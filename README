@@ -1,0 +1,20 @@
+FmapLib -- An efficient implementation of the Functional Map Framework
+=======================================================================
+
+FmapLib is an efficient Matlab implementation of the Functional Map 
+Framework, introduced in _add_ref. It contains several classes _add_content. 
+For more information and documentation, please take a look at the website
+_add_website.
+
+FmapLib is free software, you can redistribute it and/or modify it
+under the terms of the GNU General Public License, version 3 or
+above. See LICENSE for details.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+
+Reporting Bugs
+==============
+Please contact optas@stanford.edu for any bugs or unexpected behavior you may eexperience. 
