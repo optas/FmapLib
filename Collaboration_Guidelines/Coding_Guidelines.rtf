@@ -1,4 +1,4 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1347\cocoasubrtf570
+{\rtf1\ansi\ansicpg1252\cocoartf1265\cocoasubrtf210
 {\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fmodern\fcharset0 Courier;}
 {\colortbl;\red255\green255\blue255;\red0\green0\blue255;\red34\green139\blue34;}
 \margl1440\margr1440\vieww24100\viewh12720\viewkind0
@@ -8,13 +8,12 @@
 \b0 Our Code Must Follow:\
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
 \cf0 \
-\
 1. It is highly 
 \i readable.
 \i0 \
 	We follow \ul consistently\ulnone  a set of stylistic writing rules. E.g., the name of a class always starts with a capitalized character.\
-	We choose variable names that reflect their usage as much as possible. \
-	Except when efficiency is a critical factor, we favor readability than efficiency.\
+	We choose variable names that reflect their usage as much as possible (it is better to have a long name than a small cryptic one).\
+	Except when efficiency is a critical factor, we favor code readability than efficiency.\
 \
 2. It is well 
 \i documented
@@ -35,7 +34,7 @@
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
 \cf0 By adopting a 
 \i common
-\i0  style, our code becomes more homogenous, comparable and at the end -pretty-. Here are the 
+\i0  style, our code becomes more homogenous, comparable and at the end of day -pretty-. Here are the 
 \b RULES
 \b0 , which you are expected to follow:\
 \
@@ -129,12 +128,12 @@
                 \cf3 %           the areas of all the triangles.\cf0 \
                 \cf3 %\cf0 \
 				 \cf3 % Notes:    An exception is returned if\'85 etc. \
-\pard\pardeftab720
 \cf0 \
                 A = cross( V(T(:,1),:) - V(T(:,2),:), V(T(:,1),:) - V(T(:,3),:));           \cf3 % Shall we save these normals?                                        \cf0 \
                 A = normv(A)/2;																  \
+\pard\pardeftab720
 
-\fs30             \cf2 end\cf0   
+\fs30 \cf0             \cf2 end\cf0   
 \fs24 \
 \pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
 
