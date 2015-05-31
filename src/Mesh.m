@@ -24,7 +24,11 @@ classdef Mesh < dynamicprops
             elseif ischar(varargin{1}) && strcmp(varargin{1}(end-3:end), '.off')
                 % Constructor from input .off file.
                 off_file = varargin{1};                
-                [obj.vertices , obj.triangles] = read_off(off_file); 
+                [obj.vertices , obj.triangles] = Mesh_IO.read_off(off_file); 
+            elseif ischar(varargin{1}) && strcmp(varargin{1}(end-3:end), '.obj')
+                % Constructor from input .obj file.
+                obj_file = varargin{1};                
+                [obj.vertices , obj.triangles] = Mesh_IO.read_obj(obj_file); 
             else
                 % Construct with explicitly given vertices/triangles.
                 obj.vertices  = varargin{1};
