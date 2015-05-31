@@ -72,13 +72,14 @@ classdef Mesh_Features < dynamicprops
             scale        = sum(signatures, 1);
             signatures   = divide_columns(signatures, scale);
 
-            assert(all(all(signatures >= 0)));
-            % wks_variance = 6; % variance of the WKS gaussian (wih respect to the 
-            % difference of the two first eigenvalues). For easy or precision tasks 
-            % (eg. matching with only isometric deformations) you can take it smaller
+            assert(all(all(signatures >= 0)));            
         end
     
         function [E, sigma] = energy_sample_generator(recipie, emin, emax, nsamples, variance)
+            % variance of the WKS gaussian (wih respect to the 
+            % difference of the two first eigenvalues). For easy or precision tasks 
+            % (eg. matching with only isometric deformations) you can take
+            % it smaller.  Yes, smaller => more distinctiveness.            
             default_variance = 5;
             switch recipie                
                 case 'log_linear'
@@ -99,18 +100,30 @@ classdef Mesh_Features < dynamicprops
             end
         end
     
-      function [WKS] = wks_aubrey()   
-        WKS=zeros(num_vertices,N);
+      function [WKS] = wks_aubrey(evecs, evals, energies, sigma)   
+
+        % Added by Panos to make the function work
+        N            = length(energies);
+        num_vertices = size(evecs, 1);
+        log_E = log(abs(evals))';        
+        e = energies;
+        % End of Panos addition
+        
+        
+        WKS = zeros(num_vertices, N);
+        C = zeros(1,N); %weights used for the normalization of f_E
+
         for i = 1:N
-            WKS(:,i) = sum(PHI.^2.*...
-                       repmat( exp((-(e(i) - log_E).^2) ./ (2*sigma.^2)),num_vertices,1),2);
+            WKS(:, i) = sum(evecs.^2.* ...
+                       repmat( exp((-(e(i) - log_E).^2) ./ (2*sigma.^2)), num_vertices, 1),2);
+            
             C(i) = sum(exp((-(e(i)-log_E).^2)/(2*sigma.^2)));
         end
 
         % normalize WKS
-        WKS(:,:) = WKS(:,:)./repmat(C,num_vertices,1);%     
+        WKS(:,:) = WKS(:,:)./repmat(C,num_vertices,1);
         
-        end
+      end
   end    
 
 end
