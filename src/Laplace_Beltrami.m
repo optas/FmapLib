@@ -6,8 +6,6 @@ classdef Laplace_Beltrami < dynamicprops
         spectra     = containers.Map;   % A dictionary carrying various types of eigenvalues and eigenvectors
     end
     
-    
-    
     methods
     
         function obj = Laplace_Beltrami(in_mesh)
