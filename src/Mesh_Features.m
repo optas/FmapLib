@@ -67,12 +67,35 @@ classdef Mesh_Features < dynamicprops
             energies     = repmat(energies, k, 1);
             evals        = repmat(log(evals),1, e);
 
-            gauss_kernel = exp(- (( energies-evals ).^2 ) / 2*sigma^2);
+            gauss_kernel = exp(- (( energies-evals ).^2 ) / (2*sigma^2));
             signatures   = evecs.^2 * gauss_kernel;
             scale        = sum(signatures, 1);
             signatures   = divide_columns(signatures, scale);
 
             assert(all(all(signatures >= 0)));            
+        end
+        
+        
+        function [signatures] = HKS(evecs, evals, T)
+            % Computes the heat kernel signature according to the spectrum of a graph operator (e.g., Laplacian).
+            % The basic idea is introduced in the paper of Sun, J. and Ovsjanikov, M. and Guibas, L. (2009)
+            % "A Concise and Provably Informative Multi-Scale Signature-Based on Heat Diffusion."
+            %
+            % Usage:  [signatures] = HKS(evecs, evals, T)
+            %
+            % Input:  evecs         - (n x k) Eigenvectors of a graph operator arranged as columns. n denotes the number of nodes of the graph.
+            %         evals         - (k x 1) corresponding eigenvalues
+            %         T             - (1 x t) time values over which the kernel is evaluated
+            %
+            % Output: signatures    - (n x t) matrix with the values of the HKS for different T in  its columns
+            %
+            % (c) Panos Achlioptas 2014   http://www.stanford.edu/~optas
+                
+                assert(size(evals, 1) == size(evecs, 2))
+                signatures = evecs.^2 * exp( - evals * T);
+                scale = sum(signatures, 1);
+                signatures = divide_columns(signatures, scale);
+                assert(all(all(signatures >= 0)))
         end
     
         function [E, sigma] = energy_sample_generator(recipie, emin, emax, nsamples, variance)
@@ -100,6 +123,7 @@ classdef Mesh_Features < dynamicprops
             end
         end
     
+        
       function [WKS] = wks_aubrey(evecs, evals, energies, sigma)   
 
         % Added by Panos to make the function work
@@ -124,6 +148,46 @@ classdef Mesh_Features < dynamicprops
         WKS(:,:) = WKS(:,:)./repmat(C,num_vertices,1);
         
       end
+      
+      function [hks] = HKS_Sun(evecs, evals, A, scale)
+
+        % INPUTS
+        %  evecs:  ith each column in this matrix is the ith eigenfunction of the Laplace-Beltrami operator
+        %  evals:  ith element in this vector is the ith eigenvalue of the Laplace-Beltrami operator
+        %  A:      ith element in this vector is the area associated with the ith vertex
+        %  scale:  if scale = true, output the scaled hks
+        %          o.w. ouput the hks that is not scaled
+
+        % OUTPUTS
+        %  hks: ith row in this matrix is the heat kernel signature of the ith vertex
+
+
+           %area = sum(A);
+           %A = (1/area) * A;
+           %evals = area * evals;
+           %evecs = sqrt(area) * evecs;
+
+           tmin = abs(4*log(10) / evals(end));
+           tmax = abs(4*log(10) / evals(2));
+           nstep = 100;
+
+           stepsize = (log(tmax) - log(tmin)) / nstep;
+           logts = log(tmin):stepsize:log(tmax);
+           ts = exp(logts);
+
+           if scale == true, 
+              hks = abs( evecs(:, 2:end) ).^2 * exp( ( abs(evals(2)) - abs(evals(2:end)) )  * ts);
+              Am = sparse([1:length(A)], [1:length(A)], A);
+              colsum = sum(Am*hks);
+              scale = 1.0./ colsum; 
+              scalem = sparse([1:length(scale)], [1:length(scale)], scale);
+              hks = hks * scalem;
+           else
+              hks = abs( evecs(:, 2:end) ).^2 * exp( - abs(evals(2:end)) * ts);
+
+           end
+      end
+
   end    
 
 end
