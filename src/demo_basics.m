@@ -14,8 +14,11 @@ LB             = Laplace_Beltrami(inmesh);
 
 %% Compute WKS for log sample
 variance = 6;
-[E, sigma] = Mesh_Feature.energy_sample_generator('log_linear', evals(1), evals(end), 10, variance);
+[energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), 10, variance);
+energies
+wks1 = Mesh_Features.wave_kernel_signature(evecs, evals, energies, sigma);
+wks2 = Mesh_Features.wks_aubrey(evecs, evals, energies, sigma);
 
 %% Save objects
-    save('mesh_and_LB', 'refMesh', 'LB');
+%    save('mesh_and_LB', 'refMesh', 'LB');
 

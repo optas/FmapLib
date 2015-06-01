@@ -67,7 +67,7 @@ classdef Mesh_Features < dynamicprops
             energies     = repmat(energies, k, 1);
             evals        = repmat(log(evals),1, e);
 
-            gauss_kernel = exp(- (( energies-evals ).^2 ) / 2*sigma^2);
+            gauss_kernel = exp(- (( energies-evals ).^2 ) / (2*sigma^2));
             signatures   = evecs.^2 * gauss_kernel;
             scale        = sum(signatures, 1);
             signatures   = divide_columns(signatures, scale);
