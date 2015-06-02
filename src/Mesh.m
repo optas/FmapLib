@@ -154,7 +154,7 @@ classdef Mesh < dynamicprops
                 %           the areas of all the triangles.
                 
                 A = cross( V(T(:,1),:) - V(T(:,2),:), V(T(:,1),:) - V(T(:,3),:));           % Shall we save these normals?                                        
-                A = normv(A)/2;
+                A = l2_norm(A)/2;
             end  
             
             function [L] = edge_length_of_triangles(V, T)
@@ -176,9 +176,9 @@ classdef Mesh < dynamicprops
                 %           L[i][2] is the edge lenght between the 1st
                 %           vertex and the third vertex of the i-th triangle.
                                 
-                L1 = normv(V(T(:,2),:) - V(T(:,3),:));                                      % Verify this is correct.
-                L2 = normv(V(T(:,1),:) - V(T(:,3),:));                                      % I would prefer edge(1,2), (1,3), (2,3)
-                L3 = normv(V(T(:,1),:) - V(T(:,2),:));                               
+                L1 = l2_norm(V(T(:,2),:) - V(T(:,3),:));                                      % Verify this is correct.
+                L2 = l2_norm(V(T(:,1),:) - V(T(:,3),:));                                      % I would prefer edge(1,2), (1,3), (2,3)
+                L3 = l2_norm(V(T(:,1),:) - V(T(:,2),:));                               
                 L  = [L1 L2 L3];
 
             end
