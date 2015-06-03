@@ -10,7 +10,10 @@ function B = divide_columns(A, v)
 
     assert (size(A,2) == size(v,1) || size(A,2) == size(v,2))
     assert (sum(v == 0) == 0);   
-    
+    if any(abs(v) < 1e-7)
+        warning('Diving with elements that are smaller than 1e-7.')
+    end
+        
     N = size(A, 2);        
     B = zeros(size(A));
     for i=1:N

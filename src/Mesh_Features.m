@@ -40,7 +40,7 @@ classdef Mesh_Features < dynamicprops
         function [signatures] = wave_kernel_signature(evecs, evals, energies, sigma)
             % Computes the wave kernel signature according to the spectrum of a graph 
             % derived operator (e.g., the Cotangent Laplacian). 
-            % This signature was introduced in the following paper: 
+            % This signature was introduced in the paper of M. Aubry, U. Schlickewei and D. Cremers
             % "The Wave Kernel Signature: A Quantum Mechanical Approach To Shape Analysis" 
             % http://www.di.ens.fr/~aubry/texts/2011-wave-kernel-signature.pdf
             %
@@ -67,21 +67,22 @@ classdef Mesh_Features < dynamicprops
             energies     = repmat(energies, k, 1);
             evals        = repmat(log(evals),1, e);
 
-            gauss_kernel = exp(- (( energies-evals ).^2 ) / (2*sigma^2));
+            gauss_kernel = exp(- (( energies-evals ).^2 ) / (2*sigma^2) );
             signatures   = evecs.^2 * gauss_kernel;
-            scale        = sum(signatures, 1);
+
+            scale        = sum(gauss_kernel, 1);            
             signatures   = divide_columns(signatures, scale);
 
             assert(all(all(signatures >= 0)));            
         end
         
         
-        function [signatures] = HKS(evecs, evals, T)
+        function [signatures] = heat_kernel_signature(evecs, evals, T)
             % Computes the heat kernel signature according to the spectrum of a graph operator (e.g., Laplacian).
-            % The basic idea is introduced in the paper of Sun, J. and Ovsjanikov, M. and Guibas, L. (2009)
+            % The signature was introduced in the paper of J. Sun, M. Ovsjanikov and L. Guibas (2009)
             % "A Concise and Provably Informative Multi-Scale Signature-Based on Heat Diffusion."
             %
-            % Usage:  [signatures] = HKS(evecs, evals, T)
+            % Usage:  [signatures] = heat_kernel_signature(evecs, evals, T)
             %
             % Input:  evecs         - (n x k) Eigenvectors of a graph operator arranged as columns. n denotes the number of nodes of the graph.
             %         evals         - (k x 1) corresponding eigenvalues
@@ -91,19 +92,23 @@ classdef Mesh_Features < dynamicprops
             %
             % (c) Panos Achlioptas 2014   http://www.stanford.edu/~optas
                 
-                assert(size(evals, 1) == size(evecs, 2))
-                signatures = evecs.^2 * exp( - evals * T);
-                scale = sum(signatures, 1);
-                signatures = divide_columns(signatures, scale);
-                assert(all(all(signatures >= 0)))
+            assert(size(evals, 1) == size(evecs, 2))
+            low_pass_filter = exp(- evals * T);
+            signatures = evecs.^2 * low_pass_filter;
+            scale = sum(low_pass_filter, 1);
+            signatures = divide_columns(signatures, scale);
+            assert(all(all(signatures >= 0)))
         end
     
         function [E, sigma] = energy_sample_generator(recipie, emin, emax, nsamples, variance)
-            % variance of the WKS gaussian (wih respect to the 
+            % TODO: add comments-explanation. variance of the WKS gaussian (wih respect to the 
             % difference of the two first eigenvalues). For easy or precision tasks 
             % (eg. matching with only isometric deformations) you can take
             % it smaller.  Yes, smaller => more distinctiveness.            
             default_variance = 5;
+            if emin < 1e-6
+                warning('The smallest eigenvalue (emin) is smaller than 1e-6.')
+            end
             switch recipie                
                 case 'log_linear'
                     E = linspace(log(emin), (log(emax) / 1.02), nsamples);
@@ -114,17 +119,22 @@ classdef Mesh_Features < dynamicprops
                     end
                     
                 case 'linear'
+                    E = linspace(emin, emax / 1.02, nsamples);
                     delta = ( emax - emin ) / nsamples;
                     if ~exist('variance', 'var')               
                         sigma = delta * default_variance;
                     else
                         sigma = delta * variance;
-                    end            
+                    end  
+
+                otherwise
+                    error('Given recipie is not recognised.')
             end
+            assert(length(E) == nsamples)
         end
     
         
-      function [WKS] = wks_aubrey(evecs, evals, energies, sigma)   
+      function [WKS] = wks_Aubry(evecs, evals, energies, sigma)   
 
         % Added by Panos to make the function work
         N            = length(energies);
@@ -132,8 +142,7 @@ classdef Mesh_Features < dynamicprops
         log_E = log(abs(evals))';        
         e = energies;
         % End of Panos addition
-        
-        
+                
         WKS = zeros(num_vertices, N);
         C = zeros(1,N); %weights used for the normalization of f_E
 
@@ -145,11 +154,10 @@ classdef Mesh_Features < dynamicprops
         end
 
         % normalize WKS
-        WKS(:,:) = WKS(:,:)./repmat(C,num_vertices,1);
-        
+        WKS(:,:) = WKS(:,:)./repmat(C,num_vertices,1);        
       end
       
-      function [hks] = HKS_Sun(evecs, evals, A, scale)
+      function [hks] = hks_Sun(evecs, evals, A, scale)
 
         % INPUTS
         %  evecs:  ith each column in this matrix is the ith eigenfunction of the Laplace-Beltrami operator
