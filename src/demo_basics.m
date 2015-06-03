@@ -13,17 +13,25 @@ inmesh
 LB             = Laplace_Beltrami(inmesh);
 [evals, evecs] = LB.get_spectra(100, 'barycentric');
 % Save objects
-% save('../data/output/mesh_and_LB', 'inmesh', 'LB');
+save('../data/output/mesh_and_LB', 'inmesh', 'LB');
 
 
 %% WKS - HKS
-nsamples = 100;
-[energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), nsamples);
-wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);
+nsamples = 20;
+% [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), nsamples);
+% wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);
+
+
+energies          = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), nsamples)
+hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), energies);
+v_areas           = inmesh.get_vertex_areas('barycentric');
+hks_sun           = Mesh_Features.hks_Sun(evecs, evals, v_areas, energies, 1);
+allclose(hks_sig, hks_sun)
 
 hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), energies);
-hks_sun           = Mesh_Features.hks_Sun(evecs(:,2:end), evals(2:end), energies);
-
+v_areas           = ones(inmesh.num_vertices, 1);
+hks_sun           = Mesh_Features.hks_Sun(evecs, evals, v_areas, energies, 1);
+allclose(hks_sig, hks_sun)
 
 % wks_aubrey_sig    = Mesh_Features.wks_aubrey(evecs(:,2:end), evals(2:end), energies, sigma);  % Add to Unit Test.
 % allclose(wks_sig, wks_aubrey_sig)

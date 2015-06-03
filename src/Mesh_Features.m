@@ -95,7 +95,7 @@ classdef Mesh_Features < dynamicprops
             assert(size(evals, 1) == size(evecs, 2))
             low_pass_filter = exp(- evals * T);
             signatures = evecs.^2 * low_pass_filter;
-            scale = sum(low_pass_filter, 1);
+            scale = sum(low_pass_filter, 1);     %TODO-E
             signatures = divide_columns(signatures, scale);
             assert(all(all(signatures >= 0)))
         end
@@ -106,11 +106,12 @@ classdef Mesh_Features < dynamicprops
             % (eg. matching with only isometric deformations) you can take
             % it smaller.  Yes, smaller => more distinctiveness.            
             default_variance = 5;
+            sigma            = 0;
             if emin < 1e-6
                 warning('The smallest eigenvalue (emin) is smaller than 1e-6.')
             end
             switch recipie                
-                case 'log_linear'
+                case 'log_linear'   % Version Used in original WKS.
                     E = linspace(log(emin), (log(emax) / 1.02), nsamples);
                     if ~exist('variance', 'var')               
                         sigma = (E(2) - E(1)) * default_variance;
@@ -126,7 +127,15 @@ classdef Mesh_Features < dynamicprops
                     else
                         sigma = delta * variance;
                     end  
-
+                
+                case 'log_sampled'    % Version Used in original HKS.
+                    % TODO-P: keep here - take care of variance param.
+                    % When you first transform you range to log-scale and then
+                    % sample linearly, you sample more small ranged values.
+                    tmin = abs(4*log(10) / emax);
+                    tmax = abs(4*log(10) / emin);                                        
+                    E    = exp(linspace(log(tmin), log(tmax), nsamples));                    
+                    
                 otherwise
                     error('Given recipie is not recognised.')
             end
@@ -157,7 +166,7 @@ classdef Mesh_Features < dynamicprops
         WKS(:,:) = WKS(:,:)./repmat(C,num_vertices,1);        
       end
       
-      function [hks] = hks_Sun(evecs, evals, A, scale)
+      function [hks] = hks_Sun(evecs, evals, A, ts, scale)
 
         % INPUTS
         %  evecs:  ith each column in this matrix is the ith eigenfunction of the Laplace-Beltrami operator
@@ -165,6 +174,7 @@ classdef Mesh_Features < dynamicprops
         %  A:      ith element in this vector is the area associated with the ith vertex
         %  scale:  if scale = true, output the scaled hks
         %          o.w. ouput the hks that is not scaled
+        %  ts :    time slices to evaluate the HKS
 
         % OUTPUTS
         %  hks: ith row in this matrix is the heat kernel signature of the ith vertex
@@ -174,14 +184,6 @@ classdef Mesh_Features < dynamicprops
            %A = (1/area) * A;
            %evals = area * evals;
            %evecs = sqrt(area) * evecs;
-
-           tmin = abs(4*log(10) / evals(end));
-           tmax = abs(4*log(10) / evals(2));
-           nstep = 100;
-
-           stepsize = (log(tmax) - log(tmin)) / nstep;
-           logts = log(tmin):stepsize:log(tmax);
-           ts = exp(logts);
 
            if scale == true, 
               hks = abs( evecs(:, 2:end) ).^2 * exp( ( abs(evals(2)) - abs(evals(2:end)) )  * ts);
