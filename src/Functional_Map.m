@@ -7,11 +7,33 @@ classdef Functional_Map
     
     methods (Static)
         
-  
-        function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
-            % Copyright (C) 2014 Qixing Huang.            
+        function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             N1 = size(D1,1);
             N2 = size(D2,1);
+            A_fixed = D1 * D1' ;
+            B = D1 * D2' ;
+            X = zeros(N2, N1);
+            
+            if lambda == 0   %  Un-regularized
+                X = zeros(N2, N1);
+                for I = 1 : N2  % TODO-V: solve this case without for loop. Check solutions are the same.
+                    X(I, :) = A_fixed \ B(:, I);
+                end
+            else
+                for I = 1 : N2
+                    A = diag(lambda * (L1 - L2(I)) .^ 2) + A_fixed;
+                    X(I, :) = A \ B(:, I);
+                end
+            end
+        end
+        
+
+        
+  
+        function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
+            % Copyright (C) 2014 Fan Wang.            
+            N1 = size(D1, 1);
+            N2 = size(D2, 1);
             N1N2 = N1 * N2;
             % cvx_setspath('sedumi');
             z = sparse(N1N2, 1);
