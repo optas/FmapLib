@@ -1,4 +1,4 @@
-function [bool] = allclose(A, B, atol, rtol)
+function [bool] = all_close(A, B, atol, rtol)
     % Checks if matrices are element-wise equal within a tolerance.
     % The tolerance values are positive, typically very small numbers. 
     % The relative difference (rtol * abs(B)) and the absolute difference atol are added together to compare against the absolute difference between A and B.    
