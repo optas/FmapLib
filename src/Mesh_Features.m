@@ -168,7 +168,7 @@ classdef Mesh_Features < dynamicprops
         
 
         function [signatures] = D2_panos(inmesh, num_bins, xcenters)
-        %         TODO-V
+        % TODO-V
         % Input:
         %           num_bins    -  (int) Number of bins the D2 histogram will have.
         
@@ -176,8 +176,7 @@ classdef Mesh_Features < dynamicprops
                 
             all_dists = pdist(inmesh.vertices);  % This is too expensive(!) + it used euclidean dist and not geodesics.     \
                                                  % Do other also propose
-                                                 % to use Euclideans dist?
-                                                  
+                                                 % to use Euclideans dist?                                                  
             
             max_dist = max(max(all_dists));        % Maximum distance between two vertices.
             xcenters = linspace(max_dist/num_bins, max_dist, num_bins);  % One way to define centers.
