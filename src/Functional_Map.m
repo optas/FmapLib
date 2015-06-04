@@ -14,8 +14,7 @@ classdef Functional_Map
             B = D1 * D2' ;
             X = zeros(N2, N1);
             
-            if lambda == 0   %  Un-regularized
-                X = zeros(N2, N1);
+            if lambda == 0   %  Un-regularized                
                 X = (A_fixed\B)';
             else
                 for I = 1 : N2
