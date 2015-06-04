@@ -4,9 +4,7 @@ classdef Mesh_Features < dynamicprops
 %         m = [];
 %     end
 %     
-%     
-%     
-%     
+
 %     methods (Access = public)
 %         function obj = Mesh_Features(varargin)     
 %             if nargin == 0                
@@ -169,6 +167,30 @@ classdef Mesh_Features < dynamicprops
         end
         
 
+        function [signatures] = D2_panos(inmesh, num_bins, xcenters)
+        % TODO-V
+        % Input:
+        %           num_bins    -  (int) Number of bins the D2 histogram will have.
+        
+            xcenters  =     % Optional arguement defining for each bin its center. (makes num_bins obsolete)
+                
+            all_dists = pdist(inmesh.vertices);  % This is too expensive(!) + it used euclidean dist and not geodesics.     \
+                                                 % Do other also propose
+                                                 % to use Euclideans dist?                                                  
+            
+            max_dist = max(max(all_dists));        % Maximum distance between two vertices.
+            xcenters = linspace(max_dist/num_bins, max_dist, num_bins);  % One way to define centers.
+            v_num = inmesh.num_vertices;
+            
+
+            signatures = zeros(v_num, num_bins);            
+            for i = 1:v_num
+                distlist = sum((repmat(inmesh.vertices(i,:), [v_num-1, 1]) - inmesh.vertices([1:i-1 i+1:end],:)).^2, 2);
+                signatures(i,:) = hist(distlist, xcenters)/(v_num - 1);
+            end    
+        end
+            
+        
 
         
       function [WKS] = wks_Aubry(evecs, evals, energies, sigma)   

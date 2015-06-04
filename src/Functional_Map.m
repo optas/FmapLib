@@ -30,6 +30,9 @@ classdef Functional_Map
   
         function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
             % Copyright (C) 2014 Fan Wang.            
+            % TODO-P: Add documentation.
+            % TODO-V: Add inline comments to explaina bit the logic.
+            
             N1 = size(D1, 1);
             N2 = size(D2, 1);
             N1N2 = N1 * N2;
