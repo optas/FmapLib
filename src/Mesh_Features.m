@@ -100,6 +100,7 @@ classdef Mesh_Features < dynamicprops
             assert(all(all(signatures >= 0)))
         end
     
+        
         function [E, sigma] = energy_sample_generator(recipie, emin, emax, nsamples, variance)
             % TODO: add comments-explanation. variance of the WKS gaussian (wih respect to the 
             % difference of the two first eigenvalues). For easy or precision tasks 
@@ -141,7 +142,34 @@ classdef Mesh_Features < dynamicprops
             end
             assert(length(E) == nsamples)
         end
-    
+        
+        
+        function [signatures] = global_point_signature(evecs, evals)
+            % Raif's embedding.
+            % Requires a discrete approximation of area-weighted cotanget Laplacian . Not a graphical one.
+            % DOI: "Laplace-Beltrami eigenfunctions for deformation invariant shape representation. R. Rustamov, SGP 2007."
+            assert(all(evals~=0) & all(evals > 0))
+            if any(abs(evals) < 1e-7) 
+                warning('Eigenvalues with magnitude as small as 1e-7 are used.')
+            end            
+            signatures = evecs * diag((1 ./ sqrt(evals)));            
+        end
+
+        function [signatures] = D2()
+            signatures = 0;
+            % TODO-V: Stub
+%         The simplest shape descriptor is the "D2 shape descriptor." This consists of taking pairs of random points, 
+%         computing their distances, and placing those distances into a histogram. The histogram can them be looked at 
+%         as a probability distribution for how far apart points are from each other on the object. Note that because I normalized 
+%         for scale by scaling down by the RMS distance of points, this distance could be unbounded in the case of outliers (i.e. having 
+%         tons of points really close to the center and 1 point really far away). This case is rare, and after experimentation it seems 
+%         that most points are within a distance 3 of the origin after the first step. So I simply chose to put everything further away from 
+%         3 in the 3 bin. I then have 100 bins total spaced from a distance of 0 to a distance of 3, and I can take as many random samples as I want to construct the histogram in this interval.
+%         NOTE: In order for the comparisons to make sense between shapes, the same number of random samples should be taken in each shape. If we wanted a different number of samples for some reason, but we still wanted to be as correct as possible, we should scale each bin down by the number of samples (thus, turning the histogram into an actual probability density function which sums to 1). I didn't do this in my program since I'm always comparing objects with the same number of random samples.
+        end
+        
+
+
         
       function [WKS] = wks_Aubry(evecs, evals, energies, sigma)   
 
