@@ -16,9 +16,7 @@ classdef Functional_Map
             
             if lambda == 0   %  Un-regularized
                 X = zeros(N2, N1);
-                for I = 1 : N2  % TODO-V: solve this case without for loop. Check solutions are the same.
-                    X(I, :) = A_fixed \ B(:, I);
-                end
+                X = (A_fixed\B)';
             else
                 for I = 1 : N2
                     A = diag(lambda * (L1 - L2(I)) .^ 2) + A_fixed;
@@ -70,6 +68,50 @@ classdef Functional_Map
             % Solve
             [x, y, info] = sedumi(sparse(At), sparse(b), sparse(c), K, struct('fid', 0));
             X = reshape(y(1:N1N2), N1, N2)';
+        end
+        
+        function X = sum_of_squared_frobenius_norms_non_diagonal(D1, D2, L1, L2, lambda)
+            N1 = size(D1,1);
+            N2 = size(D2,1);
+            K = size(D1,2);
+            % K is also equal to size(D2,2).
+            A_fixed = D1 * D1' ;
+            B = D2 * D1' ;
+            % The first N2 rows of A_large correspond to the first row of
+            % AX', or in other words (a_1)*X', the corresponding B values
+            % being the first column of B.
+            A_large = kron(A_fixed,eye(N2));
+            B_large = B(:);
+            for n=1:N1
+                for m=1:N2
+                    L = zeros(N2,N1);
+                    for i=1:N2
+                        for j=1:N1
+                            switch j
+                                case m
+                                    switch i
+                                        case n
+                                            L(i,j) = 2*(sum_square(L1(n,:))-sum_square(L2(:,m))-2*L1(n,n)*L2(m,m)-(L1(n,n)-L2(m,m))^2);
+                                        otherwise,
+                                            L(i,j) = 2*(L1(j,:)*L1(n,:)'-L2(m,m)*L1(n,j)-L1(n,n)*L1(j,n));
+                                    end
+                                otherwise,
+                                    switch j
+                                        case n
+                                            L(i,j) = 2*(L2(:,i)'*L2(:,m)-L1(n,n)*L2(i,m)-L2(m,i)*L2(m,m));
+                                        otherwise,
+                                            L(i,j) = 2*(-L2(m,i)*L1(n,j)-L2(i,m)*L1(j,n));
+                                    end
+                            end
+                        end
+                    end
+                    
+                    A_large((n-1)*N2+m,:) = A_large((n-1)*N2+m,:) + lambda*L(:)';
+                end
+            end
+            
+            X_vec = A_large \ B_large;
+            X = reshape(X_vec,N2,N1);
         end
 
     end
