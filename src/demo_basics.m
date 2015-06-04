@@ -39,5 +39,6 @@ all_close(hks_sig, hks_sun)
 
 gps_sig           = Mesh_Features.global_point_signature(evecs(:,2:end), evals(2:end));
 vignesh = 1;
+vignesh = 
 %%
 
