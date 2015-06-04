@@ -1,10 +1,10 @@
 classdef Mesh < dynamicprops
-    % This class represents the triangular Mesh of a 3D surface.
-    % Todo: Seperate Input Class (deal with .off, .obj etc.)
+    % This class represents a triangular Mesh of a 3D surface. It comes
+    % equipped with a series of associated functions mostly of geometric
+    % nature.
     
     properties (GetAccess = public, SetAccess = private)
-        % Basic properties that every instance of the Mesh class must have.
-        
+    % Basic properties that every instance of the Mesh class has.        
         num_vertices    %   (int)               -    number of vertices of mesh.
         num_triangles   %   (int)               -    number of triangles of mesh.num_
         vertices        %   (num_vertices  x 3) -    array containing the 3D embedding of each vertex of the mesh.
@@ -15,7 +15,7 @@ classdef Mesh < dynamicprops
     
 
     methods (Access = public)
-        
+        % Class Constructor.
         function obj = Mesh(varargin)     
             if nargin == 0                
                 % Construct an empty Mesh.            
@@ -48,6 +48,7 @@ classdef Mesh < dynamicprops
         
 
         function obj = copy(this)
+            % Define what is copied when a deep copy is performed.
             % Instantiate new object of the same class.
             obj = feval(class(this));
                         
@@ -60,35 +61,19 @@ classdef Mesh < dynamicprops
                 end                
                 obj.(p{i}) = this.(p{i});
             end           
-        end
-
-
-%          function s = saveobj(obj)          
-%              possible_dyn_props = {'triangle_areas', 'edge_lengths', 'angles', 'cot_laplacian'};  % make it a hidden attributre of the class
-%              for i=1:length(possible_dyn_props)                                
-%                 prop_name = possible_dyn_props{i};
-%                 if isprop(obj, prop_name) % Object has this dynamic property.                    
-%                     prop_i                      = findprop(obj, prop_name);
-%                     s.dynamicprops(i).name      = prop_i.Name;
-%                     s.dynamicprops(i).value     = obj.(prop_name);
-%                     s.dynamicprops(i).setAccess = prop_i.SetAccess;
-%                     s.dynamicprops(i).getAccess = prop_i.GetAccess;
-%                 end
-%              end
-%          end
-        
+        end        
     end
     
     
     methods (Access = public)        
         % Setters and Getters.
-        
+        % TODO-V: add comments.
         function obj = set_name(obj, name)
             obj.name = name;
         end
             
         function obj = set_triangle_areas(obj)
-            % TODO: Add safeguard against property already existing. 
+            % TODO-P: Add safeguard against property already existing. 
             obj.addprop('triangle_areas');            
             obj.triangle_areas = Mesh.area_of_triangles(obj.vertices, obj.triangles);
         end
@@ -135,9 +120,10 @@ classdef Mesh < dynamicprops
     
     methods (Static, Access = private)        
         function [S] = valid_area_strings()
+            % We implement the following types of vertex-area
+            % constructions.
             S = {'barycentric', 'voronoi'};
-        end        
-    
+        end            
     end
     
     methods (Static)
@@ -259,24 +245,3 @@ classdef Mesh < dynamicprops
      end
    
 end
-                      
-%     %%%
-% % Compute weighted and unweighted cot LB
-% % Note that area weights are normalized to sum to 1
-% %%
-
-%
-%     [W, A] = cotLaplacian(mesh);
-%     mesh.origAreaWeights = 2*A;
-%     mesh.areaWeights = 2*A;
-%     % % Normalize mesh area to sum to 1
-%     mesh.areaWeights = mesh.areaWeights / sum(mesh.areaWeights);
-%     % Using **negative** cotLaplacian
-%     mesh.cotLaplace = -2*W;
-%
-%     %% For convenience...
-%     mesh.A = spdiags(mesh.areaWeights,0,mesh.nv,mesh.nv);
-%     mesh.Ai = spdiags(1./mesh.areaWeights,0,mesh.nv,mesh.nv);
-%     mesh.L = mesh.cotLaplace;
-%     mesh.Lw = mesh.Ai*mesh.L;
-% end
