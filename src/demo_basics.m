@@ -46,6 +46,19 @@ shading interp; axis equal; title('Gauss Curvature Smoothed');
 subplot(2, 2, 4); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), gauss_curv(:,4));
 shading interp; axis equal; title('Gauss Curvature Smoothed');
 
+%% Gradient
+%inmesh.set_vertex_normals();
+%inmesh.set_triangle_areas();
+df = Mesh.gradient_of_function(inmesh.vertices(:,1), inmesh.vertices, inmesh.triangles, inmesh.triangle_normal, inmesh.triangle_areas);
+
+bar = (inmesh.vertices(inmesh.triangles(:,1),:) + inmesh.vertices(inmesh.triangles(:,2),:) + inmesh.vertices(inmesh.triangles(:,3),:)) / 3;
+figure;
+trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.vertices(:,1));
+hold on;
+quiver3(bar(:,1), bar(:,2), bar(:,3), df(:,1), df(:,2), df(:,3));
+hold off;
+shading interp; axis equal; 
+
 %% Calculate the first 100 spectra, based on barycentric vertex areas.
 LB             = Laplace_Beltrami(inmesh);
 [evals, evecs] = LB.get_spectra(100, 'barycentric');

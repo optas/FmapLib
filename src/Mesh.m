@@ -143,19 +143,50 @@ classdef Mesh < dynamicprops
     
     methods (Static)
         
-        function [Nv] = normals_of_vertices(T, N)
+        function [df] = gradient_of_function(f, V, T, N, triangle_area)
             % Computes the outward normal of each verices given the
             % weighted normal at each triangle, in a triangular mesh.
             % Input:
+            %           f  - (num_of_vertices x 1) Functions values at each
+            %           vertex.
             %           V  - (num_of_vertices x 3) 3D coordinates of
             %           the mesh vertices.
             %           T  - (num_of_triangles x 3) T[i] are the 3 indices
             %           corresponding to the 3 vertices of the i-th
             %           triangle. The indexing is based on -V-.                
-            %           N  - (num_of_triangles x 3) tn(i,:) are the
+            %           N  - (num_of_triangles x 3) N(i,:) are the
             %           coordinates of the outward normal of the i-th
             %           triangle. The length of this normal should
             %           conrerespond to its weight in the sum.
+            %
+            % Output:   df - (num_of_triangles x 3) Gradient of f: one vector 
+            %           per face.
+
+            idj = [2 3 1];
+            idK = [3 1 2];
+            df = zeros(size(T, 1), 3);
+            for i = 1:3
+                j = idj(i);
+                k = idK(i);
+                df = df + repmat(f(T(:,k)), [1,3]) .* ( V(T(:,j),:) - V(T(:,i),:) );
+            end
+            
+            N = N./repmat(l2_norm(N), [1, 3]);
+            df = cross(N, df, 2) ./ repmat(2 * triangle_area, [1, 3]);
+        end
+        
+        function [Nv] = normals_of_vertices(T, N)
+            % Computes the outward normal of each verices given the
+            % weighted normal at each triangle, in a triangular mesh.
+            % Input:
+            %           T  - (num_of_triangles x 3) T[i] are the 3 indices
+            %           corresponding to the 3 vertices of the i-th
+            %           triangle. The indexing is based on -V-.                
+            %           N  - (num_of_triangles x 3) N(i,:) are the
+            %           coordinates of the outward normal of the i-th
+            %           triangle. The length of this normal should
+            %           conrerespond to its weight in the sum.
+            %
             % Output:   Nv - (num_of_vertices x 3) an array containing
             %           the normalized outward normals of all the vertices.
 
