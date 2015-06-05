@@ -25,13 +25,26 @@ mean_curv = Mesh_Features.mean_curvature(inmesh, Laplace_Beltrami(inmesh), [0, 0
 
 figure;
 subplot(2, 2, 1); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,1));
-shading interp; axis equal;
+shading interp; axis equal; title('Mean Curvature');
 subplot(2, 2, 2); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,2));
-shading interp; axis equal;
+shading interp; axis equal; title('Mean Curvature Smoothed');
 subplot(2, 2, 3); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,3));
-shading interp; axis equal;
+shading interp; axis equal; title('Mean Curvature Smoothed');
 subplot(2, 2, 4); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,4));
-shading interp; axis equal;
+shading interp; axis equal; title('Mean Curvature Smoothed');
+
+%% Gauss curvature
+gauss_curv = Mesh_Features.gaussian_curvature(inmesh, [0, 20, 200, 500]);
+
+figure;
+subplot(2, 2, 1); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), gauss_curv(:,1));
+shading interp; axis equal; title('Gauss Curvature');
+subplot(2, 2, 2); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), gauss_curv(:,2));
+shading interp; axis equal; title('Gauss Curvature Smoothed');
+subplot(2, 2, 3); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), gauss_curv(:,3));
+shading interp; axis equal; title('Gauss Curvature Smoothed');
+subplot(2, 2, 4); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), gauss_curv(:,4));
+shading interp; axis equal; title('Gauss Curvature Smoothed');
 
 %% Calculate the first 100 spectra, based on barycentric vertex areas.
 LB             = Laplace_Beltrami(inmesh);

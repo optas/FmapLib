@@ -73,10 +73,14 @@ classdef Mesh_Features < dynamicprops
             end
             
             try % Retrieve the vertex normals or compute them.
-                    N = inmesh.vertex_normal;
-            catch                                       
-                    inmesh.set_vertex_normals();
-                    N = inmesh.vertex_normal;
+                N = inmesh.vertex_normal;
+            catch           
+                try
+                    tn = inmesh.triangle_normal;
+                catch
+                    tn = Mesh.normals_of_triangles(inmesh.vertices, inmesh.triangles);
+                end
+                N  = Mesh.normals_of_vertices(inmesh.triangles, tn);
             end
             
             mean_curv = 0.5 * sum(N .* (laplace_beltrami.W * inmesh.vertices), 2);
@@ -86,7 +90,49 @@ classdef Mesh_Features < dynamicprops
             end
         end
         
+        function [gauss_curv] = gaussian_curvature(inmesh, smoothing_time)                                        
+            % Computes the gauss curvature at each vertices of the mesh.
+            % (Optional) A smoothing using the heat diffusion can be done
+            % as post-processing.
+            %
+            % Meyer, M. Desbrun, P. Schroder, and A. H. Barr. ?Discrete Differential-Geometry Operators for Triangulated 2-Manifolds.?
+            %
+            % Input:  inmesh            - (Mesh class) 
+            %         smoothing         - (k x 1) vector with time for the
+            %         heat diffusion processing. (Optional)
+            %
+            % Output: gauss_curv        - (nv x k) Smoothed gauss curvature
+            %         at each vertices. If smoothing_time is not given, k = 1
+            %         and no smoothing is applied.
+            
+            % If not given compute LB operator
+            if ~exist('laplace_beltrami', 'var')
+                laplace_beltrami = Laplace_Beltrami(inmesh);
+            end
+            
+            try % Retrieve the angles or compute them.
+                angles = inmesh.angles;
+            catch           
+                try
+                    L = inmesh.edge_lengths;
+                catch
+                    L = Mesh.edge_length_of_triangles(inmesh.vertice, inmesh.triangles);
+                end
+                angles  = Mesh.angles_of_triangles(L);
+            end
+            
+            try % Retrieve the areas or compute them.
+                areas = inmesh.barycentric_v_area;
+            catch           
+                areas = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
+            end
+            
+            gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;
         
+            if exist('smoothing_time', 'var')
+                gauss_curv = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, gauss_curv, smoothing_time);
+            end
+        end
         
                                         
         function [signatures] = wave_kernel_signature(evecs, evals, energies, sigma)
