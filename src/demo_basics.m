@@ -9,6 +9,30 @@ inmesh.set_triangle_angles();
 inmesh.set_vertex_areas('barycentric');
 inmesh
 
+%% Test vertex normal
+inmesh.set_vertex_normals();
+N = inmesh.vertex_normal;
+
+figure;
+trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), 1);
+hold on;
+quiver3(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), N(:,1), N(:,2), N(:,3));
+hold off;
+axis equal;
+
+%% Mean curvature
+mean_curv = Mesh_Features.mean_curvature(inmesh, Laplace_Beltrami(inmesh), [0, 0.5, 2, 10]);
+
+figure;
+subplot(2, 2, 1); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,1));
+shading interp; axis equal;
+subplot(2, 2, 2); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,2));
+shading interp; axis equal;
+subplot(2, 2, 3); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,3));
+shading interp; axis equal;
+subplot(2, 2, 4); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,4));
+shading interp; axis equal;
+
 %% Calculate the first 100 spectra, based on barycentric vertex areas.
 LB             = Laplace_Beltrami(inmesh);
 [evals, evecs] = LB.get_spectra(100, 'barycentric');
