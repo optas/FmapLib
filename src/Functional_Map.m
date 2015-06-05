@@ -8,7 +8,15 @@ classdef Functional_Map
     methods (Static)
         
         function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
-            N1 = size(D1,1);
+            % This code uses plain least squares techniques to 
+            % solve the objective function using Frobenius norm squared
+            % terms.
+            % We aim to minimize ||X*D1-D2||^2 + lambda*||X*L1-L2*X||^2. 
+            % This is done by computing the gradient wrt X, which is given
+            % by (X*D1-D2)*D1' for term 1, and by 
+            % (((lambda1_i-lambda2_j)^2)*X_{ij})_{ij} for term 2. This is
+            % solved using linear techniques as given below.
+            
             N2 = size(D2,1);
             A_fixed = D1 * D1' ;
             B = D1 * D2' ;
@@ -30,7 +38,11 @@ classdef Functional_Map
         function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
             % Copyright (C) 2014 Fan Wang.            
             % TODO-P: Add documentation.
-            % TODO-V: Add inline comments to explaina bit the logic.
+            % This code uses Sedumi to write the objective function as a
+            % Semi-definite program in the dual form. In this problem we
+            % aim to minimize ||X*D1-D2|| + lambda*||X*L1-L2*X||. This is
+            % done by solving for min t1 + lambda*t2, s.t t1 >=
+            % ||X*D1-D2||, t2 >= ||X*L1-L2*X||.
             
             N1 = size(D1, 1);
             N2 = size(D2, 1);
@@ -68,15 +80,20 @@ classdef Functional_Map
             end
 
             % Solve
-            [x, y, info] = sedumi(sparse(At), sparse(b), sparse(c), K, struct('fid', 0));
+            % The objective for dual is max b'*y which in this case is
+            % -(y_{N1N2+1} + lambda*y_{N1N2+2}). t1 = y_{N1N2+1}, t2 =
+            % y_{N1N2+2}. 
+            
+            %The dual y satisfies s = c-A'*y, s \in Dual cone K'. The
+            % existence of s in the dual gives the conditions relating
+            % t1,t2 to the Frobenius norms in the objective.
+            [~, y, ~] = sedumi(sparse(At), sparse(b), sparse(c), K, struct('fid', 0));
             X = reshape(y(1:N1N2), N1, N2)';
         end
         
         function X = sum_of_squared_frobenius_norms_non_diagonal(D1, D2, L1, L2, lambda)
             N1 = size(D1,1);
             N2 = size(D2,1);
-            K = size(D1,2);
-            % K is also equal to size(D2,2).
             A_fixed = D1 * D1' ;
             B = D2 * D1' ;
             % The first N2 rows of A_large correspond to the first row of
