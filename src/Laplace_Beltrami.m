@@ -69,6 +69,7 @@ classdef Laplace_Beltrami < dynamicprops
         
         function [W] = cotangent_laplacian(V, T, varargin)
                 % Add comments
+                % W is symmetric.
                 I = [T(:,1); T(:,2); T(:,3)];
                 J = [T(:,2); T(:,3); T(:,1)];        
                                 
@@ -90,6 +91,7 @@ classdef Laplace_Beltrami < dynamicprops
         
         function [Phi, lambda] = compute_spectra(W, vertex_areas, eigs_num)
             % Returns the sorted ..add comments..
+            % TODO-P: complex spectra
             if eigs_num < 1 || eigs_num > size(W, 1)-1;
                 error('Eigenvalues must be in range of [1, num_of_vertices-1].')
             end
@@ -99,7 +101,7 @@ classdef Laplace_Beltrami < dynamicprops
             lambda        = abs(real(lambda));
             [lambda, idx] = sort(lambda);
             Phi           = Phi(:,idx);
-            Phi           = real(Phi);                 % LB is symmetric, thus Phi's are real.
+            Phi           = real(Phi);                 % W is symmetric. diag(Vertex_Areas) is PSD. Thus, the Generalized Eigen-Prob should return real.
         end
             
     end
