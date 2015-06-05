@@ -17,24 +17,28 @@ classdef Mesh_Features < dynamicprops
 
 
     methods (Static)
-%         function [mean_curv] = mean_curvature(, )                
-            % Mean curvature
-%             Max = 5; step = 5;
-%             meanCurv = sqrt(sum((Delta*mesh.vertices).^2, 2));
-%             f5 = zeros(mesh.nv, Max);
-%             f6 = zeros(mesh.nv, Max);
-%             f5(:,1) = meanCurv;
-%             f6(:,1) = log(abs(meanCurv) + 1e-10);
-%             for i = 2:Max
-%                 f5(:, i) = (speye(size(Delta)) - step*Delta)\f5(:, i-1);
-%                 f6(:, i) = (speye(size(Delta)) - step*Delta)\f6(:, i-1);
-%             end
-% 
-%             F = [F, f5, f6];
-%             mask = [mask; ones(size(f5, 2), 1)*(max(mask) + 1)];
-%             mask = [mask; ones(size(f6, 2), 1)*(max(mask) + 1)];            
-%         end
         
+        function laplacian_smoothing()            
+        end
+        
+        function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing)                                        
+            % Add wikipedia or some other page explaining which
+            % discretization you chose.
+            
+            try % Retrieve the vertex normals or compute them.
+                    N = inmesh.vertex_normals();
+            catch                                       
+                    inmesh.set_vertex_normals();
+                    N = inmesh.vertex_normals();
+            end
+            
+            mean_curv = sum(N .* (laplace_beltrami.W * inmesh.vertices), 2); % TODO-E: sign, implements functions
+        
+        end
+        
+        
+        
+                                        
         function [signatures] = wave_kernel_signature(evecs, evals, energies, sigma)
             % Computes the wave kernel signature according to the spectrum of a graph 
             % derived operator (e.g., the Cotangent Laplacian). 
@@ -167,32 +171,22 @@ classdef Mesh_Features < dynamicprops
         end
         
 
-        function [signatures] = D2_panos(inmesh, num_bins, xcenters)
-        % TODO-V
+        function [signatures] = hist_of_euclidean_distance(inmesh, num_bins)        
         % Input:
         %           num_bins    -  (int) Number of bins the D2 histogram will have.
-        
-            xcenters  =     % Optional arguement defining for each bin its center. (makes num_bins obsolete)
                 
-            all_dists = pdist(inmesh.vertices);  % This is too expensive(!) + it used euclidean dist and not geodesics.     \
-                                                 % Do other also propose
-                                                 % to use Euclideans dist?                                                  
+            hyper_diameter = norm(max(inmesh.vertices)- min(inmesh.vertices));                                                              
+            xcenters       = linspace(hyper_diameter/num_bins, hyper_diameter, num_bins);            
+            v_num          = inmesh.num_vertices;           
             
-            max_dist = max(max(all_dists));        % Maximum distance between two vertices.
-            xcenters = linspace(max_dist/num_bins, max_dist, num_bins);  % One way to define centers.
-            v_num = inmesh.num_vertices;
-            
-
-            signatures = zeros(v_num, num_bins);            
+            signatures = zeros(v_num, num_bins);
             for i = 1:v_num
-                distlist = sum((repmat(inmesh.vertices(i,:), [v_num-1, 1]) - inmesh.vertices([1:i-1 i+1:end],:)).^2, 2);
+                distlist = sum((repmat(inmesh.vertices(i,:), [v_num-1, 1]) - inmesh.vertices([1:i-1 i+1:end],:)).^2, 2);  % TODO-V check if pdist2 is faster.
                 signatures(i,:) = hist(distlist, xcenters)/(v_num - 1);
             end    
         end
             
-        
 
-        
       function [WKS] = wks_Aubry(evecs, evals, energies, sigma)   
 
         % Added by Panos to make the function work

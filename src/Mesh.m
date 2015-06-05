@@ -101,6 +101,20 @@ classdef Mesh < dynamicprops
             obj.(prop_name) = Mesh.area_of_vertices(obj.vertices, obj.triangles, area_type);
         end
 
+        function set_triangle_normals()
+            
+        end 
+        
+        function obj = set_vertex_normals(obj)
+            
+            if isprop(obj, 'triangle_normal')
+                tn = obj.triangle_normal;
+            else
+                tn = obj.set_triangle_normals()
+            end
+            obj.addprop()            
+        end
+            
         function [A] = get_vertex_areas(obj, area_type)
             if ~ Mesh.is_supported_area_type(area_type)            
                 error(strcat('Area must be one of these strings: ', strjoin(Mesh.valid_area_strings(), ', '), '.'))
@@ -114,7 +128,7 @@ classdef Mesh < dynamicprops
                 throw(ME)
             end           
         end
-        
+               
     end
     
     
@@ -127,120 +141,136 @@ classdef Mesh < dynamicprops
     end
     
     methods (Static)
-            function [A] = area_of_triangles(V, T)
-                % Computes the area of each triangle, in a triangular mesh.
-                % Input:
-                %           V  - (num_of_vertices x 3) 3D coordinates of
-                %           the mesh vertices.
-                %           T  - (num_of_triangles x 3) T[i] are the 3 indices
-                %           corresponding to the 3 vertices of the i-th
-                %           triangle. The indexing is based on -V-.                
-                % 
-                % Output:   A - (num_of_triangles x 1) an array containint
-                %           the areas of all the triangles.
-                
-                A = cross( V(T(:,1),:) - V(T(:,2),:), V(T(:,1),:) - V(T(:,3),:));           % Shall we save these normals?                                        
-                A = l2_norm(A)/2;
-            end  
-            
-            function [L] = edge_length_of_triangles(V, T)
-                % Computes the length of each edge, of each triangle in the underlying triangular mesh.
-                % Input:
-                %           V  - (num_of_vertices x 3) 3D coordinates of
-                %           the mesh vertices.
-                %           T  - (num_of_triangles x 3) T[i] are the 3 indices
-                %           corresponding to the 3 vertices of the i-th
-                %           triangle. The indexing is based on -V-.                
-                %
-                % Output:                
-                %           L - (num_of_triangles x 3) L[i] is a triple
-                %           containing the lengths of the 3 edges
-                %           corresponding to the i-th triange. The
-                %           enumeration of the triangles is the same at in
-                %           -T- and the order in which the edges are
-                %           computes is (V2, V3), (V1, V3) (V1, V2). I.e.
-                %           L[i][2] is the edge lenght between the 1st
-                %           vertex and the third vertex of the i-th triangle.
-                                
-                L1 = l2_norm(V(T(:,2),:) - V(T(:,3),:));                                      % Verify this is correct.
-                L2 = l2_norm(V(T(:,1),:) - V(T(:,3),:));                                      % I would prefer edge(1,2), (1,3), (2,3)
-                L3 = l2_norm(V(T(:,1),:) - V(T(:,2),:));                               
-                L  = [L1 L2 L3];
+        
+        function [N] = normals_of_triangles(V, T)
+            % Computes the outward normal of each triangle, in a triangular mesh.
+            % Input:
+            %           V  - (num_of_vertices x 3) 3D coordinates of
+            %           the mesh vertices.
+            %           T  - (num_of_triangles x 3) T[i] are the 3 indices
+            %           corresponding to the 3 vertices of the i-th
+            %           triangle. The indexing is based on -V-.                
+            % 
+            % Output:   N - (num_of_triangles x 1) an array containing
+            %           the outward normals of all the triangles.
+
+            N = cross( V(T(:,1),:) - V(T(:,2),:), V(T(:,1),:) - V(T(:,3),:));
+        end
+        
+        function [A] = area_of_triangles(V, T)
+            % Computes the area of each triangle, in a triangular mesh.
+            % Input:
+            %           V  - (num_of_vertices x 3) 3D coordinates of
+            %           the mesh vertices.
+            %           T  - (num_of_triangles x 3) T[i] are the 3 indices
+            %           corresponding to the 3 vertices of the i-th
+            %           triangle. The indexing is based on -V-.                
+            % 
+            % Output:   A - (num_of_triangles x 1) an array containint
+            %           the areas of all the triangles.
+
+            A = Mesh.normals_of_triangles(V, T);
+            A = l2_norm(A)/2;
+        end  
+
+        function [L] = edge_length_of_triangles(V, T)
+            % Computes the length of each edge, of each triangle in the underlying triangular mesh.
+            % Input:
+            %           V  - (num_of_vertices x 3) 3D coordinates of
+            %           the mesh vertices.
+            %           T  - (num_of_triangles x 3) T[i] are the 3 indices
+            %           corresponding to the 3 vertices of the i-th
+            %           triangle. The indexing is based on -V-.                
+            %
+            % Output:                
+            %           L - (num_of_triangles x 3) L[i] is a triple
+            %           containing the lengths of the 3 edges
+            %           corresponding to the i-th triange. The
+            %           enumeration of the triangles is the same at in
+            %           -T- and the order in which the edges are
+            %           computes is (V2, V3), (V1, V3) (V1, V2). I.e.
+            %           L[i][2] is the edge lenght between the 1st
+            %           vertex and the third vertex of the i-th triangle.
+
+            L1 = l2_norm(V(T(:,2),:) - V(T(:,3),:));                                      % Verify this is correct.
+            L2 = l2_norm(V(T(:,1),:) - V(T(:,3),:));                                      % I would prefer edge(1,2), (1,3), (2,3)
+            L3 = l2_norm(V(T(:,1),:) - V(T(:,2),:));                               
+            L  = [L1 L2 L3];
+
+        end
+
+        function [A] = angles_of_triangles(varargin)
+            % Computes for each triangle the 3 angles among its edges.
+            % Input:
+            %   option 1:   [A] = angles_of_triangles(V, T)
+            % 
+            %               V  - (num_of_vertices x 3) 3D coordinates of
+            %               the mesh vertices.
+            %               T  - (num_of_triangles x 3) T[i] are the 3 indices
+            %               corresponding to the 3 vertices of the i-th
+            %               triangle. The indexing is based on -V-.                
+            %
+            %   option 2:   [A] = angles_of_triangles(L)
+            %                               
+            %               L - (num_of_triangles x 3) L[i] is a triple
+            %               containing the lengths of the 3 edges
+            %               corresponding to the i-th triange. 
+            %
+            % Output:
+            %                 
+
+            if nargin == 2
+                V = varargin{1};   % Vertices.
+                T = varargin{2};   % Triangles.                
+                L  = Mesh.edge_length_of_triangles(V, T);
+            else
+                L = varargin{1};
+            end
+
+            L1 = L(:, 1); L2 = L(:, 2); L3 = L(:, 3);
+            A1 = (L2.^2 + L3.^2 - L1.^2) ./ (2. * L2 .* L3);
+            A2 = (L1.^2 + L3.^2 - L2.^2) ./ (2 .* L1 .* L3);
+            A3 = (L1.^2 + L2.^2 - L3.^2) ./ (2 .* L1 .* L2);
+            A  = [A1, A2, A3];
+            A  = acos(A);            
+        end
+
+
+        function [Av] = area_of_vertices(V, T, area_type)
+            % TODO: It computes a whole matrix potentially not
+            % necessary!
+            if ~exist('area_type', 'var') || strcmp(area_type, 'barycentric')    % Default is barycentric.
+                Ar = Mesh.area_of_triangles(V, T);
+                nv = size(V, 1);
+                I   = [T(:,1);T(:,2);T(:,3)];
+                J   = [T(:,2);T(:,3);T(:,1)];
+                Mij = 1/12*[Ar; Ar; Ar];
+                Mji = Mij;
+                Mii = 1/6*[Ar; Ar; Ar];
+                In  = [I;J;I];
+                Jn  = [J;I;I];
+                Mn  = [Mij;Mji;Mii];
+                M   = sparse(In, Jn, Mn, nv, nv);                   
+                Av  = sum(M,2);
+
+            else
+                % Compute based on Voronoi.
+                % (following the algorithm decribed in 
+                % Discrete Differential-Geometry Operators for Triangulated 2-Manifolds, 
+                % Mark Meyer, Mathieu Desbrun, Peter Schroeder and Alan H. Barr, VisMath 2002).
+                error('Not implemented yet.');
 
             end
-            
-            function [A] = angles_of_triangles(varargin)
-                % Computes for each triangle the 3 angles among its edges.
-                % Input:
-                %   option 1:   [A] = angles_of_triangles(V, T)
-                % 
-                %               V  - (num_of_vertices x 3) 3D coordinates of
-                %               the mesh vertices.
-                %               T  - (num_of_triangles x 3) T[i] are the 3 indices
-                %               corresponding to the 3 vertices of the i-th
-                %               triangle. The indexing is based on -V-.                
-                %
-                %   option 2:   [A] = angles_of_triangles(L)
-                %                               
-                %               L - (num_of_triangles x 3) L[i] is a triple
-                %               containing the lengths of the 3 edges
-                %               corresponding to the i-th triange. 
-                %
-                % Output:
-                %                 
+        end
 
-                if nargin == 2
-                    V = varargin{1};   % Vertices.
-                    T = varargin{2};   % Triangles.                
-                    L  = Mesh.edge_length_of_triangles(V, T);
-                else
-                    L = varargin{1};
-                end
- 
-                L1 = L(:, 1); L2 = L(:, 2); L3 = L(:, 3);
-                A1 = (L2.^2 + L3.^2 - L1.^2) ./ (2. * L2 .* L3);
-                A2 = (L1.^2 + L3.^2 - L2.^2) ./ (2 .* L1 .* L3);
-                A3 = (L1.^2 + L2.^2 - L3.^2) ./ (2 .* L1 .* L2);
-                A  = [A1, A2, A3];
-                A  = acos(A);            
-            end
-            
-            
-            function [Av] = area_of_vertices(V, T, area_type)
-                % TODO: It computes a whole matrix potentially not
-                % necessary!
-                if ~exist('area_type', 'var') || strcmp(area_type, 'barycentric')    % Default is barycentric.
-                    Ar = Mesh.area_of_triangles(V, T);
-                    nv = size(V, 1);
-                    I   = [T(:,1);T(:,2);T(:,3)];
-                    J   = [T(:,2);T(:,3);T(:,1)];
-                    Mij = 1/12*[Ar; Ar; Ar];
-                    Mji = Mij;
-                    Mii = 1/6*[Ar; Ar; Ar];
-                    In  = [I;J;I];
-                    Jn  = [J;I;I];
-                    Mn  = [Mij;Mji;Mii];
-                    M   = sparse(In, Jn, Mn, nv, nv);                   
-                    Av  = sum(M,2);
-
-                else
-                    % Compute based on Voronoi.
-                    % (following the algorithm decribed in 
-                    % Discrete Differential-Geometry Operators for Triangulated 2-Manifolds, 
-                    % Mark Meyer, Mathieu Desbrun, Peter Schroeder and Alan H. Barr, VisMath 2002).
-                    error('Not implemented yet.');
-                     
-                end
-            end
-            
-            function [bool] = is_supported_area_type(area_type)
-                % Returns 1 iff the area_type (string) corresponds to a
-                % method of creating vertex areas, that is supported by Mesh class.                
-                valid_area_types = Mesh.valid_area_strings();
-                area_type = lower(area_type);  % Keywords are case independent.
-                index = strcmpi(area_type, valid_area_types);
-                bool = any(index);
-            end
+        function [bool] = is_supported_area_type(area_type)
+            % Returns 1 iff the area_type (string) corresponds to a
+            % method of creating vertex areas, that is supported by Mesh class.                
+            valid_area_types = Mesh.valid_area_strings();
+            area_type = lower(area_type);  % Keywords are case independent.
+            index = strcmpi(area_type, valid_area_types);
+            bool = any(index);
+        end
 
      end
    
