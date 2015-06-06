@@ -18,25 +18,121 @@ classdef Mesh_Features < dynamicprops
 
     methods (Static)
         
-        function laplacian_smoothing()            
+        function [smoothed_func] = laplacian_smoothing(W, Function, Time)
+            % Computes the heat diffusion of a function for a given time.
+            % As a result the function will appear smoother.
+            %
+            % Input:  W - (n x n) Matrix approximating the Laplace-Beltrami
+            %         operator
+            %         Function - (n x 1) Vector containing the function
+            %         values
+            %         Time     - (1 x k) Vector contining the diffusion
+            %         times
+            %
+            % Output: smoothed_func - (n x k) Matrix with the values of k 
+            %         smoothed function
+            
+            if size(Time, 1) > 1
+                 Time = Time';
+            end
+            assert(size(Time, 1) == 1, 'Variable "Time" should be vector');
+            assert(size(W, 1) == size(W, 2), 'Given LB matrix is not square');
+            assert(size(W, 2) == size(Function, 1), 'Uncompatible size between function and operator');
+            assert(size(Function, 2) == 1, 'Variable "Function" should be a column vector');
+            
+            n = size(W, 2);
+            k = size(Time, 2);
+            
+            smoothed_func = zeros(n, k);
+            for i = 1:k
+                smoothed_func(:,i) = ( speye(n, n) + Time(i) * W) \ Function ;
+            end
         end
         
-        function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing)                                        
-            % Add wikipedia or some other page explaining which
-            % discretization you chose.
+        function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
+            % Computes the mean curvature at each vertices of the mesh
+            % using the Laplace-Beltrami operator end vertices positions.
+            % (Optional) A smoothing using the heat diffusion can be done
+            % as post-processing.
+            %
+            % http://en.wikipedia.org/wiki/Mean_curvature
+            %
+            % Input:  inmesh            - (Mesh class) 
+            %         laplace_beltrami  - (Laplace_Beltrami class) contains
+            %         the Laplace-Beltrami operator defined for inmesh.
+            %         smoothing         - (k x 1) vector with time for the
+            %         heat diffusion processing. (Optional)
+            %
+            % Output: mean_curv         - (nv x k) Smoothed mean curvature
+            %         at each vertices. If smoothing_time is not given, k = 1
+            %         and no smoothing is applied.
             
-            try % Retrieve the vertex normals or compute them.
-                    N = inmesh.vertex_normals();
-            catch                                       
-                    inmesh.set_vertex_normals();
-                    N = inmesh.vertex_normals();
+            % If not given compute LB operator
+            if ~exist('laplace_beltrami', 'var')
+                laplace_beltrami = Laplace_Beltrami(inmesh);
             end
             
-            mean_curv = sum(N .* (laplace_beltrami.W * inmesh.vertices), 2); % TODO-E: sign, implements functions
+            try % Retrieve the vertex normals or compute them.
+                N = inmesh.vertex_normal;
+            catch           
+                try
+                    tn = inmesh.triangle_normal;
+                catch
+                    tn = Mesh.normals_of_triangles(inmesh.vertices, inmesh.triangles);
+                end
+                N  = Mesh.normals_of_vertices(inmesh.triangles, tn);
+            end
+            
+            mean_curv = 0.5 * sum(N .* (laplace_beltrami.W * inmesh.vertices), 2);
         
+            if exist('smoothing_time', 'var')
+                mean_curv = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, mean_curv, smoothing_time);
+            end
         end
         
+        function [gauss_curv] = gaussian_curvature(inmesh, smoothing_time)                                        
+            % Computes the gauss curvature at each vertices of the mesh.
+            % (Optional) A smoothing using the heat diffusion can be done
+            % as post-processing.
+            %
+            % Meyer, M. Desbrun, P. Schroder, and A. H. Barr. ?Discrete Differential-Geometry Operators for Triangulated 2-Manifolds.?
+            %
+            % Input:  inmesh            - (Mesh class) 
+            %         smoothing         - (k x 1) vector with time for the
+            %         heat diffusion processing. (Optional)
+            %
+            % Output: gauss_curv        - (nv x k) Smoothed gauss curvature
+            %         at each vertices. If smoothing_time is not given, k = 1
+            %         and no smoothing is applied.
+            
+            % If not given compute LB operator
+            if ~exist('laplace_beltrami', 'var')
+                laplace_beltrami = Laplace_Beltrami(inmesh);
+            end
+            
+            try % Retrieve the angles or compute them.
+                angles = inmesh.angles;
+            catch           
+                try
+                    L = inmesh.edge_lengths;
+                catch
+                    L = Mesh.edge_length_of_triangles(inmesh.vertice, inmesh.triangles);
+                end
+                angles  = Mesh.angles_of_triangles(L);
+            end
+            
+            try % Retrieve the areas or compute them.
+                areas = inmesh.barycentric_v_area;
+            catch           
+                areas = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
+            end
+            
+            gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;
         
+            if exist('smoothing_time', 'var')
+                gauss_curv = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, gauss_curv, smoothing_time);
+            end
+        end
         
                                         
         function [signatures] = wave_kernel_signature(evecs, evals, energies, sigma)
@@ -69,7 +165,9 @@ classdef Mesh_Features < dynamicprops
             energies     = repmat(energies, k, 1);
             evals        = repmat(log(evals),1, e);
 
+
             gauss_kernel = exp(- (( energies-evals ).^2 ) / (2*sigma^2) );
+
             signatures   = evecs.^2 * gauss_kernel;
 
             scale        = sum(gauss_kernel, 1);            

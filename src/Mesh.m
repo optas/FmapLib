@@ -101,18 +101,19 @@ classdef Mesh < dynamicprops
             obj.(prop_name) = Mesh.area_of_vertices(obj.vertices, obj.triangles, area_type);
         end
 
-        function set_triangle_normals()
-            
+        function obj = set_triangle_normals(obj)
+            obj.addprop('triangle_normal');
+            obj.triangle_normal = Mesh.normals_of_triangles(obj.vertices, obj.triangles);
         end 
         
         function obj = set_vertex_normals(obj)
             
-            if isprop(obj, 'triangle_normal')
-                tn = obj.triangle_normal;
-            else
-                tn = obj.set_triangle_normals()
+            if ~isprop(obj, 'triangle_normal')
+                obj.set_triangle_normals();
             end
-            obj.addprop()            
+            tn = obj.triangle_normal;
+            obj.addprop('vertex_normal');
+            obj.vertex_normal = Mesh.normals_of_vertices(obj.triangles, tn);
         end
             
         function [A] = get_vertex_areas(obj, area_type)
@@ -142,6 +143,96 @@ classdef Mesh < dynamicprops
     
     methods (Static)
         
+        function [div_vf] = divergence_of_vector_field(vf, V, T, N, Av)
+            % Computes the outward normal of each verices given the
+            % weighted normal at each triangle, in a triangular mesh.
+            % Input:
+            %           vf - (num_of_vertices x 3) Vector field values at each
+            %           face.
+            %           V  - (num_of_vertices x 3) 3D coordinates of
+            %           the mesh vertices.
+            %           T  - (num_of_triangles x 3) T[i] are the 3 indices
+            %           corresponding to the 3 vertices of the i-th
+            %           triangle. The indexing is based on -V-.                
+            %           N  - (num_of_triangles x 3) N(i,:) are the
+            %           coordinates of the outward normal of the i-th
+            %           triangle. The length of this normal should
+            %           conrerespond to its weight in the sum.
+            %           Av - (num_of_vertices x 1) an array containing
+            %           the areas of all the vertices.
+            %
+            % Output:   div_vf - (num_of_vertices x 1) Divergence of vf: one 
+            %           value per vertex.
+
+            N = N./repmat(l2_norm(N), [1, 3]);
+            vf = cross(vf, N, 2);
+            
+            idj = [2 3 1];
+            idK = [3 1 2];
+            div_vf = zeros(size(V, 1), 1);
+            for i = 1:3
+                j = idj(i);
+                k = idK(i);
+                scalar_prod =  sum( vf .* ( V(T(:,j),:) - V(T(:,i),:) ) , 2 ) ;
+                div_vf = div_vf + accumarray(T(:,k), scalar_prod);
+            end
+            
+            div_vf = div_vf ./ ( 2 * Av );
+        end
+        
+        function [df] = gradient_of_function(f, V, T, N, A)
+            % Computes the outward normal of each verices given the
+            % weighted normal at each triangle, in a triangular mesh.
+            % Input:
+            %           f  - (num_of_vertices x 1) Functions values at each
+            %           vertex.
+            %           V  - (num_of_vertices x 3) 3D coordinates of
+            %           the mesh vertices.
+            %           T  - (num_of_triangles x 3) T[i] are the 3 indices
+            %           corresponding to the 3 vertices of the i-th
+            %           triangle. The indexing is based on -V-.                
+            %           N  - (num_of_triangles x 3) N(i,:) are the
+            %           coordinates of the outward normal of the i-th
+            %           triangle. The length of this normal should
+            %           conrerespond to its weight in the sum.
+            %           A  - (num_of_triangles x 1) an array containing
+            %           the areas of all the triangles.
+            %
+            % Output:   df - (num_of_triangles x 3) Gradient of f: one vector 
+            %           per face.
+
+            idj = [2 3 1];
+            idK = [3 1 2];
+            df = zeros(size(T, 1), 3);
+            for i = 1:3
+                j = idj(i);
+                k = idK(i);
+                df = df + repmat(f(T(:,k)), [1,3]) .* ( V(T(:,j),:) - V(T(:,i),:) );
+            end
+            
+            N = N./repmat(l2_norm(N), [1, 3]);
+            df = cross(N, df, 2) ./ repmat(2 * A, [1, 3]);
+        end
+        
+        function [Nv] = normals_of_vertices(T, N)
+            % Computes the outward normal of each verices given the
+            % weighted normal at each triangle, in a triangular mesh.
+            % Input:
+            %           T  - (num_of_triangles x 3) T[i] are the 3 indices
+            %           corresponding to the 3 vertices of the i-th
+            %           triangle. The indexing is based on -V-.                
+            %           N  - (num_of_triangles x 3) N(i,:) are the
+            %           coordinates of the outward normal of the i-th
+            %           triangle. The length of this normal should
+            %           conrerespond to its weight in the sum.
+            %
+            % Output:   Nv - (num_of_vertices x 3) an array containing
+            %           the normalized outward normals of all the vertices.
+
+            Nv = [accumarray(T(:), repmat(N(:,1), [3,1])) , accumarray(T(:), repmat(N(:,2) , [3,1])), accumarray(T(:), repmat(N(:,3), [3,1]))];
+            Nv = Nv./repmat(l2_norm(Nv), [1, 3]);
+        end
+        
         function [N] = normals_of_triangles(V, T)
             % Computes the outward normal of each triangle, in a triangular mesh.
             % Input:
@@ -151,7 +242,7 @@ classdef Mesh < dynamicprops
             %           corresponding to the 3 vertices of the i-th
             %           triangle. The indexing is based on -V-.                
             % 
-            % Output:   N - (num_of_triangles x 1) an array containing
+            % Output:   N - (num_of_triangles x 3) an array containing
             %           the outward normals of all the triangles.
 
             N = cross( V(T(:,1),:) - V(T(:,2),:), V(T(:,1),:) - V(T(:,3),:));
