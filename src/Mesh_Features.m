@@ -2,7 +2,9 @@ classdef Mesh_Features < dynamicprops
     
     methods (Static)
         
-        % TODO E-P: SEE compute_normal(vertex,face) and check_face_vertex
+        % TODO E-P: SEE compute_normal(vertex,face) and
+        %         shall we also enforce outwardness?       
+        %         how his smothing parameter compares to ours (SEE compute_curvature)? does he use another technique. Remember we need a good name.
         
         function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
             % Computes the mean curvature at each vertex of a given mesh.
@@ -10,17 +12,17 @@ classdef Mesh_Features < dynamicprops
             % Beltrami (LB) operator. (TODO-E: cite technique).            
             % See: http://en.wikipedia.org/wiki/Mean_curvature            
             %
-            % Input:    inmesh            - (Mesh) The input mesh which has
-            %                               num_vertices vertices.
-            %           laplace_beltrami  - (Laplace_Beltrami) The corresponding LB of the
-            %                               inmesh.
-            %           smoothing         - (k x 1, optional) Vector with time for the
-            %                               heat diffusion processing.
+            % Input:    inmesh            -  (Mesh) The input mesh which has
+            %                                num_vertices vertices.
+            %           laplace_beltrami  -  (Laplace_Beltrami) The corresponding LB of the
+            %                                inmesh.
+            %           smoothing         -  (k x 1, optional) Vector with time for the
+            %                                heat diffusion processing.
             %
-            % Output:   mean_curv         - (num_vertices x k) The mean curvature of each vertex.
-            %                               If smoothing is applied then the k-smoothed versions of the mean            
-            %                               curvaature are returned. If not, k = 1. 
-            %                               TODO-E: return k+1 (i.e., add the unsmooth anyway).
+            % Output:   mean_curv         -  (num_vertices x k) The mean curvature of each vertex.
+            %                                If smoothing is applied then the k-smoothed versions of the mean            
+            %                                curvaature are returned. If not, k = 1. 
+            %                                TODO-E: return k+1 (i.e., add the unsmooth anyway).
            
             if isprop(inmesh, 'vertex_normals')
                 N = inmesh.vertex_normals;
@@ -28,7 +30,7 @@ classdef Mesh_Features < dynamicprops
                 N = Mesh.normals_of_vertices(inmesh.vertices, inmesh.triangles);
             end
             
-            mean_curv = 0.5 * sum(N .* (laplace_beltrami.W * inmesh.vertices), 2);        
+            mean_curv = 0.5 * sum(N .* (laplace_beltrami.W * inmesh.vertices), 2);
             
             if exist('smoothing_time', 'var')
                 mean_curv = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, mean_curv, smoothing_time);
@@ -202,12 +204,9 @@ classdef Mesh_Features < dynamicprops
             signatures = evecs * diag((1 ./ sqrt(evals)));            
         end
 
-        %         TODO-E: Do not use names that coinside with the the
-        %         programming type.
-        %         function [smoothed_func] = laplacian_smoothing(W, Function, Time)         
-        %         Also use assertions for our bugs. Otherwise - error.
-        %                 and why catitalized?
-        %        we are not doing this: http://en.wikipedia.org/wiki/Laplacian_smoothing
+        %         TODO-E: 
+        %         function [smoothed_func] = laplacian_smoothing(W, Function, Time)             
+        %           we are not doing this: http://en.wikipedia.org/wiki/Laplacian_smoothing
         function [smoothed_func] = laplacian_smoothing(W, Function, Time) 
             % Computes the heat diffusion of a function for a given time.
             % As a result the function will appear smoother.

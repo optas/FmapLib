@@ -151,9 +151,10 @@ classdef Mesh < dynamicprops
     methods (Static)
         
         function [N] = normals_of_vertices(V, T)
-            % Computes the outward normal at each vertex by weighting the 
-            % normals of each triangle a vertex is adjacent to. TODO-E How
-            % does it do the weighting?
+            % Computes the normalized outward normal at each vertex by adding the 
+            % weighted normals of each triangle a vertex is adjacent to.
+            % The weights that are used are the actual area of the triangle
+            % a normal comes from.
             % 
             % Input:
             %           V   -   (num_of_vertices x 3) 3D coordinates of
@@ -164,10 +165,9 @@ classdef Mesh < dynamicprops
             %
             % Output:   N   -   (num_of_vertices x 3) an array containing
             %                   the normalized outward normals of all the vertices.
-            % TODO-E,P -  add varargin to take potential diff weights or
+            % TODO-E,P -  add varargin to take potential diff weights (maybe_in_future)or
             % reuse already computed triangle normals.
-            % TODO-E      do we need to change the call of
-            %             normals_of_triangles to be normalized?
+            
             N = Mesh.normals_of_triangles(V, T);
             N = [accumarray(T(:), repmat(N(:,1), [3,1])) , accumarray(T(:), repmat(N(:,2) , [3,1])), accumarray(T(:), repmat(N(:,3), [3,1]))];
             N = N ./ repmat(l2_norm(N), [1, 3]);

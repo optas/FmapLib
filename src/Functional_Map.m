@@ -7,9 +7,35 @@ classdef Functional_Map
     
     methods (Static)
         
+        function random_delta_functions(inmesh, nsamples, basis)
+            % Computes randomly chosen delta functions of the given mesh
+            % vertices. A delta function of vertex -i- is just a vector 
+            % which has a single non-zero entry at its i-th dimension. 
+            % The total number of dimensions of such a vector is equal 
+            % to the number of vertices of the given mesh.           
+            % 
+            % Input:
+            %           inmesh    -   (Mesh)Input mesh.             
+            %           nsamples  -   number of output random functions.
+            % 
+            %             
+            % 
+            %   
+            % 
+            % 
+            %             
+            % 
+            % 
+            
+            inmesh.num_vertices
+            
+        end
+        
         function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
-            N1 = size(D1,1);
-            N2 = size(D2,1);
+            % TODO-V: rename to more intuitive variable names + maybe add
+            % inline comments.
+            N1 = size(D1, 1);
+            N2 = size(D2, 1);
             A_fixed = D1 * D1' ;
             B = D1 * D2' ;
             X = zeros(N2, N1);
@@ -17,16 +43,13 @@ classdef Functional_Map
             if lambda == 0   %  Un-regularized                
                 X = (A_fixed\B)';
             else
-                for I = 1 : N2
-                    A = diag(lambda * (L1 - L2(I)) .^ 2) + A_fixed;
-                    X(I, :) = A \ B(:, I);
+                for i = 1 : N2
+                    A = diag(lambda * (L1 - L2(i)) .^ 2) + A_fixed;
+                    X(i, :) = A \ B(:, i);
                 end
             end
         end
-        
-
-        
-  
+          
         function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
             % Copyright (C) 2014 Fan Wang.            
             % TODO-P: Add documentation.
