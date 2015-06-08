@@ -1,9 +1,8 @@
-%%  A Script demonstrating the basic functionalities of the FmapLib.
-%%  (Work in progress)
-
+%%  A Script demonstrating the basic functionalities of the FmapLib (Work in progress).
+gitdir;
+cd FmapLib/src
 %% Load a Mesh and calculate basic quantities.
 meshfile  = '../data/kid_rodola/0001.isometry.1.off';
-% meshfile  = '/Users/optas/Dropbox/Matlab_Projects/3D_Meshes/Data/kid_rodola/0001.isometry.1.off';
 inmesh    = Mesh(meshfile, 'rodola_1_1');
 inmesh.set_triangle_angles();
 inmesh.set_vertex_areas('barycentric');
@@ -19,11 +18,12 @@ load('../data/output/mesh_and_LB', 'inmesh', 'LB');
 [evals, evecs] = LB.get_spectra(100, 'barycentric');
 
 %%
-pairs = [1,2; 1,10; 1,100];
+pairs = [1,2; 1,55; 1,100]';
+% pairs must be passed as 2 x N
 tic
 D1 = comp_geodesics_pairs(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.triangles', pairs);
-toc                 
-
+toc  
+%%
 %%
 sources = [1];
 tic
