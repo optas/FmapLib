@@ -18,5 +18,14 @@ save('../data/output/mesh_and_LB', 'inmesh', 'LB');
 load('../data/output/mesh_and_LB', 'inmesh', 'LB');
 [evals, evecs] = LB.get_spectra(100, 'barycentric');
 
+%%
+pairs = [1,2; 1,10; 1,100];
+tic
+D1 = comp_geodesics_pairs(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.triangles', pairs);
+toc                 
 
-
+%%
+sources = [1];
+tic
+D2 = comp_geodesics_to_all(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.triangles', sources);
+toc
