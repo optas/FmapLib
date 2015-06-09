@@ -1,22 +1,55 @@
 %%  A Script demonstrating the basic functionalities of the FmapLib (Work in progress).
-gitdir;
-cd FmapLib/src
+    gitdir;
+    cd FmapLib/src
+
 %% Load a Mesh and calculate basic quantities.
-meshfile  = '../data/kid_rodola/0001.isometry.1.off';
-inmesh    = Mesh(meshfile, 'rodola_1_1');
-inmesh.set_triangle_angles();
-inmesh.set_vertex_areas('barycentric');
-inmesh
+    meshfile  = '../data/kid_rodola/0001.isometry.1.off';
+    inmesh    = Mesh(meshfile, 'rodola_1_1');
+    inmesh.set_triangle_angles();
+    inmesh.set_vertex_areas('barycentric');
+    inmesh
 
-%% Calculate the first 100 spectra, based on barycentric vertex areas.
-LB             = Laplace_Beltrami(inmesh);
-[evals, evecs] = LB.get_spectra(100, 'barycentric');
-save('../data/output/mesh_and_LB', 'inmesh', 'LB');
+    % Calculate the first 100 spectra, based on barycentric vertex areas.
+    % LB             = Laplace_Beltrami(inmesh);
+    % [evals, evecs] = LB.get_spectra(100, 'barycentric');
+    % save('../data/output/mesh_and_LB', 'inmesh', 'LB');
 
-%% Load Precomputed ones.
-load('../data/output/mesh_and_LB', 'inmesh', 'LB');
-[evals, evecs] = LB.get_spectra(100, 'barycentric');
+    % Load Precomputed ones.
+    load('../data/output/mesh_and_LB', 'inmesh', 'LB');
+    [evals, evecs] = LB.get_spectra(100, 'barycentric');
 
+
+%% Two Meshes and a Fmap.
+    
+    wks_samples    = 100;
+    hks_samples    = 100;
+    curvatures     = 100;
+
+    meshfile       = '../data/kid_rodola/0001.isometry.1.off';
+    mesh1          = Mesh(meshfile, 'rodola_1_1');
+    LB1            = Laplace_Beltrami(mesh1);
+    [evals, evecs] = LB1.get_spectra(100, 'barycentric');
+    
+    [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
+    wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);
+    
+    heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
+    hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
+    
+    mean_curvature    = Mesh_Features.mean_curvature
+    
+    
+    
+    
+    meshfile = '../data/kid_rodola/0002.isometry.1.off';
+    mesh2    = Mesh(meshfile, 'rodola_2_1');
+    
+    
+    
+    
+    Functional_Map.
+    
+    
 %%
 pairs = [1,2; 1,55; 1,100]';
 % pairs must be passed as 2 x N

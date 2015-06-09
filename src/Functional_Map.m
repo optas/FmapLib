@@ -1,35 +1,49 @@
 classdef Functional_Map
-    % A collection of functions for computing Functional Maps as in the
-    % (TODO cite papers).
-    
+    % A class implementing a variety of utilities related to the Functional
+    % Maps framework.
+        
     properties
     end
     
     methods (Static)
         
-        function random_delta_functions(inmesh, nsamples, basis)
+%         function [quality] = evaluate_functional_map(inmap, groundtruth_map)
+%         
+%         end
+        
+        
+        function [d] = pair_wise_distortion_of_map(left_mesh, right_mesh, )
+        
+        end
+
+        
+        function [N] = closest_neighbors(from_funcs, to_funcs)            
+            [ids, dist] = knnsearch(from_funcs, to_funcs, 'IncludeTies', 'True');                                     
+        end
+            
+        function [S] = random_delta_functions(inmesh, nsamples)
             % Computes randomly chosen delta functions of the given mesh
-            % vertices. A delta function of vertex -i- is just a vector 
+            % vertices. A delta function of vertex -i- is a vector 
             % which has a single non-zero entry at its i-th dimension. 
             % The total number of dimensions of such a vector is equal 
             % to the number of vertices of the given mesh.           
             % 
             % Input:
-            %           inmesh    -   (Mesh)Input mesh.             
-            %           nsamples  -   number of output random functions.
-            % 
+            %           inmesh    -   (Mesh) Input mesh.             
+            %           nsamples  -   (int)  Number of delta functions to
+            %                                be produced.            
             %             
-            % 
-            %   
-            % 
-            % 
-            %             
-            % 
-            % 
-            
-            inmesh.num_vertices
-            
+            % Output:
+            %           S          -   (nsamples x num_vertices) Sparse
+            %                          matrix. 
+            %
+            % Precondition: nsamples must be at most as large as
+            %               inmesh.num_vertices.
+                       
+            vertices = randsample(inmesh.num_vertices, nsamples);
+            S        = sparse(1:nsamples, vertices, ones(1,nsamples));
         end
+        
         
         function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             % TODO-V: rename to more intuitive variable names + maybe add

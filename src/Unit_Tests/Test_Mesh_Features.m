@@ -35,7 +35,7 @@ classdef Test_Mesh_Features < matlab.unittest.TestCase
             % For the moment only plotting our implementation of mean
             % curvature VS. Mesh Toolbox . Good for visual comparison.
             inmesh = obj.ref_mesh;            
-            [Umin,Umax,Cmin,Cmax,Cmean,Cgauss,Normal] = compute_curvature(inmesh.vertices, inmesh.triangles);   
+            [Umin, Umax, Cmin, Cmax, Cmean, Cgauss, Normal] = compute_curvature(inmesh.vertices, inmesh.triangles);   
             subplot(1,2,1);
             options.face_vertex_color = perform_saturation(Cmean, 1.2);
             plot_mesh(inmesh.vertices, inmesh.triangles, options);
