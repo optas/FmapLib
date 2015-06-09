@@ -9,8 +9,9 @@ classdef Mesh_Features < dynamicprops
         function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
             % Computes the mean curvature at each vertex of a given mesh.
             % This implementation utilizes the corresponding Laplace
-            % Beltrami (LB) operator. (TODO-E: cite technique).            
-            % See: http://en.wikipedia.org/wiki/Mean_curvature            
+            % Beltrami (LB) operator. 
+            % Meyer, M. Desbrun, P. Schroder, and A. H. Barr. "Discrete
+            % Differential-Geometry Operators for Triangulated 2-Manifolds."
             %
             % Input:    inmesh            -  (Mesh) The input mesh which has
             %                                num_vertices vertices.
@@ -19,10 +20,10 @@ classdef Mesh_Features < dynamicprops
             %           smoothing         -  (k x 1, optional) Vector with time for the
             %                                heat diffusion processing.
             %
-            % Output:   mean_curv         -  (num_vertices x k) The mean curvature of each vertex.
-            %                                If smoothing is applied then the k-smoothed versions of the mean            
-            %                                curvaature are returned. If not, k = 1. 
-            %                                TODO-E: return k+1 (i.e., add the unsmooth anyway).
+            % Output:   mean_curv         -  (num_vertices x k+1) The mean curvature of each vertex.
+            %                                If smoothing is applied then the first column contains
+            %                                the mean curvature and the k-following columns contain
+            %                                the k-smoothed versions of the mean.
            
             if isprop(inmesh, 'vertex_normals')
                 N = inmesh.vertex_normals;
@@ -33,52 +34,55 @@ classdef Mesh_Features < dynamicprops
             mean_curv = 0.5 * sum(N .* (laplace_beltrami.W * inmesh.vertices), 2);
             
             if exist('smoothing_time', 'var')
-                mean_curv = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, mean_curv, smoothing_time);
+                mean_curv_smooth = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, mean_curv, smoothing_time);
+                mean_curv        = [mean_curv, mean_curv_smooth];
             end
         end
         
         function [gauss_curv] = gaussian_curvature(inmesh, smoothing_time)                                        
-            % TODO-E Try now to make it look as the mean curvature.
             % Computes the gauss curvature at each vertex of a given mesh.
             % (Optional) A smoothing using the heat diffusion can be done
             % as post-processing.
             %
-            % Meyer, M. Desbrun, P. Schroder, and A. H. Barr. ?Discrete Differential-Geometry Operators for Triangulated 2-Manifolds.?
+            % Meyer, M. Desbrun, P. Schroder, and A. H. Barr. "Discrete
+            % Differential-Geometry Operators for Triangulated 2-Manifolds."
             %
-            % Input:  inmesh            - (Mesh class) 
-            %         smoothing         - (k x 1) vector with time for the
-            %         heat diffusion processing. (Optional)
+            % Input:  inmesh            -  (Mesh) 
+            %         smoothing         -  (k x 1, Optional) vector with time for the
+            %                              heat diffusion processing.
             %
-            % Output: gauss_curv        - (nv x k) Smoothed gauss curvature
-            %         at each vertices. If smoothing_time is not given, k = 1
-            %         and no smoothing is applied.
+            % Output: gauss_curv        -  (num_vertices x k+1) The gaussian curvature of each vertex.
+            %                              If smoothing is applied then the first column contains
+            %                              the mean curvature and the k-following columns contain
+            %                              the k-smoothed versions of the mean.
             
             % If not given compute LB operator
             if ~exist('laplace_beltrami', 'var')
                 laplace_beltrami = Laplace_Beltrami(inmesh);
             end
             
-            try % Retrieve the angles or compute them.
+            if isprop(inmesh, 'angles')
                 angles = inmesh.angles;
-            catch           
-                try
+            else
+                if isprop(inmesh, 'edge_lengths')
                     L = inmesh.edge_lengths;
-                catch
+                else
                     L = Mesh.edge_length_of_triangles(inmesh.vertice, inmesh.triangles);
                 end
                 angles  = Mesh.angles_of_triangles(L);
             end
             
-            try % Retrieve the areas or compute them.
+            if isprop(inmesh, 'barycentric_v_area')
                 areas = inmesh.barycentric_v_area;
-            catch           
+            else           
                 areas = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
             end
             
             gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;
         
             if exist('smoothing_time', 'var')
-                gauss_curv = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, gauss_curv, smoothing_time);
+                gauss_curv_smooth = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, gauss_curv, smoothing_time);
+                gauss_curv        = [gauss_curv, gauss_curv_smooth];
             end
         end
         
@@ -207,34 +211,39 @@ classdef Mesh_Features < dynamicprops
         %         TODO-E: 
         %         function [smoothed_func] = laplacian_smoothing(W, Function, Time)             
         %           we are not doing this: http://en.wikipedia.org/wiki/Laplacian_smoothing
-        function [smoothed_func] = laplacian_smoothing(W, Function, Time) 
-            % Computes the heat diffusion of a function for a given time.
+        function [smoothed_fct] = heat_diffusion_smoothing(W, fct, diffusion_time) 
+            % Computes the heat diffusion of a function for a given time using an implicit Euler scheme.
             % As a result the function will appear smoother.
             %
-            % Input:  W - (n x n) Matrix approximating the Laplace-Beltrami
-            %         operator
-            %         Function - (n x 1) Vector containing the function
-            %         values
-            %         Time     - (1 x k) Vector contining the diffusion
-            %         times
+            % Input:  W                  -  (n x n) Matrix approximating the Laplace-Beltrami
+            %                               operator
+            %         fct                -  (n x 1) Vector containing the function values
+            %         diffusion_time     -  (1 x k) Vector contining the diffusion times
             %
-            % Output: smoothed_func - (n x k) Matrix with the values of k 
-            %         smoothed function
+            % Output: smoothed_fct       -  (n x k) Matrix with the values of k smoothed function
             
-            if size(Time, 1) > 1
-                 Time = Time';
+            if size(diffusion_time, 1) > 1
+                 diffusion_time = diffusion_time';
             end
-            assert(size(Time, 1) == 1, 'Variable "Time" should be vector');
-            assert(size(W, 1) == size(W, 2), 'Given LB matrix is not square');
-            assert(size(W, 2) == size(Function, 1), 'Uncompatible size between function and operator');
-            assert(size(Function, 2) == 1, 'Variable "Function" should be a column vector');
+            if size(diffusion_time, 1) ~= 1
+                error('Variable "Time" should be vector');
+            end
+            if size(W, 1) ~= size(W, 2)
+                error('Given LB matrix is not square');
+            end
+            if size(W, 2) ~= size(fct, 1)
+                error('Uncompatible size between function and operator');
+            end
+            if size(fct, 2) ~= 1
+                error('Variable "Function" should be a column vector');
+            end
             
             n = size(W, 2);
-            k = size(Time, 2);
+            k = size(diffusion_time, 2);
             
-            smoothed_func = zeros(n, k);
+            smoothed_fct = zeros(n, k);
             for i = 1:k
-                smoothed_func(:,i) = ( speye(n, n) + Time(i) * W) \ Function ;
+                smoothed_fct(:,i) = ( speye(n, n) + diffusion_time(i) * W ) \ fct ;
             end
         end
         
