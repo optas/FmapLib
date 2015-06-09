@@ -93,11 +93,11 @@ classdef Laplace_Beltrami < dynamicprops
                 % the mesh, if not provided it will be calculated.
                 I = [T(:,1); T(:,2); T(:,3)];
                 J = [T(:,2); T(:,3); T(:,1)];        
-                                
-                if nargin == 3
+                              
+                if nargin == 2
+                    A = Mesh.angles_of_triangles(V, T);                    
+                elseif nargin == 3
                     A = varargin{1};
-                elseif nargin == 4
-                    A = Mesh.angles_of_triangles(V, T);
                 else
                     error('Too many arguments were given.')
                 end
