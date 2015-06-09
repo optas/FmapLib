@@ -31,7 +31,7 @@ classdef Laplace_Beltrami < dynamicprops
             end
             
             
-            if ~ obj.spectra.isKey(area_type) || ...           % This type of spectra has not been computed before, or,
+            if ~ obj.spectra.isKey(area_type) || ...                  % This type of spectra has not been computed before, or,
                 size(obj.spectra(area_type).evals, 1) < eigs_num      % the requested number of eigenvalues is larger than what has been previously calculated.                
                 
                 try % Retrieve the vertex areas or compute them.
@@ -52,17 +52,36 @@ classdef Laplace_Beltrami < dynamicprops
             end
         end
         
-        
-%          function obj = set_cotangent_laplacian(obj)
-%                 obj.addprop('cot_laplacian');            
-%                 if isprop(obj, 'angles')
-%                     obj.cot_laplacian = Mesh.cotangent_laplacian(obj.vertices, obj.triangles, obj.angles);
-%                 else
-%                     obj.cot_laplacian = Mesh.cotangent_laplacian(obj.vertices, obj.triangles);
-%                 end            
-%          end   
-    
-    
+        function [Proj] = project_functions(obj, area_type, eigs_num, varargin)
+            n_varargin = nargin -3; % Number of arguments passed through varargin.
+            
+            if n_varargin < 1
+                error ('Please provide some functions to be projected on the LB basis.');
+            end
+            
+            num_vertices = size(obj.W, 1);
+            
+            functions_total = 0;            
+            for i=1:n_varargin
+                if size(varargin{i}, 1) ~= num_vertices                    
+                    error ('Wrong dimensionality. The functions must be defined over a Mesh with a number of vertices equal to that of this LB.')
+                end
+                functions_total = functions_total + size(varargin{i}, 2);
+            end
+
+            [~, evecs] = obj.get_spectra(eigs_num, area_type);
+            assert(num_vertices  == size(evecs, 1));
+                            
+            % Project feauture vectors into reduced LB basis.            
+            Proj = zeros(functions_total, eigs_num);            % Pre-allocate space.
+            right = 0;         
+            for i = 1:n_varargin
+                left  = right + 1;
+                right = right + size(varargin{i}, 2);
+                Proj(left:right, :) = evecs(:, 1:eigs_num)' * varargin{i};
+            end            
+        end
+
     end
     
     methods (Static)

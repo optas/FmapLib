@@ -10,17 +10,16 @@ classdef Functional_Map
 %         function [quality] = evaluate_functional_map(inmap, groundtruth_map)
 %         
 %         end
-        
-        
-        function [d] = pair_wise_distortion_of_map(left_mesh, right_mesh, )
-        
-        end
-
-        
-        function [N] = closest_neighbors(from_funcs, to_funcs)            
-            [ids, dist] = knnsearch(from_funcs, to_funcs, 'IncludeTies', 'True');                                     
-        end
-            
+%         
+%         function [d] = pair_wise_distortion_of_map(left_mesh, right_mesh, )
+%         
+%         end
+% 
+%         
+%         function [N] = closest_neighbors(from_funcs, to_funcs)            
+%             [ids, dist] = knnsearch(from_funcs, to_funcs, 'IncludeTies', 'True');                                     
+%         end
+%             
         function [S] = random_delta_functions(inmesh, nsamples)
             % Computes randomly chosen delta functions of the given mesh
             % vertices. A delta function of vertex -i- is a vector 
@@ -33,10 +32,9 @@ classdef Functional_Map
             %           nsamples  -   (int)  Number of delta functions to
             %                                be produced.            
             %             
-            % Output:
-            %           S          -   (nsamples x num_vertices) Sparse
-            %                          matrix. 
-            %
+            % Output:   S         -   (nsamples x num_vertices) Sparse
+            %                         matrix. 
+            %                          
             % Precondition: nsamples must be at most as large as
             %               inmesh.num_vertices.
                        

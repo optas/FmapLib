@@ -2,28 +2,27 @@ classdef Mesh_Features < dynamicprops
     
     methods (Static)
         
-        % TODO E-P: SEE compute_normal(vertex,face) and
-        %         shall we also enforce outwardness?       
-        %         how his smothing parameter compares to ours (SEE compute_curvature)? does he use another technique. Remember we need a good name.
-        
         function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
             % Computes the mean curvature at each vertex of a given mesh.
-            % This implementation utilizes the corresponding Laplace
-            % Beltrami (LB) operator. 
-            % Meyer, M. Desbrun, P. Schroder, and A. H. Barr. "Discrete
-            % Differential-Geometry Operators for Triangulated 2-Manifolds."
+            % This implementation utilizes the Laplace Beltrami (LB) operator of
+            % the mesh (see Notes).            
             %
-            % Input:    inmesh            -  (Mesh) The input mesh which has
-            %                                num_vertices vertices.
-            %           laplace_beltrami  -  (Laplace_Beltrami) The corresponding LB of the
+            % Input:    inmesh            -  (Mesh) Input mesh with inmesh.num_vertices 
+            %                                vertices.
+            %                                
+            %           laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the
             %                                inmesh.
-            %           smoothing         -  (k x 1, optional) Vector with time for the
-            %                                heat diffusion processing.
+            %           smoothing         -  (k x 1, optional) Vector with values corresponding to time samples 
+            %                                for the heat diffusion smoothing TODO-P: explain more.            
             %
             % Output:   mean_curv         -  (num_vertices x k+1) The mean curvature of each vertex.
             %                                If smoothing is applied then the first column contains
             %                                the mean curvature and the k-following columns contain
-            %                                the k-smoothed versions of the mean.
+            %                                the k-smoothed versions of it.
+            %
+            % Notes:
+            %       Meyer, M. Desbrun, P. Schroder, and A. H. Barr. "Discrete
+            %       Differential-Geometry Operators for Triangulated 2-Manifolds."
            
             if isprop(inmesh, 'vertex_normals')
                 N = inmesh.vertex_normals;
@@ -34,7 +33,7 @@ classdef Mesh_Features < dynamicprops
             mean_curv = 0.5 * sum(N .* (laplace_beltrami.W * inmesh.vertices), 2);
             
             if exist('smoothing_time', 'var')
-                mean_curv_smooth = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, mean_curv, smoothing_time);
+                mean_curv_smooth = Mesh_Features.heat_diffusion_smoothing(laplace_beltrami.W, mean_curv, smoothing_time);
                 mean_curv        = [mean_curv, mean_curv_smooth];
             end
         end
@@ -56,23 +55,18 @@ classdef Mesh_Features < dynamicprops
             %                              the mean curvature and the k-following columns contain
             %                              the k-smoothed versions of the mean.
             
-            % If not given compute LB operator
-            if ~exist('laplace_beltrami', 'var')
-                laplace_beltrami = Laplace_Beltrami(inmesh);
-            end
-            
             if isprop(inmesh, 'angles')
                 angles = inmesh.angles;
             else
                 if isprop(inmesh, 'edge_lengths')
                     L = inmesh.edge_lengths;
                 else
-                    L = Mesh.edge_length_of_triangles(inmesh.vertice, inmesh.triangles);
+                    L = Mesh.edge_length_of_triangles(inmesh.vertices, inmesh.triangles);
                 end
                 angles  = Mesh.angles_of_triangles(L);
             end
             
-            if isprop(inmesh, 'barycentric_v_area')
+            if isprop(inmesh, 'barycentric_v_area')    %TODO-P: dependency on area-type
                 areas = inmesh.barycentric_v_area;
             else           
                 areas = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
@@ -80,7 +74,10 @@ classdef Mesh_Features < dynamicprops
             
             gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;
         
-            if exist('smoothing_time', 'var')
+            if exist('smoothing_time', 'var')                
+                if ~exist('laplace_beltrami', 'var') % If not given compute LB operator.
+                    laplace_beltrami = Laplace_Beltrami(inmesh);
+                end
                 gauss_curv_smooth = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, gauss_curv, smoothing_time);
                 gauss_curv        = [gauss_curv, gauss_curv_smooth];
             end
@@ -208,9 +205,7 @@ classdef Mesh_Features < dynamicprops
             signatures = evecs * diag((1 ./ sqrt(evals)));            
         end
 
-        %         TODO-E: 
-        %         function [smoothed_func] = laplacian_smoothing(W, Function, Time)             
-        %           we are not doing this: http://en.wikipedia.org/wiki/Laplacian_smoothing
+                
         function [smoothed_fct] = heat_diffusion_smoothing(W, fct, diffusion_time) 
             % Computes the heat diffusion of a function for a given time using an implicit Euler scheme.
             % As a result the function will appear smoother.
@@ -244,6 +239,18 @@ classdef Mesh_Features < dynamicprops
             smoothed_fct = zeros(n, k);
             for i = 1:k
                 smoothed_fct(:,i) = ( speye(n, n) + diffusion_time(i) * W ) \ fct ;
+            end
+        end
+        
+        function mc = MC_multiscale(meanCurvature, L, t, step)
+            %TODO-E compare with what we have.
+            nVertex = size(L,1);
+            mc = zeros(nVertex,step);
+            mc(:,1) = meanCurvature;
+            H = inv((eye(nVertex) - t * L));
+            % Hi = (eye(nVertex) - t * L);
+            for i = 2:step
+                mc(:,i) =  H * mc(:,i-1);
             end
         end
         

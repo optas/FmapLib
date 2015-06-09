@@ -7,9 +7,10 @@ classdef Test_Mesh_Features < matlab.unittest.TestCase
     %                test1.initialize_mesh_and_LB();
     %                test1.test_wks_and_hks();
     %
-    % Note: As of 06/06, checks the euivalence between our implementation of
-    % HKS and WKS and that of the original authors.
-    
+    % Note: As of 06/06, checks:
+    %       1. the euivalence between our implementation of HKS and WKS and that of the original authors. 
+    %       2. graphically shows our mean_curvature and the one created via the Mesh Toolbox.
+    %       TODO-E add you tests for curvatures and smoothing.
     
     properties
         shape_file  = '../../Data/kid_rodola/0001.isometry.1.off';
