@@ -87,15 +87,19 @@ classdef Laplace_Beltrami < dynamicprops
     methods (Static)
         
         function [W] = cotangent_laplacian(V, T, varargin)
-                % Add comments
+                % Computes teh cotangent laplacian weights.
                 % W is symmetric.
+                % optional third argument is the angles of the triangles of
+                % the mesh, if not provided it will be calculated.
                 I = [T(:,1); T(:,2); T(:,3)];
                 J = [T(:,2); T(:,3); T(:,1)];        
                                 
                 if nargin == 3
                     A = varargin{1};
-                else
+                elseif nargin == 4
                     A = Mesh.angles_of_triangles(V, T);
+                else
+                    error('Too many arguments were given.')
                 end
                 
                 S = 0.5 * cot([A(:,3); A(:,1); A(:,2)]);
