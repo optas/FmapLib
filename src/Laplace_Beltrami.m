@@ -94,7 +94,6 @@ classdef Laplace_Beltrami < dynamicprops
                 functions_total = functions_total + size(varargin{i}, 2);
             end
             
-    
             [~, evecs] = obj.get_spectra(eigs_num, area_type);
             assert(num_vertices  == size(evecs, 1));
                             

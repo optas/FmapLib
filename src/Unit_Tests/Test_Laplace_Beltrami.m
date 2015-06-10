@@ -55,7 +55,7 @@ classdef Test_Laplace_Beltrami < matlab.unittest.TestCase
             for i=1:5
                 k = randi(eigs_num);     % Number of eigs to be retrieved.
                 wf = randi(wks_samples); % Number of wks feautures to be used.
-                hf = randi(hks_samples);  % Number of hks feautures to be used.                
+                hf = randi(hks_samples); % Number of hks feautures to be used.                
                 res1              = LB1.project_functions(area_type, k, wks_sig(:,wf), hks_sig(:,hf));                                
                 obj.verifyTrue(dim(res1, 1) == k);
                 obj.verifyTrue(dim(res1, 2) == wf+hf);   
@@ -63,7 +63,7 @@ classdef Test_Laplace_Beltrami < matlab.unittest.TestCase
                 % res2              = % TODO-V: your way of making the projections.
                 
                 obj.verifyTrue(isequal, res1, res2);
-                
+
             end
         end
     end
