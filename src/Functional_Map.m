@@ -6,7 +6,59 @@ classdef Functional_Map
     end
     
     methods (Static)
-        
+               
+        function [maps_new, X_all] = low_rank_filtering(maps, W)
+            % Panos figuring this out:
+
+            % maps      -   mn x mn matrix with all initial pairwise maps (m x m)
+            %               between n objects.
+
+            % W         -   n x n: global similarity between each pair of objects. When
+            %               two objects are very similar, being inconcsisten will be
+            %               penalized more.
+
+            % X_all     -   must be the collection of the sequential mn x mn matrices that correspond
+            % to the updates of the low rank optimization towards convergence.
+            % maps_new  -   must be the last update, i.e., the X_all(:,:,end)
+
+            n = size(W, 1);
+            m = size(maps{1,2}, 1);
+
+            % Initialization of X0 to a block matrix carrying the initial maps.
+            X_0 = kron(ones(n,n), eye(m));
+            for rowIndex = 1:n
+                rowIndices = ((rowIndex-1)*m+1):(rowIndex*m);
+                for colIndex = 1:n
+                    if rowIndex == colIndex
+                        continue;
+                    end
+                    colIndices = ((colIndex-1)*m+1):(colIndex*m);
+                    X_0(rowIndices, colIndices) = maps{rowIndex, colIndex};                
+                end
+            end
+
+            lambda = kron(W+eye(n), ones(m,m))/sqrt(m*n);
+
+            % low rank optimization
+            X_all = Optimization.rank_min(X_0, lambda, n, m);
+
+            X = X_all(:,:,end);
+            % write it back
+            maps_new = maps;
+            for rowIndex = 1:n
+                rowIndices = ((rowIndex-1)*m+1):(rowIndex*m);
+                for colIndex = 1:n
+                    if rowIndex == colIndex
+                        continue;
+                    end
+                    colIndices = ((colIndex-1)*m+1):(colIndex*m);
+                    maps_new{rowIndex, colIndex} = X(rowIndices, colIndices);
+                end
+            end
+
+            end
+
+
 %         function [quality] = evaluate_functional_map(inmap, groundtruth_map)
 %         
 %         end
@@ -19,7 +71,8 @@ classdef Functional_Map
 %         function [N] = closest_neighbors(from_funcs, to_funcs)            
 %             [ids, dist] = knnsearch(from_funcs, to_funcs, 'IncludeTies', 'True');                                     
 %         end
-%             
+
+
         function [S] = random_delta_functions(inmesh, nsamples)
             % Computes randomly chosen delta functions of the given mesh
             % vertices. A delta function of vertex -i- is a vector 

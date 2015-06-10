@@ -14,7 +14,6 @@ classdef Test_Laplace_Beltrami < matlab.unittest.TestCase
         LB          = [];
     end
 
-
     methods (TestClassSetup)
         % This code runs before any class instance is created.
         % See here: http://www.mathworks.com/help/matlab/matlab_prog/write-setup-and-teardown-code-using-classes.html
