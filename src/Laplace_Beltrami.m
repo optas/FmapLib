@@ -53,14 +53,19 @@ classdef Laplace_Beltrami < dynamicprops
         end
         
         function [Proj] = project_functions(obj, area_type, eigs_num, varargin)
-            n_varargin = nargin -3; % Number of arguments passed through varargin.
+            %   Projects a set of given functions on the corresponding
+            %   requested eigenfunctions of the Laplace Beltrami operator.
+            %   TODO-P
+            % 
+            %
+            %
             
+            n_varargin = nargin -3; % Number of arguments passed through varargin.            
             if n_varargin < 1
                 error ('Please provide some functions to be projected on the LB basis.');
             end
             
-            num_vertices = size(obj.W, 1);
-            
+            num_vertices = size(obj.W, 1);            
             functions_total = 0;            
             for i=1:n_varargin
                 if size(varargin{i}, 1) ~= num_vertices                    
@@ -68,7 +73,9 @@ classdef Laplace_Beltrami < dynamicprops
                 end
                 functions_total = functions_total + size(varargin{i}, 2);
             end
-
+            
+            functions_total
+                
             [~, evecs] = obj.get_spectra(eigs_num, area_type);
             assert(num_vertices  == size(evecs, 1));
                             
@@ -78,7 +85,11 @@ classdef Laplace_Beltrami < dynamicprops
             for i = 1:n_varargin
                 left  = right + 1;
                 right = right + size(varargin{i}, 2);
-                Proj(left:right, :) = evecs(:, 1:eigs_num)' * varargin{i};
+                left
+                right
+                temp = varargin{i}' * evecs(:, 1:eigs_num);
+                size(temp)
+                Proj(left:right, :) = temp;
             end            
         end
 
