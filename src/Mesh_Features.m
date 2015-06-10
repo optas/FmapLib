@@ -242,10 +242,16 @@ classdef Mesh_Features < dynamicprops
             end
         end
         
+        
+        
+        
         function mc = MC_multiscale(meanCurvature, L, t, step)
+            %Example Usage: 
+            %              t = -0.01; step = 100;
+            %              [~, L] = LB.get_spectra()            
             %TODO-E compare with what we have.
-            nVertex = size(L,1);
-            mc = zeros(nVertex,step);
+            nVertex = size(L, 1);
+            mc = zeros(nVertex, step);
             mc(:,1) = meanCurvature;
             H = inv((eye(nVertex) - t * L));
             % Hi = (eye(nVertex) - t * L);

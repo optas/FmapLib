@@ -1,4 +1,5 @@
 %%  A Script demonstrating the basic functionalities of the FmapLib (Work in progress).
+    clr;
     gitdir;
     cd FmapLib/src
 
@@ -19,19 +20,19 @@
     [evals, evecs] = LB.get_spectra(100, 'barycentric');
 
 
-%% Two Meshes and a Fmap.
+%% Two Meshes and a F-map.
     num_eigs       = 100;   
     meshfile       = '../data/kid_rodola/0001.isometry.1.off';
     mesh1          = Mesh(meshfile, 'rodola_1_1');    
     
-    LB1            = Laplace_Beltrami(mesh1);
+    LB1            = Laplace_Beltrami(mesh1);    
     [evals, evecs] = LB1.get_spectra(num_eigs, 'barycentric');
-    save('../data/output/LB1', 'LB1');    
-    
-    %% 
+    save('../data/output/LB1', 'LB1');          
+%     LB1 = load('../data/output/LB1');
+        
     wks_samples    = 300;
     hks_samples    = 200;
-    curvatures     = 20;
+    curvatures     = 100;
     
     [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
     wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);
@@ -41,12 +42,13 @@
     
     
     heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), curvatures-1);
+
     mean_curvature    = Mesh_Features.mean_curvature(mesh1, LB1, heat_time);    
     gauss_curvature   = Mesh_Features.gaussian_curvature(mesh1, heat_time);
     
     from_probes       = LB1.project_functions('barycentric', num_eigs, wks_sig, hks_sig, mean_curvature, gauss_curvature);
     size(from_probes)
-
+    
 %     meshfile = '../data/kid_rodola/0002.isometry.1.off';
 %     mesh2    = Mesh(meshfile, 'rodola_2_1');
 
