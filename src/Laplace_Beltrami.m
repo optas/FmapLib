@@ -31,7 +31,7 @@ classdef Laplace_Beltrami < dynamicprops
             end
             
             
-            if ~ obj.spectra.isKey(area_type) || ...           % This type of spectra has not been computed before, or,
+            if ~ obj.spectra.isKey(area_type) || ...                  % This type of spectra has not been computed before, or,
                 size(obj.spectra(area_type).evals, 1) < eigs_num      % the requested number of eigenvalues is larger than what has been previously calculated.                
                 
                 try % Retrieve the vertex areas or compute them.
@@ -52,31 +52,85 @@ classdef Laplace_Beltrami < dynamicprops
             end
         end
         
-        
-%          function obj = set_cotangent_laplacian(obj)
-%                 obj.addprop('cot_laplacian');            
-%                 if isprop(obj, 'angles')
-%                     obj.cot_laplacian = Mesh.cotangent_laplacian(obj.vertices, obj.triangles, obj.angles);
-%                 else
-%                     obj.cot_laplacian = Mesh.cotangent_laplacian(obj.vertices, obj.triangles);
-%                 end            
-%          end   
-    
-    
+        function [Proj] = project_functions(obj, area_type, eigs_num, varargin)
+            %   Projects a set of given functions on the corresponding
+            %   eigenfunctions of the Laplace Beltrami operator. Each LB
+            %   eigenfunction has num_vertices dimensions. I.e., as many as the
+            %   vertices of its corresponding Mesh.
+            %
+            %   Input:
+            %           area_type   -  (string) defines the area type used
+            %                           TODO-P
+            %           eigs_num    -  (int) number of LB basis functions to be
+            %                          used in the projection.
+            %           
+            %           varargin{i} -  (num_vertices, k{i}) A matrix
+            %                          capturing k{i} functions that will be
+            %                          projected on the LB. Each function
+            %                          is a column this matrix.
+            %
+            %
+            %   Output: 
+            %          Proj         - [sum(k{i}), eigs_num] Matrix carrying
+            %                         the projections of all the functions
+            %                         given in matrices in the varargin
+            %                         (thus sum(k{i}) where
+            %                         i=1:num_varargin ) such functions
+            %                         will be outputted. Each one has
+            %                         eigs_num dimensions.
+            %             
+            % 
+            n_varargin = nargin -3; % Number of arguments passed through varargin.            
+            if n_varargin < 1
+                error ('Please provide some functions to be projected on the LB basis.');
+            end
+            
+            num_vertices = size(obj.W, 1);            
+            functions_total = 0;            
+            for i=1:n_varargin
+                if size(varargin{i}, 1) ~= num_vertices                    
+                    error ('Wrong dimensionality. The functions must be defined over a Mesh with a number of vertices equal to that of this LB.')
+                end
+                functions_total = functions_total + size(varargin{i}, 2);
+            end
+            
+            functions_total
+                
+            [~, evecs] = obj.get_spectra(eigs_num, area_type);
+            assert(num_vertices  == size(evecs, 1));
+                            
+            % Project feauture vectors into reduced LB basis.            
+            Proj = zeros(functions_total, eigs_num);            % Pre-allocate space.
+            right = 0;         
+            for i = 1:n_varargin
+                left  = right + 1;
+                right = right + size(varargin{i}, 2);
+                left
+                right
+                temp = varargin{i}' * evecs(:, 1:eigs_num);
+                size(temp)
+                Proj(left:right, :) = temp;
+            end            
+        end
+
     end
     
     methods (Static)
         
         function [W] = cotangent_laplacian(V, T, varargin)
-                % Add comments
+                % Computes teh cotangent laplacian weights.
                 % W is symmetric.
+                % optional third argument is the angles of the triangles of
+                % the mesh, if not provided it will be calculated.
                 I = [T(:,1); T(:,2); T(:,3)];
                 J = [T(:,2); T(:,3); T(:,1)];        
-                                
-                if nargin == 3
+                              
+                if nargin == 2
+                    A = Mesh.angles_of_triangles(V, T);                    
+                elseif nargin == 3
                     A = varargin{1};
                 else
-                    A = Mesh.angles_of_triangles(V, T);
+                    error('Too many arguments were given.')
                 end
                 
                 S = 0.5 * cot([A(:,3); A(:,1); A(:,2)]);

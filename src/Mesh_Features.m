@@ -1,40 +1,89 @@
 classdef Mesh_Features < dynamicprops
     
-%     properties (GetAccess = public, SetAccess = private)
-%         m = [];
-%     end
-%     
-
-%     methods (Access = public)
-%         function obj = Mesh_Features(varargin)     
-%             if nargin == 0                
-%                 obj.m = [];
-%             else
-%                 obj.m = varargin{1};
-%             end
-%         end        
-%     end
-
-
     methods (Static)
-%         function [mean_curv] = mean_curvature(, )                
-            % Mean curvature
-%             Max = 5; step = 5;
-%             meanCurv = sqrt(sum((Delta*mesh.vertices).^2, 2));
-%             f5 = zeros(mesh.nv, Max);
-%             f6 = zeros(mesh.nv, Max);
-%             f5(:,1) = meanCurv;
-%             f6(:,1) = log(abs(meanCurv) + 1e-10);
-%             for i = 2:Max
-%                 f5(:, i) = (speye(size(Delta)) - step*Delta)\f5(:, i-1);
-%                 f6(:, i) = (speye(size(Delta)) - step*Delta)\f6(:, i-1);
-%             end
-% 
-%             F = [F, f5, f6];
-%             mask = [mask; ones(size(f5, 2), 1)*(max(mask) + 1)];
-%             mask = [mask; ones(size(f6, 2), 1)*(max(mask) + 1)];            
-%         end
         
+        function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
+            % Computes the mean curvature at each vertex of a given mesh.
+            % This implementation utilizes the Laplace Beltrami (LB) operator of
+            % the mesh (see Notes).            
+            %
+            % Input:    inmesh            -  (Mesh) Input mesh with inmesh.num_vertices 
+            %                                vertices.
+            %                                
+            %           laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the
+            %                                inmesh.
+            %           smoothing         -  (k x 1, optional) Vector with values corresponding to time samples 
+            %                                for the heat diffusion smoothing TODO-P: explain more.            
+            %
+            % Output:   mean_curv         -  (num_vertices x k+1) The mean curvature of each vertex.
+            %                                If smoothing is applied then the first column contains
+            %                                the mean curvature and the k-following columns contain
+            %                                the k-smoothed versions of it.
+            %
+            % Notes:
+            %       Meyer, M. Desbrun, P. Schroder, and A. H. Barr. "Discrete
+            %       Differential-Geometry Operators for Triangulated 2-Manifolds."
+           
+            if isprop(inmesh, 'vertex_normals')
+                N = inmesh.vertex_normals;
+            else
+                N = Mesh.normals_of_vertices(inmesh.vertices, inmesh.triangles);
+            end
+            
+            mean_curv = 0.5 * sum(N .* (laplace_beltrami.W * inmesh.vertices), 2);
+            
+            if exist('smoothing_time', 'var')
+                mean_curv_smooth = Mesh_Features.heat_diffusion_smoothing(laplace_beltrami.W, mean_curv, smoothing_time);
+                mean_curv        = [mean_curv, mean_curv_smooth];
+            end
+        end
+        
+        function [gauss_curv] = gaussian_curvature(inmesh, smoothing_time)                                        
+            % Computes the Gaussian curvature at each vertex of a given mesh.
+            % (Optional) A smoothing using the heat diffusion can be done
+            % as post-processing.
+            %
+            % Meyer, M. Desbrun, P. Schroder, and A. H. Barr. "Discrete
+            % Differential-Geometry Operators for Triangulated 2-Manifolds."
+            %
+            % Input:  inmesh            -  (Mesh) 
+            %         smoothing         -  (k x 1, Optional) vector with time for the
+            %                              heat diffusion processing.
+            %
+            % Output: gauss_curv        -  (num_vertices x k+1) The gaussian curvature of each vertex.
+            %                              If smoothing is applied then the first column contains
+            %                              the mean curvature and the k-following columns contain
+            %                              the k-smoothed versions of the mean.
+            
+            if isprop(inmesh, 'angles')
+                angles = inmesh.angles;
+            else
+                if isprop(inmesh, 'edge_lengths')
+                    L = inmesh.edge_lengths;
+                else
+                    L = Mesh.edge_length_of_triangles(inmesh.vertices, inmesh.triangles);
+                end
+                angles  = Mesh.angles_of_triangles(L);
+            end
+            
+            if isprop(inmesh, 'barycentric_v_area')    %TODO-P: dependency on area-type
+                areas = inmesh.barycentric_v_area;
+            else           
+                areas = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
+            end
+            
+            gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;
+        
+            if exist('smoothing_time', 'var')                
+                if ~exist('laplace_beltrami', 'var') % If not given compute LB operator.
+                    laplace_beltrami = Laplace_Beltrami(inmesh);
+                end                
+                gauss_curv_smooth = Mesh_Features.heat_diffusion_smoothing(laplace_beltrami.W, gauss_curv, smoothing_time);
+                gauss_curv        = [gauss_curv, gauss_curv_smooth];
+            end
+        end
+        
+                                        
         function [signatures] = wave_kernel_signature(evecs, evals, energies, sigma)
             % Computes the wave kernel signature according to the spectrum of a graph 
             % derived operator (e.g., the Cotangent Laplacian). 
@@ -57,7 +106,9 @@ classdef Mesh_Features < dynamicprops
             %
             % (c) Panos Achlioptas 2014   http://www.stanford.edu/~optas
 
-            assert(size(evals, 1) == size(evecs, 2));
+            if(size(evals, 1) ~= size(evecs, 2))
+                error('The number of eigenvalues given does not aggree with the number of eigenvectors.')
+            end
 
             k            = size(evals, 1);                % Number of eigenvalues.
             e            = size(energies, 2);             % Number of energies.
@@ -67,10 +118,8 @@ classdef Mesh_Features < dynamicprops
 
             gauss_kernel = exp(- (( energies-evals ).^2 ) / (2*sigma^2) );
             signatures   = evecs.^2 * gauss_kernel;
-
             scale        = sum(gauss_kernel, 1);            
             signatures   = divide_columns(signatures, scale);
-
             assert(all(all(signatures >= 0)));            
         end
         
@@ -90,7 +139,10 @@ classdef Mesh_Features < dynamicprops
             %
             % (c) Panos Achlioptas 2014   http://www.stanford.edu/~optas
                 
-            assert(size(evals, 1) == size(evecs, 2))
+            if(size(evals, 1) ~= size(evecs, 2))
+                error('The number of eigenvalues given does not aggree with the number of eigenvectors.')
+            end
+            
             low_pass_filter = exp(- evals * T);
             signatures = evecs.^2 * low_pass_filter;
             scale = sum(low_pass_filter, 1);     %TODO-E
@@ -153,6 +205,62 @@ classdef Mesh_Features < dynamicprops
             signatures = evecs * diag((1 ./ sqrt(evals)));            
         end
 
+                
+        function [smoothed_fct] = heat_diffusion_smoothing(W, fct, diffusion_time) 
+            % Computes the heat diffusion of a function for a given time using an implicit Euler scheme.
+            % As a result the function will appear smoother.
+            %
+            % Input:  W                  -  (n x n) Matrix approximating the Laplace-Beltrami
+            %                               operator
+            %         fct                -  (n x 1) Vector containing the function values
+            %         diffusion_time     -  (1 x k) Vector contining the diffusion times
+            %
+            % Output: smoothed_fct       -  (n x k) Matrix with the values of k smoothed function
+            
+            if size(diffusion_time, 1) > 1
+                 diffusion_time = diffusion_time';
+            end
+            if size(diffusion_time, 1) ~= 1
+                error('Variable "Time" should be vector');
+            end
+            if size(W, 1) ~= size(W, 2)
+                error('Given LB matrix is not square');
+            end
+            if size(W, 2) ~= size(fct, 1)
+                error('Uncompatible size between function and operator');
+            end
+            if size(fct, 2) ~= 1
+                error('Variable "Function" should be a column vector');
+            end
+            
+            n = size(W, 2);
+            k = size(diffusion_time, 2);
+            
+            smoothed_fct = zeros(n, k);
+            for i = 1:k
+                smoothed_fct(:,i) = ( speye(n, n) + diffusion_time(i) * W ) \ fct ;
+            end
+        end
+        
+        
+        
+        
+        function mc = MC_multiscale(meanCurvature, L, t, step)
+            %Example Usage: 
+            %              t = -0.01; step = 100;
+            %              [~, L] = LB.get_spectra()            
+            %TODO-E compare with what we have.
+            nVertex = size(L, 1);
+            mc = zeros(nVertex, step);
+            mc(:,1) = meanCurvature;
+            H = inv((eye(nVertex) - t * L));
+            % Hi = (eye(nVertex) - t * L);
+            for i = 2:step
+                mc(:,i) =  H * mc(:,i-1);
+            end
+        end
+        
+        
         function [signatures] = D2()
             signatures = 0;
             % TODO-V: Stub
@@ -167,86 +275,20 @@ classdef Mesh_Features < dynamicprops
         end
         
 
-        function [signatures] = D2_panos(inmesh, num_bins, xcenters)
-        % TODO-V
+        function [signatures] = hist_of_euclidean_distance(inmesh, num_bins)        
         % Input:
         %           num_bins    -  (int) Number of bins the D2 histogram will have.
-        
-            xcenters  =     % Optional arguement defining for each bin its center. (makes num_bins obsolete)
                 
-            all_dists = pdist(inmesh.vertices);  % This is too expensive(!) + it used euclidean dist and not geodesics.     \
-                                                 % Do other also propose
-                                                 % to use Euclideans dist?                                                  
+            hyper_diameter = norm(max(inmesh.vertices)- min(inmesh.vertices));                                                              
+            xcenters       = linspace(hyper_diameter/num_bins, hyper_diameter, num_bins);            
+            v_num          = inmesh.num_vertices;           
             
-            max_dist = max(max(all_dists));        % Maximum distance between two vertices.
-            xcenters = linspace(max_dist/num_bins, max_dist, num_bins);  % One way to define centers.
-            v_num = inmesh.num_vertices;
-            
-
-            signatures = zeros(v_num, num_bins);            
+            signatures = zeros(v_num, num_bins);
             for i = 1:v_num
-                distlist = sum((repmat(inmesh.vertices(i,:), [v_num-1, 1]) - inmesh.vertices([1:i-1 i+1:end],:)).^2, 2);
+                distlist = sum((repmat(inmesh.vertices(i,:), [v_num-1, 1]) - inmesh.vertices([1:i-1 i+1:end],:)).^2, 2);  % TODO-V check if pdist2 is faster.
                 signatures(i,:) = hist(distlist, xcenters)/(v_num - 1);
             end    
         end
-            
-        
-
-        
-      function [WKS] = wks_Aubry(evecs, evals, energies, sigma)   
-
-        % Added by Panos to make the function work
-        N            = length(energies);
-        num_vertices = size(evecs, 1);
-        log_E = log(abs(evals))';        
-        e = energies;
-        % End of Panos addition
-                
-        WKS = zeros(num_vertices, N);
-        C = zeros(1,N); %weights used for the normalization of f_E
-
-        for i = 1:N
-            WKS(:, i) = sum(evecs.^2.* ...
-                       repmat( exp((-(e(i) - log_E).^2) ./ (2*sigma.^2)), num_vertices, 1),2);
-            
-            C(i) = sum(exp((-(e(i)-log_E).^2)/(2*sigma.^2)));
-        end
-
-        % normalize WKS
-        WKS(:,:) = WKS(:,:)./repmat(C,num_vertices,1);        
-      end
-      
-      function [hks] = hks_Sun(evecs, evals, A, ts, scale)
-
-        % INPUTS
-        %  evecs:  ith each column in this matrix is the ith eigenfunction of the Laplace-Beltrami operator
-        %  evals:  ith element in this vector is the ith eigenvalue of the Laplace-Beltrami operator
-        %  A:      ith element in this vector is the area associated with the ith vertex
-        %  scale:  if scale = true, output the scaled hks
-        %          o.w. ouput the hks that is not scaled
-        %  ts :    time slices to evaluate the HKS
-
-        % OUTPUTS
-        %  hks: ith row in this matrix is the heat kernel signature of the ith vertex
-
-
-           %area = sum(A);
-           %A = (1/area) * A;
-           %evals = area * evals;
-           %evecs = sqrt(area) * evecs;
-
-           if scale == true, 
-              hks = abs( evecs(:, 2:end) ).^2 * exp( ( abs(evals(2)) - abs(evals(2:end)) )  * ts);
-              Am = sparse([1:length(A)], [1:length(A)], A);
-              colsum = sum(Am*hks);
-              scale = 1.0./ colsum; 
-              scalem = sparse([1:length(scale)], [1:length(scale)], scale);
-              hks = hks * scalem;
-           else
-              hks = abs( evecs(:, 2:end) ).^2 * exp( - abs(evals(2:end)) * ts);
-
-           end
-      end
 
   end    
 

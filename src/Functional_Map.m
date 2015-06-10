@@ -1,11 +1,47 @@
 classdef Functional_Map
-    % A collection of functions for computing Functional Maps as in the
-    % (TODO cite papers).
-    
+    % A class implementing a variety of utilities related to the Functional
+    % Maps framework.
+        
     properties
     end
     
     methods (Static)
+        
+%         function [quality] = evaluate_functional_map(inmap, groundtruth_map)
+%         
+%         end
+%         
+%         function [d] = pair_wise_distortion_of_map(left_mesh, right_mesh, )
+%         
+%         end
+% 
+%         
+%         function [N] = closest_neighbors(from_funcs, to_funcs)            
+%             [ids, dist] = knnsearch(from_funcs, to_funcs, 'IncludeTies', 'True');                                     
+%         end
+%             
+        function [S] = random_delta_functions(inmesh, nsamples)
+            % Computes randomly chosen delta functions of the given mesh
+            % vertices. A delta function of vertex -i- is a vector 
+            % which has a single non-zero entry at its i-th dimension. 
+            % The total number of dimensions of such a vector is equal 
+            % to the number of vertices of the given mesh.           
+            % 
+            % Input:
+            %           inmesh    -   (Mesh) Input mesh.             
+            %           nsamples  -   (int)  Number of delta functions to
+            %                                be produced.            
+            %             
+            % Output:   S         -   (nsamples x num_vertices) Sparse
+            %                         matrix. 
+            %                          
+            % Precondition: nsamples must be at most as large as
+            %               inmesh.num_vertices.
+                       
+            vertices = randsample(inmesh.num_vertices, nsamples);
+            S        = sparse(1:nsamples, vertices, ones(1,nsamples));
+        end
+        
         
         function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             % This code uses plain least squares techniques to 
@@ -17,7 +53,9 @@ classdef Functional_Map
             % (((lambda1_i-lambda2_j)^2)*X_{ij})_{ij} for term 2. This is
             % solved using linear techniques as given below.
             
-            N2 = size(D2,1);
+            N1 = size(D1, 1);
+            N2 = size(D2, 1);
+            
             A_fixed = D1 * D1' ;
             B = D1 * D2' ;
             X = zeros(N2, N1);
@@ -25,16 +63,13 @@ classdef Functional_Map
             if lambda == 0   %  Un-regularized                
                 X = (A_fixed\B)';
             else
-                for I = 1 : N2
-                    A = diag(lambda * (L1 - L2(I)) .^ 2) + A_fixed;
-                    X(I, :) = A \ B(:, I);
+                for i = 1 : N2
+                    A = diag(lambda * (L1 - L2(i)) .^ 2) + A_fixed;
+                    X(i, :) = A \ B(:, i);
                 end
             end
         end
-        
-
-        
-  
+          
         function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
             % Copyright (C) 2014 Fan Wang.            
             % TODO-P: Add documentation.
@@ -49,17 +84,7 @@ classdef Functional_Map
             N1N2 = N1 * N2;
             % cvx_setspath('sedumi');
             z = sparse(N1N2, 1);
-            % Variables organized as [x y1 y2 y3]
-            % For each term, b, c, At are augmented
-            % Structure in At:
-            % 0 -1  0   0
-            % K 0   0   0
-            % 0 0   -1  0
-            % K 0   0   0
-            % 0 0   0   -1
-            % K 0   0   0
-            % D1 D2
-            
+                       
             dim = numel(D2);
             K.q = [1 + dim];
             b   = [z; -1];
@@ -90,6 +115,7 @@ classdef Functional_Map
             [~, y, ~] = sedumi(sparse(At), sparse(b), sparse(c), K, struct('fid', 0));
             X = reshape(y(1:N1N2), N1, N2)';
         end
+
         
         function X = sum_of_squared_frobenius_norms_non_diagonal(D1, D2, L1, L2, lambda)
             N1 = size(D1,1);
