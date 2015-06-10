@@ -29,9 +29,9 @@
     save('../data/output/LB1', 'LB1');    
     
     %% 
-    wks_samples    = 132;
-    hks_samples    = 120;
-    curvatures     = 100;
+    wks_samples    = 300;
+    hks_samples    = 200;
+    curvatures     = 20;
     
     [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
     wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);
@@ -42,7 +42,7 @@
     
     heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), curvatures-1);
     mean_curvature    = Mesh_Features.mean_curvature(mesh1, LB1, heat_time);    
-    gauss_curvature   = Mesh_Features.gauss_curvature(mesh1, heat_time);
+    gauss_curvature   = Mesh_Features.gaussian_curvature(mesh1, heat_time);
     
     from_probes       = LB1.project_functions('barycentric', num_eigs, wks_sig, hks_sig, mean_curvature, gauss_curvature);
     size(from_probes)

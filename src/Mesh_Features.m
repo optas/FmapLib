@@ -39,7 +39,7 @@ classdef Mesh_Features < dynamicprops
         end
         
         function [gauss_curv] = gaussian_curvature(inmesh, smoothing_time)                                        
-            % Computes the gauss curvature at each vertex of a given mesh.
+            % Computes the Gaussian curvature at each vertex of a given mesh.
             % (Optional) A smoothing using the heat diffusion can be done
             % as post-processing.
             %
@@ -77,8 +77,8 @@ classdef Mesh_Features < dynamicprops
             if exist('smoothing_time', 'var')                
                 if ~exist('laplace_beltrami', 'var') % If not given compute LB operator.
                     laplace_beltrami = Laplace_Beltrami(inmesh);
-                end
-                gauss_curv_smooth = Mesh_Features.laplacian_smoothing(laplace_beltrami.W, gauss_curv, smoothing_time);
+                end                
+                gauss_curv_smooth = Mesh_Features.heat_diffusion_smoothing(laplace_beltrami.W, gauss_curv, smoothing_time);
                 gauss_curv        = [gauss_curv, gauss_curv_smooth];
             end
         end

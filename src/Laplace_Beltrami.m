@@ -54,12 +54,32 @@ classdef Laplace_Beltrami < dynamicprops
         
         function [Proj] = project_functions(obj, area_type, eigs_num, varargin)
             %   Projects a set of given functions on the corresponding
-            %   requested eigenfunctions of the Laplace Beltrami operator.
-            %   TODO-P
+            %   eigenfunctions of the Laplace Beltrami operator. Each LB
+            %   eigenfunction has num_vertices dimensions. I.e., as many as the
+            %   vertices of its corresponding Mesh.
+            %
+            %   Input:
+            %           area_type   -  (string) defines the area type used
+            %                           TODO-P
+            %           eigs_num    -  (int) number of LB basis functions to be
+            %                          used in the projection.
+            %           
+            %           varargin{i} -  (num_vertices, k{i}) A matrix
+            %                          capturing k{i} functions that will be
+            %                          projected on the LB. Each function
+            %                          is a column this matrix.
+            %
+            %
+            %   Output: 
+            %          Proj         - [sum(k{i}), eigs_num] Matrix carrying
+            %                         the projections of all the functions
+            %                         given in matrices in the varargin
+            %                         (thus sum(k{i}) where
+            %                         i=1:num_varargin ) such functions
+            %                         will be outputted. Each one has
+            %                         eigs_num dimensions.
+            %             
             % 
-            %
-            %
-            
             n_varargin = nargin -3; % Number of arguments passed through varargin.            
             if n_varargin < 1
                 error ('Please provide some functions to be projected on the LB basis.');
