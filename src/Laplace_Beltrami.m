@@ -94,23 +94,17 @@ classdef Laplace_Beltrami < dynamicprops
                 functions_total = functions_total + size(varargin{i}, 2);
             end
             
-            functions_total
-                
             [~, evecs] = obj.get_spectra(eigs_num, area_type);
             assert(num_vertices  == size(evecs, 1));
                             
             % Project feauture vectors into reduced LB basis.            
-            Proj = zeros(functions_total, eigs_num);            % Pre-allocate space.
+            Proj = zeros(eigs_num, functions_total);            % Pre-allocate space.
             right = 0;         
             for i = 1:n_varargin
                 left  = right + 1;
-                right = right + size(varargin{i}, 2);
-                left
-                right
-                temp = varargin{i}' * evecs(:, 1:eigs_num);
-                size(temp)
-                Proj(left:right, :) = temp;
-            end            
+                right = right + size(varargin{i}, 2);                
+                Proj(:, left:right) =  evecs(:, 1:eigs_num)' * varargin{i};
+            end                        
         end
 
     end
