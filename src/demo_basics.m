@@ -25,15 +25,13 @@
     meshfile       = '../data/kid_rodola/0001.isometry.1.off';
     mesh1          = Mesh(meshfile, 'rodola_1_1');    
     
-    LB1            = Laplace_Beltrami(mesh1);    
-    [evals, evecs] = LB1.get_spectra(num_eigs, 'barycentric');
-    save('../data/output/LB1', 'LB1');          
-
-%     load('../data/output/LB1');    
+%     LB1            = Laplace_Beltrami(mesh1);    
 %     [evals, evecs] = LB1.get_spectra(num_eigs, 'barycentric');
-        
-    
-        
+%     save('../data/output/LB1', 'LB1');          
+
+    load('../data/output/LB1');    
+    [evals, evecs] = LB1.get_spectra(num_eigs, 'barycentric');
+            
     wks_samples    = 300;
     hks_samples    = 200;
     curvatures     = 100;
@@ -47,21 +45,19 @@
 %     heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), curvatures-1);
 %     mean_curvature    = Mesh_Features.mean_curvature(mesh1, LB1, heat_time);    
 %     gauss_curvature   = Mesh_Features.gaussian_curvature(mesh1, heat_time);
+    
     %TODO-P Normalize prob functions
     from_probes       = LB1.project_functions('barycentric', num_eigs, wks_sig, hks_sig);
-%     from_probes       = LB1.project_functions('barycentric', num_eigs, wks_sig, hks_sig, mean_curvature, gauss_curvature);
-        
-    to_probes         = from_probes;    
-    lambda            = 0;
-    
-    X = Functional_Map.sum_of_squared_frobenius_norms(from_probes, to_probes, 0, 0, lambda);
-    
 
+        
+%     to_probes         = from_probes;    
+%     lambda            = 0;
+    
+%     X = Functional_Map.sum_of_squared_frobenius_norms(from_probes, to_probes, 0, 0, lambda);
+    
 %     meshfile = '../data/kid_rodola/0002.isometry.1.off';
 %     mesh2    = Mesh(meshfile, 'rodola_2_1');
-
-   
-    
+ 
 %%
 pairs = [1,2; 1,55; 1,100]';
 % pairs must be passed as 2 x N

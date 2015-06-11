@@ -29,8 +29,7 @@ classdef Laplace_Beltrami < dynamicprops
             if ~ Mesh.is_supported_area_type(area_type)
                 error('You specidied an area_type which is not supported by the Mesh Library.')
             end
-            
-            
+                        
             if ~ obj.spectra.isKey(area_type) || ...                  % This type of spectra has not been computed before, or,
                 size(obj.spectra(area_type).evals, 1) < eigs_num      % the requested number of eigenvalues is larger than what has been previously calculated.                
                 
@@ -102,8 +101,11 @@ classdef Laplace_Beltrami < dynamicprops
             right = 0;         
             for i = 1:n_varargin
                 left  = right + 1;
-                right = right + size(varargin{i}, 2);                
-                Proj(:, left:right) =  evecs(:, 1:eigs_num)' * varargin{i};
+                right = right + size(varargin{i}, 2);                                
+                Proj(:, left:right)  = evecs(:, 1:eigs_num) \ varargin{i};
+                % Proj(:, left:right) =  evecs(:, 1:eigs_num)' * varargin{i};  % If eigs, were orthonormal.
+                % TODO-E, Discuss that:  an eigenvector with big norm will contribure
+                % with a smaller coeeficient.                 
             end                        
         end
 
@@ -139,17 +141,19 @@ classdef Laplace_Beltrami < dynamicprops
         
         function [Phi, lambda] = compute_spectra(W, vertex_areas, eigs_num)
             % Returns the sorted ..add comments..
-            % TODO-P: complex spectra
+            % TODO-P if vertex_ares == ones(), solve the simple version
+            % directly.
             if eigs_num < 1 || eigs_num > size(W, 1)-1;
                 error('Eigenvalues must be in range of [1, num_of_vertices-1].')
             end
             
             [Phi, lambda] = eigs(W, vertex_areas, eigs_num, -1e-5);
+            % TODO-P,V: assert(Phi's are lin. independent).            
             lambda        = diag(lambda);
             lambda        = abs(real(lambda));
             [lambda, idx] = sort(lambda);
-            Phi           = Phi(:,idx);
-            Phi           = real(Phi);                 % W is symmetric. diag(Vertex_Areas) is PSD. Thus, the Generalized Eigen-Prob should return real.
+            Phi           = Phi(:,idx);            
+            Phi           = real(Phi);                 % W is symmetric. diag(Vertex_Areas) is PSD. Thus, the Generalized Eigen-Prob should return real.            
         end
             
     end
