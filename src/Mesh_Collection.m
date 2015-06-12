@@ -13,42 +13,58 @@ classdef Mesh_Collection
                 % Construct an empty Mesh_Collection.            
                 obj.name = '';
                 obj.meshes = containers.Map;                
-            elseif nargin == 2   % A collection name and a top_directory were given.                 
-                % All potential objects will be loaded (.off, .obj).
-                all_subfiles = rdir([top_directory, '/**/'], 'regexp(name, ''\.obj$|\.off$'')');                                
+            elseif nargin > 1   % At least a collection name and a top_directory were given.
                 
-                num_meshes = length(all_subfiles);
+                % Start by finding all potential objects (.off, .obj
+                % files). % TODO-add optional -.mat format.
+                all_subfiles = rdir([top_directory, '/**/'], 'regexp(name, ''\.obj$|\.off$'')');                                                
+                num_meshes   = length(all_subfiles);
                 if num_meshes == 0
                     warning(['The given top directory does not contain any .off or .obj files' ...
                              'in it or in any of its sub directories.']);
                     return
                 end                
-                obj.meshes = containers.Map;                
+                obj.meshes = containers.Map;
+                                
                 for i=1:num_meshes
                     try                          
                         full_path = all_subfiles(i).name;
-                        path_substrings = strsplit(full_path, '/');
+                        path_substrings = strsplit(full_path, '/');   % TODO: use separator of current system.
                         last_word = path_substrings{end};
                         mesh_name = last_word(1:end-4);    % Relying on the fact that length('.off') == length('.obj') == 4.                                                               
                         if obj.meshes.isKey(mesh_name)
-                            error('todo;explain.')
+                            error('Todo: meshes with same meshes are not supported at the moment.')
                         end                        
-                        obj.meshes(mesh_name) = Mesh(full_path, mesh_name);                        
+                        obj.meshes(mesh_name) = Mesh(full_path, mesh_name);
                     catch                         
                         warning([full_path, ' was not loaded.']);
                         continue
                     end
-                end
-                            
-                obj.name = name;
-            end
+                end                            
+            
+%                 if exist('mesh_classes', 'var')
+%                     % If two columns: ID - Class_Type (both strings or
+%                     % string-int).
+%                     
+%                     % If more than two columms, then ID - Class_type_1, Class_type_k 
+% 
+%                     
+%                 end
                 
-                
-                
+                obj.name = name;                
+            end                
         end
-
         
-    end
+%         function set_mesh_attributes(attribute_file)
+%             
+%         end
+    
 
+
+    end
+    
+    
+    
+    
     
 end

@@ -54,10 +54,27 @@
 %     lambda            = 0;
     
 %     X = Functional_Map.sum_of_squared_frobenius_norms(from_probes, to_probes, 0, 0, lambda);
+
+%%    
+    meshfile = '../data/kid_rodola/0002.isometry.1.off';
+    mesh2    = Mesh(meshfile, 'rodola_2_1');
+    LB2      = Laplace_Beltrami(mesh2);        
+    [evals, evecs]    = LB2.get_spectra(num_eigs, 'barycentric');
+    [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
+    wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
+    heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
+    hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
+    to_probes         = LB2.project_functions('barycentric', num_eigs, wks_sig, hks_sig);
     
-%     meshfile = '../data/kid_rodola/0002.isometry.1.off';
-%     mesh2    = Mesh(meshfile, 'rodola_2_1');
- 
+%%  
+    lambda = 20;
+    X      = Functional_Map.sum_of_squared_frobenius_norms(from_probes, to_probes, LB1.get_spectra(num_eigs, 'barycentric'), LB2.get_spectra(num_eigs, 'barycentric'), lambda); 
+%%
+    evaluation_samples  = 20;
+    [evals1, evecs1]    = LB1.get_spectra(num_eigs, 'barycentric');
+    [evals2, evecs2]    = LB2.get_spectra(num_eigs, 'barycentric');
+    [ids, dist]         = Functional_Map.pair_wise_distortion_of_map(X, mesh1, evecs1, evecs2, evaluation_samples);                                          
+    
 %%
 pairs = [1,2; 1,55; 1,100]';
 % pairs must be passed as 2 x N
