@@ -1,41 +1,85 @@
 classdef Functional_Map
-    % A collection of functions for computing Functional Maps as in the
-    % (TODO cite papers).
-    
+    % A class implementing a variety of utilities related to the Functional
+    % Maps framework.
+        
     properties
     end
     
     methods (Static)
         
-        function random_delta_functions(inmesh, nsamples, basis)
-            % Computes randomly chosen delta functions of the given mesh
-            % vertices. A delta function of vertex -i- is just a vector 
-            % which has a single non-zero entry at its i-th dimension. 
-            % The total number of dimensions of such a vector is equal 
-            % to the number of vertices of the given mesh.           
-            % 
-            % Input:
-            %           inmesh    -   (Mesh)Input mesh.             
-            %           nsamples  -   number of output random functions.
-            % 
-            %             
-            % 
-            %   
-            % 
-            % 
-            %             
-            % 
-            % 
-            
-            inmesh.num_vertices
-            
+        
+        function [dists] = ball_distortion_of_map()
+            %% Document.
         end
         
+
+       function [dists] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, nsamples, fast)                                
+           %% Document.
+           %  Symmetries? e.g., decode Rodola's file           
+            
+%             proj_deltas = (from_basis \ deltas);                           % Delta functions projected in the from_basis.                                                
+%             deltas_transfered = inmap * proj_deltas;                        
+%             all_to_deltas = (to_basis \ speye(size(to_basis, 1)));                     
+%             [ids, dist]  = knn(all_to_deltas'  ,deltas_transfered');         %TODO-P, 'IncludeTies', 'True');                       
+            
+            deltas            = Functional_Map.random_delta_functions(from_mesh, nsamples, 1);
+            proj_deltas       = from_basis(deltas, :)';                     % Delta functions expressed in from_basis.
+            deltas_transfered = inmap * proj_deltas;                        % Use inmap to transfer them in to_mesh.
+            [ids, dist]       = knnsearch(to_basis', deltas_transfered');   % Find closest function for its tranfered on (Euclidean dist is used).
+                                                                            % TODO-P,E solve 'Ties' in knn.                                              
+
+            pairs = [ids, groundtruth(deltas)];                                                           
+            if exist('fast' ,'var') && fast ~= 0  % compute true geodesics or use approx. by Dijkstra.
+                dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs, 1);
+            else
+                dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs);
+            end                            
+        end
+
+        function [S] = random_delta_functions(inmesh, nsamples, index_only)
+            % Computes uniformly i.i.d. random delta functions of the given mesh
+            % vertices. The delta function of vertex -i- is a vector 
+            % which has a single non-zero entry at its i-th dimension. 
+            % The total number of dimensions of such a vector is equal 
+            % to the number of vertices of the given mesh. The sampling is
+            % done without replacement.
+            % 
+            % Input:
+            %           inmesh      -   (Mesh) Input mesh.             
+            %           nsamples    -   (int)  Number of delta functions to
+            %                            be produced.            
+            %           index_only  -   (optional, Boolean) If 1, only the indices 
+            %                            of the vertices are returned.
+            %                                                                                     
+            %
+            % Output:   S           -     (num_vertices x nsamples) Sparse matrix.            
+            %                       - or, (nsamples, 1) if index_only == 1.
+            %                          
+            % Precondition: nsamples must be at most as large as
+            %               inmesh.num_vertices.
+                       
+            vertices = randsample(inmesh.num_vertices, nsamples);           
+            if exist(index_only, 'var') && index_only == 1
+                S = vertices;
+                return
+            end
+            S  = sparse(vertices, 1:nsamples, ones(1,nsamples), inmesh.num_vertices, nsamples);                       
+        end
+        
+        
         function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
-            % TODO-V: rename to more intuitive variable names + maybe add
-            % inline comments.
+            % This code uses plain least squares techniques to 
+            % solve the objective function using Frobenius norm squared
+            % terms.
+            % We aim to minimize ||X*D1-D2||^2 + lambda*||X*L1-L2*X||^2. 
+            % This is done by computing the gradient wrt X, which is given
+            % by (X*D1-D2)*D1' for term 1, and by 
+            % (((lambda1_i-lambda2_j)^2)*X_{ij})_{ij} for term 2. This is
+            % solved using linear techniques as given below.
+            
             N1 = size(D1, 1);
             N2 = size(D2, 1);
+            
             A_fixed = D1 * D1' ;
             B = D1 * D2' ;
             X = zeros(N2, N1);
@@ -53,24 +97,18 @@ classdef Functional_Map
         function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
             % Copyright (C) 2014 Fan Wang.            
             % TODO-P: Add documentation.
-            % TODO-V: Add inline comments to explaina bit the logic.
+            % This code uses Sedumi to write the objective function as a
+            % Semi-definite program in the dual form. In this problem we
+            % aim to minimize ||X*D1-D2|| + lambda*||X*L1-L2*X||. This is
+            % done by solving for min t1 + lambda*t2, s.t t1 >=
+            % ||X*D1-D2||, t2 >= ||X*L1-L2*X||.
             
             N1 = size(D1, 1);
             N2 = size(D2, 1);
             N1N2 = N1 * N2;
             % cvx_setspath('sedumi');
             z = sparse(N1N2, 1);
-            % Variables organized as [x y1 y2 y3]
-            % For each term, b, c, At are augmented
-            % Structure in At:
-            % 0 -1  0   0
-            % K 0   0   0
-            % 0 0   -1  0
-            % K 0   0   0
-            % 0 0   0   -1
-            % K 0   0   0
-            % D1 D2
-            
+                       
             dim = numel(D2);
             K.q = [1 + dim];
             b   = [z; -1];
@@ -91,15 +129,21 @@ classdef Functional_Map
             end
 
             % Solve
-            [x, y, info] = sedumi(sparse(At), sparse(b), sparse(c), K, struct('fid', 0));
+            % The objective for dual is max b'*y which in this case is
+            % -(y_{N1N2+1} + lambda*y_{N1N2+2}). t1 = y_{N1N2+1}, t2 =
+            % y_{N1N2+2}. 
+            
+            %The dual y satisfies s = c-A'*y, s \in Dual cone K'. The
+            % existence of s in the dual gives the conditions relating
+            % t1,t2 to the Frobenius norms in the objective.
+            [~, y, ~] = sedumi(sparse(At), sparse(b), sparse(c), K, struct('fid', 0));
             X = reshape(y(1:N1N2), N1, N2)';
         end
+
         
         function X = sum_of_squared_frobenius_norms_non_diagonal(D1, D2, L1, L2, lambda)
             N1 = size(D1,1);
             N2 = size(D2,1);
-            K = size(D1,2);
-            % K is also equal to size(D2,2).
             A_fixed = D1 * D1' ;
             B = D2 * D1' ;
             % The first N2 rows of A_large correspond to the first row of
@@ -138,8 +182,57 @@ classdef Functional_Map
             X_vec = A_large \ B_large;
             X = reshape(X_vec,N2,N1);
         end
-
-    end
     
-end
+    
+        function [maps_new, X_all] = low_rank_filtering(maps, W)
+            % Panos figuring this out:
 
+            % maps      -   mn x mn matrix with all initial pairwise maps (m x m)
+            %               between n objects.
+
+            % W         -   n x n: global similarity between each pair of objects. When
+            %               two objects are very similar, being inconcsisten will be
+            %               penalized more.
+
+            % X_all     -   must be the collection of the sequential mn x mn matrices that correspond
+            % to the updates of the low rank optimization towards convergence.
+            % maps_new  -   must be the last update, i.e., the X_all(:,:,end)
+
+            n = size(W, 1);
+            m = size(maps{1,2}, 1);
+
+            % Initialization of X0 to a block matrix carrying the initial maps.
+            X_0 = kron(ones(n,n), eye(m));
+            for rowIndex = 1:n
+                rowIndices = ((rowIndex-1)*m+1):(rowIndex*m);
+                for colIndex = 1:n
+                    if rowIndex == colIndex
+                        continue;
+                    end
+                    colIndices = ((colIndex-1)*m+1):(colIndex*m);
+                    X_0(rowIndices, colIndices) = maps{rowIndex, colIndex};                
+                end
+            end
+
+            lambda = kron(W+eye(n), ones(m,m))/sqrt(m*n);
+
+            % low rank optimization
+            X_all = Optimization.rank_min(X_0, lambda, n, m);
+
+            X = X_all(:,:,end);
+            % write it back
+            maps_new = maps;
+            for rowIndex = 1:n
+                rowIndices = ((rowIndex-1)*m+1):(rowIndex*m);
+                for colIndex = 1:n
+                    if rowIndex == colIndex
+                        continue;
+                    end
+                    colIndices = ((colIndex-1)*m+1):(colIndex*m);
+                    maps_new{rowIndex, colIndex} = X(rowIndices, colIndices);
+                end
+            end
+        end
+
+    end % Static.
+end % ClassDef.

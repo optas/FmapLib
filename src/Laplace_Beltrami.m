@@ -29,9 +29,8 @@ classdef Laplace_Beltrami < dynamicprops
             if ~ Mesh.is_supported_area_type(area_type)
                 error('You specidied an area_type which is not supported by the Mesh Library.')
             end
-            
-            
-            if ~ obj.spectra.isKey(area_type) || ...           % This type of spectra has not been computed before, or,
+                        
+            if ~ obj.spectra.isKey(area_type) || ...                  % This type of spectra has not been computed before, or,
                 size(obj.spectra(area_type).evals, 1) < eigs_num      % the requested number of eigenvalues is larger than what has been previously calculated.                
                 
                 try % Retrieve the vertex areas or compute them.
@@ -52,31 +51,82 @@ classdef Laplace_Beltrami < dynamicprops
             end
         end
         
-        
-%          function obj = set_cotangent_laplacian(obj)
-%                 obj.addprop('cot_laplacian');            
-%                 if isprop(obj, 'angles')
-%                     obj.cot_laplacian = Mesh.cotangent_laplacian(obj.vertices, obj.triangles, obj.angles);
-%                 else
-%                     obj.cot_laplacian = Mesh.cotangent_laplacian(obj.vertices, obj.triangles);
-%                 end            
-%          end   
-    
-    
+        function [Proj] = project_functions(obj, area_type, eigs_num, varargin)
+            %   Projects a set of given functions on the corresponding
+            %   eigenfunctions of the Laplace Beltrami operator. Each LB
+            %   eigenfunction has num_vertices dimensions. I.e., as many as the
+            %   vertices of its corresponding Mesh.
+            %
+            %   Input:
+            %           area_type   -  (string) defines the area type used
+            %                           TODO-P
+            %           eigs_num    -  (int) number of LB basis functions to be
+            %                          used in the projection.
+            %           
+            %           varargin{i} -  (num_vertices, k{i}) A matrix
+            %                          capturing k{i} functions that will be
+            %                          projected on the LB. Each function
+            %                          is a column this matrix.
+            %
+            %
+            %   Output: 
+            %          Proj         - [sum(k{i}), eigs_num] Matrix carrying
+            %                         the projections of all the functions
+            %                         given in matrices in the varargin
+            %                         (thus sum(k{i}) where
+            %                         i=1:num_varargin ) such functions
+            %                         will be outputted. Each one has
+            %                         eigs_num dimensions.
+            %             
+            % 
+            n_varargin = nargin -3; % Number of arguments passed through varargin.            
+            if n_varargin < 1
+                error ('Please provide some functions to be projected on the LB basis.');
+            end
+            
+            num_vertices = size(obj.W, 1);            
+            functions_total = 0;            
+            for i=1:n_varargin
+                if size(varargin{i}, 1) ~= num_vertices                    
+                    error ('Wrong dimensionality. The functions must be defined over a Mesh with a number of vertices equal to that of this LB.')
+                end
+                functions_total = functions_total + size(varargin{i}, 2);
+            end
+            
+            [~, evecs] = obj.get_spectra(eigs_num, area_type);
+            assert(num_vertices  == size(evecs, 1));
+                            
+            % Project feauture vectors into reduced LB basis.            
+            Proj = zeros(eigs_num, functions_total);            % Pre-allocate space.
+            right = 0;         
+            for i = 1:n_varargin
+                left  = right + 1;
+                right = right + size(varargin{i}, 2);                                
+                Proj(:, left:right)  = evecs(:, 1:eigs_num) \ varargin{i};
+                % Proj(:, left:right) =  evecs(:, 1:eigs_num)' * varargin{i};  % If eigs, were orthonormal.
+                % TODO-E, Discuss that:  an eigenvector with big norm will contribure
+                % with a smaller coeeficient.                 
+            end                        
+        end
+
     end
     
     methods (Static)
         
         function [W] = cotangent_laplacian(V, T, varargin)
-                % Add comments
+                % Computes teh cotangent laplacian weights.
                 % W is symmetric.
+                % optional third argument is the angles of the triangles of
+                % the mesh, if not provided it will be calculated.
                 I = [T(:,1); T(:,2); T(:,3)];
                 J = [T(:,2); T(:,3); T(:,1)];        
-                                
-                if nargin == 3
+                              
+                if nargin == 2
+                    A = Mesh.angles_of_triangles(V, T);                    
+                elseif nargin == 3
                     A = varargin{1};
                 else
-                    A = Mesh.angles_of_triangles(V, T);
+                    error('Too many arguments were given.')
                 end
                 
                 S = 0.5 * cot([A(:,3); A(:,1); A(:,2)]);
@@ -91,17 +141,19 @@ classdef Laplace_Beltrami < dynamicprops
         
         function [Phi, lambda] = compute_spectra(W, vertex_areas, eigs_num)
             % Returns the sorted ..add comments..
-            % TODO-P: complex spectra
+            % TODO-P if vertex_ares == ones(), solve the simple version
+            % directly.
             if eigs_num < 1 || eigs_num > size(W, 1)-1;
                 error('Eigenvalues must be in range of [1, num_of_vertices-1].')
             end
             
             [Phi, lambda] = eigs(W, vertex_areas, eigs_num, -1e-5);
+            % TODO-P,V: assert(Phi's are lin. independent).            
             lambda        = diag(lambda);
             lambda        = abs(real(lambda));
             [lambda, idx] = sort(lambda);
-            Phi           = Phi(:,idx);
-            Phi           = real(Phi);                 % W is symmetric. diag(Vertex_Areas) is PSD. Thus, the Generalized Eigen-Prob should return real.
+            Phi           = Phi(:,idx);            
+            Phi           = real(Phi);                 % W is symmetric. diag(Vertex_Areas) is PSD. Thus, the Generalized Eigen-Prob should return real.            
         end
             
     end
