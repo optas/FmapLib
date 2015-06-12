@@ -6,93 +6,64 @@ classdef Functional_Map
     end
     
     methods (Static)
-               
-        function [maps_new, X_all] = low_rank_filtering(maps, W)
-            % Panos figuring this out:
+        
+        
+        function [dists] = ball_distortion_of_map()
+            %% Document.
+        end
+        
 
-            % maps      -   mn x mn matrix with all initial pairwise maps (m x m)
-            %               between n objects.
+       function [dists] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, nsamples, fast)                                
+           %% Document.
+           %  Symmetries? e.g., decode Rodola's file           
+            
+%             proj_deltas = (from_basis \ deltas);                           % Delta functions projected in the from_basis.                                                
+%             deltas_transfered = inmap * proj_deltas;                        
+%             all_to_deltas = (to_basis \ speye(size(to_basis, 1)));                     
+%             [ids, dist]  = knn(all_to_deltas'  ,deltas_transfered');         %TODO-P, 'IncludeTies', 'True');                       
+            
+            deltas            = Functional_Map.random_delta_functions(from_mesh, nsamples, 1);
+            proj_deltas       = from_basis(deltas, :)';                     % Delta functions expressed in from_basis.
+            deltas_transfered = inmap * proj_deltas;                        % Use inmap to transfer them in to_mesh.
+            [ids, dist]       = knnsearch(to_basis', deltas_transfered');   % Find closest function for its tranfered on (Euclidean dist is used).
+                                                                            % TODO-P,E solve 'Ties' in knn.                                              
 
-            % W         -   n x n: global similarity between each pair of objects. When
-            %               two objects are very similar, being inconcsisten will be
-            %               penalized more.
+            pairs = [ids, groundtruth(deltas)];                                                           
+            if exist('fast' ,'var') && fast ~= 0  % compute true geodesics or use approx. by Dijkstra.
+                dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs, 1);
+            else
+                dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs);
+            end                            
+        end
 
-            % X_all     -   must be the collection of the sequential mn x mn matrices that correspond
-            % to the updates of the low rank optimization towards convergence.
-            % maps_new  -   must be the last update, i.e., the X_all(:,:,end)
-
-            n = size(W, 1);
-            m = size(maps{1,2}, 1);
-
-            % Initialization of X0 to a block matrix carrying the initial maps.
-            X_0 = kron(ones(n,n), eye(m));
-            for rowIndex = 1:n
-                rowIndices = ((rowIndex-1)*m+1):(rowIndex*m);
-                for colIndex = 1:n
-                    if rowIndex == colIndex
-                        continue;
-                    end
-                    colIndices = ((colIndex-1)*m+1):(colIndex*m);
-                    X_0(rowIndices, colIndices) = maps{rowIndex, colIndex};                
-                end
-            end
-
-            lambda = kron(W+eye(n), ones(m,m))/sqrt(m*n);
-
-            % low rank optimization
-            X_all = Optimization.rank_min(X_0, lambda, n, m);
-
-            X = X_all(:,:,end);
-            % write it back
-            maps_new = maps;
-            for rowIndex = 1:n
-                rowIndices = ((rowIndex-1)*m+1):(rowIndex*m);
-                for colIndex = 1:n
-                    if rowIndex == colIndex
-                        continue;
-                    end
-                    colIndices = ((colIndex-1)*m+1):(colIndex*m);
-                    maps_new{rowIndex, colIndex} = X(rowIndices, colIndices);
-                end
-            end
-
-            end
-
-
-%         function [quality] = evaluate_functional_map(inmap, groundtruth_map)
-%         
-%         end
-%         
-%         function [d] = pair_wise_distortion_of_map(left_mesh, right_mesh, )
-%         
-%         end
-% 
-%         
-%         function [N] = closest_neighbors(from_funcs, to_funcs)            
-%             [ids, dist] = knnsearch(from_funcs, to_funcs, 'IncludeTies', 'True');                                     
-%         end
-
-
-        function [S] = random_delta_functions(inmesh, nsamples)
-            % Computes randomly chosen delta functions of the given mesh
-            % vertices. A delta function of vertex -i- is a vector 
+        function [S] = random_delta_functions(inmesh, nsamples, index_only)
+            % Computes uniformly i.i.d. random delta functions of the given mesh
+            % vertices. The delta function of vertex -i- is a vector 
             % which has a single non-zero entry at its i-th dimension. 
             % The total number of dimensions of such a vector is equal 
-            % to the number of vertices of the given mesh.           
+            % to the number of vertices of the given mesh. The sampling is
+            % done without replacement.
             % 
             % Input:
-            %           inmesh    -   (Mesh) Input mesh.             
-            %           nsamples  -   (int)  Number of delta functions to
-            %                                be produced.            
-            %             
-            % Output:   S         -   (nsamples x num_vertices) Sparse
-            %                         matrix. 
+            %           inmesh      -   (Mesh) Input mesh.             
+            %           nsamples    -   (int)  Number of delta functions to
+            %                            be produced.            
+            %           index_only  -   (optional, Boolean) If 1, only the indices 
+            %                            of the vertices are returned.
+            %                                                                                     
+            %
+            % Output:   S           -     (num_vertices x nsamples) Sparse matrix.            
+            %                       - or, (nsamples, 1) if index_only == 1.
             %                          
             % Precondition: nsamples must be at most as large as
             %               inmesh.num_vertices.
                        
-            vertices = randsample(inmesh.num_vertices, nsamples);
-            S        = sparse(1:nsamples, vertices, ones(1,nsamples));
+            vertices = randsample(inmesh.num_vertices, nsamples);           
+            if exist(index_only, 'var') && index_only == 1
+                S = vertices;
+                return
+            end
+            S  = sparse(vertices, 1:nsamples, ones(1,nsamples), inmesh.num_vertices, nsamples);                       
         end
         
         
@@ -211,8 +182,57 @@ classdef Functional_Map
             X_vec = A_large \ B_large;
             X = reshape(X_vec,N2,N1);
         end
-
-    end
     
-end
+    
+        function [maps_new, X_all] = low_rank_filtering(maps, W)
+            % Panos figuring this out:
 
+            % maps      -   mn x mn matrix with all initial pairwise maps (m x m)
+            %               between n objects.
+
+            % W         -   n x n: global similarity between each pair of objects. When
+            %               two objects are very similar, being inconcsisten will be
+            %               penalized more.
+
+            % X_all     -   must be the collection of the sequential mn x mn matrices that correspond
+            % to the updates of the low rank optimization towards convergence.
+            % maps_new  -   must be the last update, i.e., the X_all(:,:,end)
+
+            n = size(W, 1);
+            m = size(maps{1,2}, 1);
+
+            % Initialization of X0 to a block matrix carrying the initial maps.
+            X_0 = kron(ones(n,n), eye(m));
+            for rowIndex = 1:n
+                rowIndices = ((rowIndex-1)*m+1):(rowIndex*m);
+                for colIndex = 1:n
+                    if rowIndex == colIndex
+                        continue;
+                    end
+                    colIndices = ((colIndex-1)*m+1):(colIndex*m);
+                    X_0(rowIndices, colIndices) = maps{rowIndex, colIndex};                
+                end
+            end
+
+            lambda = kron(W+eye(n), ones(m,m))/sqrt(m*n);
+
+            % low rank optimization
+            X_all = Optimization.rank_min(X_0, lambda, n, m);
+
+            X = X_all(:,:,end);
+            % write it back
+            maps_new = maps;
+            for rowIndex = 1:n
+                rowIndices = ((rowIndex-1)*m+1):(rowIndex*m);
+                for colIndex = 1:n
+                    if rowIndex == colIndex
+                        continue;
+                    end
+                    colIndices = ((colIndex-1)*m+1):(colIndex*m);
+                    maps_new{rowIndex, colIndex} = X(rowIndices, colIndices);
+                end
+            end
+        end
+
+    end % Static.
+end % ClassDef.

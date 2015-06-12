@@ -1,6 +1,6 @@
 classdef Optimization
     % Some high level routines for doing numerical optimization. Still
-    % figuring this out.
+    % figuring this out. TODO-V, Do your best:)
   
     methods (Static)
   
