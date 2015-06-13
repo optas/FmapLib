@@ -19,6 +19,15 @@
     load('../data/output/mesh_and_LB', 'inmesh', 'LB');
     [evals, evecs] = LB.get_spectra(100, 'barycentric');
 
+%% Geodesic distance
+id                = 1;
+indicator_fct     = zeros(inmesh.num_vertices, 1);
+indicator_fct(id) = 1;
+[geo_dist]        = Mesh_Features.geodesic_distance_to_set(inmesh, LB, indicator_fct);
+
+figure;
+trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), geo_dist);
+axis equal; shading interp;
 
 %% Two Meshes and a F-map.
     num_eigs       = 100;   
