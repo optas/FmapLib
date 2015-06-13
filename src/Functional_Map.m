@@ -48,22 +48,6 @@ classdef Functional_Map
             end
         end
         
-        function y = cummax(x)
-            % Computes the cummulative maxmum elements of a vector.
-            %
-            % Input:
-            %           x      -  (n x 1) Vector.                                                                                      
-            %
-            % Output:   y      -  (n x 1) Vector such that y(i) = max(x(1:i))
-            %                          
-            % WARNING: Is an internal MATLAB15a function.
-            
-            y = x;
-            for i = 2:length(x)
-                y(i) = max(y(i), y(i-1));
-            end
-        end
-        
 
        function [dists] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, nsamples, fast)                                
            %% Document.
