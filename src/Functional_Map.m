@@ -8,8 +8,60 @@ classdef Functional_Map
     methods (Static)
         
         
-        function [dists] = ball_distortion_of_map()
-            %% Document.
+        function [centers, from_radius, to_radius] = ball_distortion_of_map(inmap, from_mesh, to_mesh, ngeoballs)
+            % Computes the distortion of a geodesic ball by the given map. 
+            % The centers of the balls are uniformally distributed random
+            % points. For growing radius of the initial geodesic ball correspond the
+            % radius of the mapped geodesic balls.
+            % 
+            % Input:
+            %           inmap       -   (num_vertices x 1) The i-th vertex
+            %                           of from_mesh correspond to the
+            %                           inmap(i)-th vertex of to_mesh.
+            %           from_mesh   -   (Mesh) Input mesh. 
+            %           to_mesh     -   (Mesh) Input mesh. 
+            %           ngeoballs   -   (int)  Number of geodesic balls to
+            %                            be produced.                              
+            %
+            % Output:   centers     -   (ngeoballs x 1) List of indeices on from_mesh
+            %                            corresponding to the center of a
+            %                            geodesic balls.
+            %           from_radius -   (num_vertices x ngeoballs) Growing
+            %                           radius of a geodesic ball on
+            %                           from_mesh.
+            %           to_radius   -   (num_vertices x ngeoballs)
+            %                           Corresponging radius on to_mesh.
+            
+            % TODO-E Test
+            centers = Functional_Map.random_delta_functions(from_mesh, ngeoballs, 1);
+            
+            from_radius = zeros(from_mesh.num_vertices, ngeoballs);
+            to_radius   = zeros(from_mesh.num_vertices, ngeoballs);
+            
+            for i = 1:ngeoballs
+                from_dists                  = comp_geodesics_to_all(from_mesh.vertices(:,1), from_mesh.vertices(:,2), from_mesh.vertices(:,3), from_mesh.triangles', centers(i));
+                [from_radius(:,i), id_from] = sort(from_dists);
+                
+                to_dists       = comp_geodesics_to_all(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', inmap(centers(i)));
+                to_dists       = to_dists( inmap(id_from) );
+                to_radius(:,i) = cummax(to_dists); % WARNING exists only in MATLAB15a (redefined below)
+            end
+        end
+        
+        function y = cummax(x)
+            % Computes the cummulative maxmum elements of a vector.
+            %
+            % Input:
+            %           x      -  (n x 1) Vector.                                                                                      
+            %
+            % Output:   y      -  (n x 1) Vector such that y(i) = max(x(1:i))
+            %                          
+            % WARNING: Is an internal MATLAB15a function.
+            
+            y = x;
+            for i = 2:length(x)
+                y(i) = max(y(i), y(i-1));
+            end
         end
         
 
