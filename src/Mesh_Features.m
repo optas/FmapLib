@@ -1,63 +1,7 @@
 classdef Mesh_Features < dynamicprops
     
     methods (Static)
-        
-        function [geo_dist] = geodesic_distance_to_set(inmesh, laplace_beltrami, indicator_fct)
-            % Computes an approximation the geodesic distance of all vertices to a set.
-            % This approximation comes from an heat diffusion process.
-            %
-            % Input:    inmesh            -  (Mesh) Input mesh with inmesh.num_vertices 
-            %                                vertices.
-            %                                
-            %           laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the
-            %                                inmesh.
-            %           indicator_fct     -  (num_vertices x 1) Vector with values 1 when 
-            %                                the vertex belongs to the set and 0 when ouside.            
-            %
-            % Output:   geo_dist         -  (num_vertices x 1) Geodesic distance between the 
-            %                               i-th vertex and the set defined by indicator_fct.
-            %
-            % Notes:
-            %       K. CRANE, C. WEISCHEDEL, M. WARDETZKY
-            %       "Geodesics in Heat: A New Approach to Computing Distance
-            %       Based on Heat Flow", 2013
-            %
-            
-            if isprop(inmesh, 'triangle_normals')
-                N = inmesh.triangle_normals;
-                N = N ./ repmat(l2_norm(N), [1, 3]);
-            else
-                N = Mesh.normals_of_triangles(inmesh.vertices, inmesh.triangles, 1);
-            end
-            
-            if isprop(inmesh, 'barycentric_v_area')
-                area_vertices = inmesh.barycentric_v_area;
-            else           
-                area_vertices = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
-            end
-            
-            if isprop(inmesh, 'triangle_areas')
-                area_triangles = inmesh.triangle_areas;
-            else           
-                area_triangles = Mesh.area_of_triangles(inmesh.vertices, inmesh.triangles);
-            end
-            
-            if isprop(inmesh, 'edge_lengths')
-                L = inmesh.edge_lengths;
-            else           
-                L = Mesh.edge_length_of_triangles(inmesh.vertices, inmesh.triangles);
-            end
-            
-            t              = mean(L(:))^2;
-            heat_diff      = ( sparse(1:inmesh.num_vertices, 1:inmesh.num_vertices, area_vertices) + t * laplace_beltrami.W ) \ indicator_fct;
-            grad_heat_diff = Mesh.gradient_of_function(heat_diff, inmesh.vertices, inmesh.triangles, N, area_triangles);
-            grad_heat_diff = - grad_heat_diff ./ repmat(l2_norm(grad_heat_diff), [1, 3]);
-            
-            div_vf   = Mesh.divergence_of_vector_field(grad_heat_diff, inmesh.vertices, inmesh.triangles, N, area_vertices);
-            geo_dist = full( laplace_beltrami.W \ ( area_vertices .* div_vf ) );
-            geo_dist = geo_dist - min(geo_dist);
-        end
-        
+  
         function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
             % Computes the mean curvature at each vertex of a given mesh.
             % This implementation utilizes the Laplace Beltrami (LB) operator of
@@ -346,6 +290,61 @@ classdef Mesh_Features < dynamicprops
             end    
         end
 
+          function [geo_dist] = geodesic_distance_to_set(inmesh, laplace_beltrami, indicator_fct)
+            % Computes an approximation the geodesic distance of all vertices to a set.
+            % This approximation comes from an heat diffusion process.
+            %
+            % Input:    inmesh            -  (Mesh) Input mesh with inmesh.num_vertices 
+            %                                vertices.
+            %                                
+            %           laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the
+            %                                inmesh.
+            %           indicator_fct     -  (num_vertices x 1) Vector with values 1 when 
+            %                                the vertex belongs to the set and 0 when ouside.            
+            %
+            % Output:   geo_dist         -  (num_vertices x 1) Geodesic distance between the 
+            %                               i-th vertex and the set defined by indicator_fct.
+            %
+            % Notes:
+            %       K. CRANE, C. WEISCHEDEL, M. WARDETZKY
+            %       "Geodesics in Heat: A New Approach to Computing Distance
+            %       Based on Heat Flow.", 2013
+            %
+            
+            if isprop(inmesh, 'triangle_normals')
+                N = inmesh.triangle_normals;                
+            else
+                N = Mesh.normals_of_triangles(inmesh.vertices, inmesh.triangles, 1);
+            end
+            
+            if isprop(inmesh, 'barycentric_v_area')
+                area_vertices = inmesh.barycentric_v_area;
+            else           
+                area_vertices = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
+            end
+            
+            if isprop(inmesh, 'triangle_areas')
+                area_triangles = inmesh.triangle_areas;
+            else           
+                area_triangles = Mesh.area_of_triangles(inmesh.vertices, inmesh.triangles);
+            end
+            
+            if isprop(inmesh, 'edge_lengths')
+                L = inmesh.edge_lengths;
+            else           
+                L = Mesh.edge_length_of_triangles(inmesh.vertices, inmesh.triangles);
+            end
+            
+            t              = mean(L(:))^2;
+            heat_diff      = ( sparse(1:inmesh.num_vertices, 1:inmesh.num_vertices, area_vertices) + t * laplace_beltrami.W ) \ indicator_fct;
+            grad_heat_diff = Mesh.gradient_of_function(heat_diff, inmesh.vertices, inmesh.triangles, N, area_triangles);
+            grad_heat_diff = - grad_heat_diff ./ repmat(l2_norm(grad_heat_diff), [1, 3]);
+            
+            div_vf   = Mesh.divergence_of_vector_field(grad_heat_diff, inmesh.vertices, inmesh.triangles, N, area_vertices);
+            geo_dist = full( laplace_beltrami.W \ ( area_vertices .* div_vf ) );
+            geo_dist = geo_dist - min(geo_dist);
+        end
+        
   end    
 
 end

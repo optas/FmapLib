@@ -28,11 +28,10 @@ function [bool] = all_close(A, B, atol, rtol)
     end
     
     assert(atol > 0 & rtol >0)
-    
+       
     abs_error =  A(:) - B(:);    
-    rel_error = abs_error ./ A(:);
-   
-    bool = all( (abs(abs_error) < atol) & (abs(rel_error) < rtol) );
+
+    bool = all( (abs(abs_error) < atol) & (abs(abs_error) < rtol * abs(B(:))));
 
 end
 

@@ -49,33 +49,27 @@ classdef Functional_Map
         end
         
 
-       function [dists] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, nsamples, fast)                                
+       function [dists] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, nsamples, groundtruth, fast)                                
            %% Document.
-           %  Symmetries? e.g., decode Rodola's file           
-            
-%             proj_deltas = (from_basis \ deltas);                           % Delta functions projected in the from_basis.                                                
-%             deltas_transfered = inmap * proj_deltas;                        
-%             all_to_deltas = (to_basis \ speye(size(to_basis, 1)));                     
-%             [ids, dist]  = knn(all_to_deltas'  ,deltas_transfered');         %TODO-P, 'IncludeTies', 'True');                       
-            
-            deltas            = Functional_Map.random_delta_functions(from_mesh, nsamples, 1);
-            proj_deltas       = from_basis(deltas, :)';                     % Delta functions expressed in from_basis.
-            deltas_transfered = inmap * proj_deltas;                        % Use inmap to transfer them in to_mesh.
-            [ids, dist]       = knnsearch(to_basis', deltas_transfered');   % Find closest function for its tranfered on (Euclidean dist is used).
+           %  Symmetries? e.g., decode Rodola's file                                               
+            [deltas, indices] = Functional_Map.random_delta_functions(from_mesh, nsamples);                       
+            proj_deltas       = from_basis' * diag(from_mesh.get_vertex_areas()) * deltas;                           
+            deltas_transfered = inmap * proj_deltas;                        % Use inmap to transfer them in to_mesh.            
+            [ids, ~]       = knnsearch(to_basis'*diag(sqrt(to_mesh.get_vertex_areas())) , deltas_transfered');   % Find closest function for its tranfered on (Euclidean dist is used).
                                                                             % TODO-P,E solve 'Ties' in knn.                                              
-
-            pairs = [ids, groundtruth(deltas)];                                                           
-            if exist('fast' ,'var') && fast ~= 0  % compute true geodesics or use approx. by Dijkstra.
+            pairs = [ids, groundtruth(indices)];                                                           
+            if exist('fast' ,'var') && fast ~= 0  % Compute true geodesics or use approx. by Dijkstra.
                 dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs, 1);
             else
                 dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs);
             end                            
         end
 
-        function [S] = random_delta_functions(inmesh, nsamples, index_only)
+        function [S, indices] = random_delta_functions(inmesh, nsamples)
             % Computes uniformly i.i.d. random delta functions of the given mesh
             % vertices. The delta function of vertex -i- is a vector 
-            % which has a single non-zero entry at its i-th dimension. 
+            % which has a single non-zero entry at its i-th dimension.
+            % TODO-P
             % The total number of dimensions of such a vector is equal 
             % to the number of vertices of the given mesh. The sampling is
             % done without replacement.
@@ -83,23 +77,20 @@ classdef Functional_Map
             % Input:
             %           inmesh      -   (Mesh) Input mesh.             
             %           nsamples    -   (int)  Number of delta functions to
-            %                            be produced.            
-            %           index_only  -   (optional, Boolean) If 1, only the indices 
-            %                            of the vertices are returned.
-            %                                                                                     
+            %                            be produced.                                    
             %
-            % Output:   S           -     (num_vertices x nsamples) Sparse matrix.            
-            %                       - or, (nsamples, 1) if index_only == 1.
+            % Output:   S           -     (num_vertices x nsamples) Sparse matrix.                        
             %                          
             % Precondition: nsamples must be at most as large as
             %               inmesh.num_vertices.
-                       
-            vertices = randsample(inmesh.num_vertices, nsamples);           
-            if exist(index_only, 'var') && index_only == 1
-                S = vertices;
-                return
-            end
-            S  = sparse(vertices, 1:nsamples, ones(1,nsamples), inmesh.num_vertices, nsamples);                       
+            %  
+            indices = randsample(inmesh.num_vertices, nsamples);           
+            
+            Av              = inmesh.get_vertex_areas();
+            areas           = 1./sqrt(Av(indices));               %TODO-P remember/explain the inner product wrt 
+                                                                  % areas of                                                                                                                                     
+            S  = sparse(indices, 1:nsamples, areas, inmesh.num_vertices, nsamples);
+            
         end
         
         

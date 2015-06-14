@@ -63,6 +63,18 @@ classdef Mesh < dynamicprops
             end           
         end
         
+        function [F] = plot(this, vertex_function)
+            F = figure; 
+            if ~exist('vertex_values', 'val')                
+                trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3));                
+            else                
+                trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function);                                
+                shading interp;
+            end
+            axis equal; 
+        end
+       
+        
     end
 
     methods (Access = public)        
@@ -84,7 +96,7 @@ classdef Mesh < dynamicprops
         end
         
         function obj = set_triangle_normals(obj)
-            Mesh.add_or_reset_property(obj, 'triangle_normals', @Mesh.normals_of_triangles, obj.vertices, obj.triangles);           
+            Mesh.add_or_reset_property(obj, 'triangle_normals', @Mesh.normals_of_triangles, obj.vertices, obj.triangles, 1);           
         end 
         
         function obj = set_vertex_normals(obj)
@@ -108,9 +120,16 @@ classdef Mesh < dynamicprops
         end
 
         function [A] = get_vertex_areas(obj, area_type)
+            
+            if ~exist('area_type', 'var')
+                area_type = 'barycentric';
+            end
+            
             if ~ Mesh.is_supported_area_type(area_type)            
                 error(strcat('Area must be one of these strings: ', strjoin(Mesh.valid_area_strings(), ', '), '.'))
             end
+            
+            
             prop_name = strcat(area_type, '_v_area');
             if isprop(obj,prop_name)
                 A = obj.(prop_name);
@@ -367,7 +386,8 @@ classdef Mesh < dynamicprops
             %
             % Output:   df - (num_of_triangles x 3) Gradient of f: one vector 
             %           per face.
-
+            %            
+                     
             idj = [2 3 1];
             idK = [3 1 2];
             df = zeros(size(T, 1), 3);

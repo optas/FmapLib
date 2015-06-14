@@ -8,46 +8,59 @@
     inmesh    = Mesh(meshfile, 'rodola_1_1');
     inmesh.set_triangle_angles();
     inmesh.set_vertex_areas('barycentric');
-    inmesh
-
+    
     % Calculate the first 100 spectra, based on barycentric vertex areas.
-    % LB             = Laplace_Beltrami(inmesh);
-    % [evals, evecs] = LB.get_spectra(100, 'barycentric');
-    % save('../data/output/mesh_and_LB', 'inmesh', 'LB');
+    LB             = Laplace_Beltrami(inmesh);
+    [evals, evecs] = LB.get_spectra(100, 'barycentric');
+    save('../data/output/mesh_and_LB', 'inmesh', 'LB');
 
     % Load Precomputed ones.
-    load('../data/output/mesh_and_LB', 'inmesh', 'LB');
-    [evals, evecs] = LB.get_spectra(100, 'barycentric');
+%     load('../data/output/mesh_and_LB', 'inmesh', 'LB');
+%     [evals, evecs] = LB.get_spectra(100, 'barycentric');
 
-%% Geodesic distance
-id                = 1;
-indicator_fct     = zeros(inmesh.num_vertices, 1);
-indicator_fct(id) = 1;
-[geo_dist]        = Mesh_Features.geodesic_distance_to_set(inmesh, LB, indicator_fct);
 
-figure;
-trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), geo_dist);
-axis equal; shading interp;
-
-%% Two Meshes and a F-map.
-    num_eigs       = 100;   
-    meshfile       = '../data/kid_rodola/0001.isometry.1.off';
-    mesh1          = Mesh(meshfile, 'rodola_1_1');    
-    
-%     LB1            = Laplace_Beltrami(mesh1);    
-%     [evals, evecs] = LB1.get_spectra(num_eigs, 'barycentric');
-%     save('../data/output/LB1', 'LB1');          
-
-    load('../data/output/LB1');    
-    [evals, evecs] = LB1.get_spectra(num_eigs, 'barycentric');
-            
-    wks_samples    = 300;
-    hks_samples    = 200;
-    curvatures     = 100;
+%%  %%  Testing new way of computing geodesics. 
+    id                = 1;
+    set_indicator     = zeros(inmesh.num_vertices, 1);
+    set_indicator(id) = 1;
+       
    
-    [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
-    wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);
+    [geo_dist]        = Mesh_Features.geodesic_distance_to_set(inmesh, LB, set_indicator);
+        
+    figure;
+    trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), geo_dist);
+    axis equal; shading interp;
+      
+    geo_dist2 = comp_geodesics_to_all(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.triangles', id, 1);
+       
+    figure;
+    trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), geo_dist2);
+    axis equal; shading interp; colorbar;
     
+    d1 = geo_dist ./ max(geo_dist);
+    d2 = geo_dist2 ./ max(geo_dist2);    
+    norm(d1-d2) / norm(d2)
+    norm(geo_dist -geo_dist2) / norm(geo_dist)
+
+       
+    %% Two Meshes and a F-map.
+    num_eigs       = 100;
+    wks_samples    = 150;
+    hks_samples    = 100;
+    curvatures     = 100;
+    
+    
+    meshfile       = '../data/kid_rodola/0001.isometry.1.off';
+    mesh1          = Mesh(meshfile, 'rodola_1_1');        
+    LB1            = Laplace_Beltrami(mesh1);    
+    [evals, evecs] = LB1.get_spectra(num_eigs, 'barycentric');
+    save('../data/output/LB1', 'LB1');          
+
+%     load('../data/output/LB1');    
+%     [evals, evecs] = LB1.get_spectra(num_eigs, 'barycentric');
+
+    [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
+    wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
     heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
     hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
     
@@ -57,41 +70,26 @@ axis equal; shading interp;
     
     %TODO-P Normalize prob functions
     from_probes       = LB1.project_functions('barycentric', num_eigs, wks_sig, hks_sig);
-
-        
-%     to_probes         = from_probes;    
-%     lambda            = 0;
-    
-%     X = Functional_Map.sum_of_squared_frobenius_norms(from_probes, to_probes, 0, 0, lambda);
-
-%%    
-    meshfile = '../data/kid_rodola/0002.isometry.1.off';
-    mesh2    = Mesh(meshfile, 'rodola_2_1');
-    LB2      = Laplace_Beltrami(mesh2);        
+ 
+    meshfile          = '../data/kid_rodola/0002.isometry.1.off';
+    mesh2             = Mesh(meshfile, 'rodola_2_1');
+    LB2               = Laplace_Beltrami(mesh2);            
     [evals, evecs]    = LB2.get_spectra(num_eigs, 'barycentric');
+    save('../data/output/LB2', 'LB2');          
     [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
     wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
     heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
     hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
-    to_probes         = LB2.project_functions('barycentric', num_eigs, wks_sig, hks_sig);
-    
+    to_probes         = LB2.project_functions('barycentric', num_eigs, wks_sig, hks_sig);    
 %%  
-    lambda = 20;
-    X      = Functional_Map.sum_of_squared_frobenius_norms(from_probes, to_probes, LB1.get_spectra(num_eigs, 'barycentric'), LB2.get_spectra(num_eigs, 'barycentric'), lambda); 
+%     lambda = 20;        
+%     X      = Functional_Map.sum_of_squared_frobenius_norms(from_probes, to_probes, LB1.get_spectra(num_eigs, 'barycentric'), LB2.get_spectra(num_eigs, 'barycentric'), lambda); 
 %%
+    
+    groundtruth = (1:mesh1.num_vertices)';
     evaluation_samples  = 20;
     [evals1, evecs1]    = LB1.get_spectra(num_eigs, 'barycentric');
     [evals2, evecs2]    = LB2.get_spectra(num_eigs, 'barycentric');
-    [ids, dist]         = Functional_Map.pair_wise_distortion_of_map(X, mesh1, evecs1, evecs2, evaluation_samples);                                          
+    X                   = evecs2' * diag(mesh2.get_vertex_areas()) * evecs1;
+    [dist]              = Functional_Map.pairwise_distortion_of_map(X, mesh1, mesh2, evecs1, evecs2, evaluation_samples, groundtruth, 1);                                          
     
-%%
-pairs = [1,2; 1,55; 1,100]';
-% pairs must be passed as 2 x N
-tic
-D1 = comp_geodesics_pairs(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.triangles', pairs);
-toc  
-%%
-sources = [1];
-tic
-D2 = comp_geodesics_to_all(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.triangles', sources);
-toc

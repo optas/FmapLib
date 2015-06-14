@@ -143,17 +143,27 @@ classdef Laplace_Beltrami < dynamicprops
             % Returns the sorted ..add comments..
             % TODO-P if vertex_ares == ones(), solve the simple version
             % directly.
+            % TOdO-P assert(ares are positive).
             if eigs_num < 1 || eigs_num > size(W, 1)-1;
                 error('Eigenvalues must be in range of [1, num_of_vertices-1].')
             end
             
             [Phi, lambda] = eigs(W, vertex_areas, eigs_num, -1e-5);
-            % TODO-P,V: assert(Phi's are lin. independent).            
             lambda        = diag(lambda);
+            
+            if ~isreal(Phi) || ~isreal(lambda)
+                error ('Input Mesh leads to an LB operator that has not real spectra.')
+            end            
+            if sum(lambda < 0) > 1                
+                warning ('More than one *negative* eigenvalue were produced. LB is PSD and only the 1st eigenvalue is expected to potentially be smaller than zero (instead of exactly zero).')
+            end
+            
+%             assert( all_close(Phi' * vertex_areas * Phi, eye(eigs_num)));   % Assert orthogonality.            
+
             lambda        = abs(real(lambda));
             [lambda, idx] = sort(lambda);
             Phi           = Phi(:,idx);            
-            Phi           = real(Phi);                 % W is symmetric. diag(Vertex_Areas) is PSD. Thus, the Generalized Eigen-Prob should return real.            
+            
         end
             
     end

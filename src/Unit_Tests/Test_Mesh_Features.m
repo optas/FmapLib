@@ -77,71 +77,18 @@ classdef Test_Mesh_Features < matlab.unittest.TestCase
         
     end
 
-     
-    
-% %% TODO-E: Format! 
-% Test vertex normal
-% inmesh.set_vertex_normals();
-% N = inmesh.vertex_normal;
-% 
-% figure;
-% trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), 1);
-% hold on;
-% quiver3(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), N(:,1), N(:,2), N(:,3));
-% hold off;
-% axis equal;
-% 
-% %% Mean curvature
-% mean_curv = Mesh_Features.mean_curvature(inmesh, Laplace_Beltrami(inmesh), [0, 0.5, 2, 10]);
-% 
-% figure;
-% subplot(2, 2, 1); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,1));
-% shading interp; axis equal; title('Mean Curvature');
-% subplot(2, 2, 2); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,2));
-% shading interp; axis equal; title('Mean Curvature Smoothed');
-% subplot(2, 2, 3); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,3));
-% shading interp; axis equal; title('Mean Curvature Smoothed');
-% subplot(2, 2, 4); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), mean_curv(:,4));
-% shading interp; axis equal; title('Mean Curvature Smoothed');
-% 
-% %% Gauss curvature
-% gauss_curv = Mesh_Features.gaussian_curvature(inmesh, [0, 20, 200, 500]);
-% 
-% figure;
-% subplot(2, 2, 1); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), gauss_curv(:,1));
-% shading interp; axis equal; title('Gauss Curvature');
-% subplot(2, 2, 2); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), gauss_curv(:,2));
-% shading interp; axis equal; title('Gauss Curvature Smoothed');
-% subplot(2, 2, 3); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), gauss_curv(:,3));
-% shading interp; axis equal; title('Gauss Curvature Smoothed');
-% subplot(2, 2, 4); trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), gauss_curv(:,4));
-% shading interp; axis equal; title('Gauss Curvature Smoothed');
-% 
-% %% Gradient
-% inmesh.set_vertex_normals();
-% inmesh.set_triangle_areas();
-% f = inmesh.vertices(:,1);
-% df = Mesh.gradient_of_function(f, inmesh.vertices, inmesh.triangles, inmesh.triangle_normal, inmesh.triangle_areas);
-% 
-% bar = (inmesh.vertices(inmesh.triangles(:,1),:) + inmesh.vertices(inmesh.triangles(:,2),:) + inmesh.vertices(inmesh.triangles(:,3),:)) / 3;
-% figure;
-% trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.vertices(:,1));
-% hold on;
-% quiver3(bar(:,1), bar(:,2), bar(:,3), df(:,1), df(:,2), df(:,3));
-% hold off;
-% shading interp; axis equal; 
-% 
-% Lf = Mesh.divergence_of_vector_field(df, inmesh.vertices, inmesh.triangles, inmesh.triangle_normal, inmesh.barycentric_v_area);
-% LB = Laplace_Beltrami(inmesh);
-% Lf2 = LB.W*f ./ inmesh.barycentric_v_area;
-% assert(norm(Lf - Lf2)/norm(Lf) < 1e-8);
-% 
-% figure;
-% trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), Lf);
-% shading interp; axis equal; 
-% 
-%     
-    
+
+    % Verify that divergence of gradient is equal Laplacian.
+    % f can be a random function over the vertices.
+    % df = Mesh.gradient_of_function(f, inmesh.vertices, inmesh.triangles, inmesh.triangle_normal, inmesh.triangle_areas);
+    % Lf = Mesh.divergence_of_vector_field(df, inmesh.vertices, inmesh.triangles, inmesh.triangle_normal, inmesh.barycentric_v_area);
+    % LB = Laplace_Beltrami(inmesh);
+    % Lf2 = LB.W*f ./ inmesh.barycentric_v_area;
+    % assert(norm(Lf - Lf2)/norm(Lf) < 1e-8);
+    % 
+    % figure;
+    % trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), Lf);
+    % shading interp; axis equal; 
 
     methods (Static)
         
