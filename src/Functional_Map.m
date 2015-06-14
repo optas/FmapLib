@@ -93,6 +93,17 @@ classdef Functional_Map
             
         end
         
+        function [X] = groundtruth_functional_map(basis_from, basis_to, correspondences_from_to)
+            
+            nodes_from = size(basis_from, 1);
+            nodes_to   = size(basis_to, 1);  
+            
+            non_zero   = length(correspondences_from_to(:, 2));
+
+            P          = sparse(correspondences_from_to(:, 2), correspondences_from_to(:, 1), ones(non_zero,1), nodes_to, nodes_from);            
+            X = basis_to' * P * basis_from;
+%         TODO-E:  do we have to adjust via the areas: diag(mesh2.get_vertex_areas()) 
+        end
         
         function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             % This code uses plain least squares techniques to 
