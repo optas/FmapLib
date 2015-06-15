@@ -10,16 +10,15 @@
     inmesh.set_vertex_areas('barycentric');            
     sum(inmesh.get_vertex_areas('barycentric'))             % We don't normalize vertex areas to sum to 1.
         
-%     LB             = Laplace_Beltrami(inmesh);              % Calculate the first 100 spectra, based on barycentric vertex areas.
-%     [evals, evecs] = LB.get_spectra(100, 'barycentric'); 
-%     save('../data/output/mesh_and_LB', 'inmesh', 'LB');
+    LB             = Laplace_Beltrami(inmesh);              % Calculate the first 100 spectra, based on barycentric vertex areas.
+    [evals, evecs] = LB.get_spectra(100, 'barycentric'); 
+    save('../data/output/mesh_and_LB', 'inmesh', 'LB');
  
     % Load Precomputed ones.
-    load('../data/output/mesh_and_LB', 'inmesh', 'LB');
-    [evals, evecs] = LB.get_spectra(100, 'barycentric');
+%     load('../data/output/mesh_and_LB', 'inmesh', 'LB');
+%     [evals, evecs] = LB.get_spectra(100, 'barycentric');
 
-
-    %% Two Meshes and a F-map.
+%% Two Meshes and a F-map.
     num_eigs       = 100;
     wks_samples    = 150;
     hks_samples    = 100;
