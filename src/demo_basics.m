@@ -19,30 +19,6 @@
 %     [evals, evecs] = LB.get_spectra(100, 'barycentric');
 
 
-%%  %%  Testing new way of computing geodesics. 
-    id                = 1;
-    set_indicator     = zeros(inmesh.num_vertices, 1);
-    set_indicator(id) = 1;
-       
-   
-    [geo_dist]        = Mesh_Features.geodesic_distance_to_set(inmesh, LB, set_indicator);
-        
-    figure;
-    trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), geo_dist);
-    axis equal; shading interp;
-      
-    geo_dist2 = comp_geodesics_to_all(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.triangles', id, 1);
-       
-    figure;
-    trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), geo_dist2);
-    axis equal; shading interp; colorbar;
-    
-    d1 = geo_dist ./ max(geo_dist);
-    d2 = geo_dist2 ./ max(geo_dist2);    
-    norm(d1-d2) / norm(d2)
-    norm(geo_dist -geo_dist2) / norm(geo_dist)
-
-       
     %% Two Meshes and a F-map.
     num_eigs       = 100;
     wks_samples    = 150;
@@ -81,8 +57,6 @@
     hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
     to_probes         = LB2.project_functions('barycentric', num_eigs, wks_sig, hks_sig);    
 
-    
-%%  
 %     lambda = 20;        
 %     X      = Functional_Map.sum_of_squared_frobenius_norms(from_probes, to_probes, LB1.get_spectra(num_eigs, 'barycentric'), LB2.get_spectra(num_eigs, 'barycentric'), lambda); 
 %%
@@ -92,8 +66,7 @@
     X_opt = Functional_Map.groundtruth_functional_map(basis_from, basis_to, correspondences);
 
 %% 
-
     groundtruth = (1:mesh1.num_vertices)';
     evaluation_samples  = 20;    
-    [dist]              = Functional_Map.pairwise_distortion_of_map(X_opt, mesh1, mesh2, basis_from, basis_to, evaluation_samples, groundtruth, 1);                                          
+    [dist]              = Functional_Map.pairwise_distortion_of_map(X_opt, mesh1, mesh2, basis_from, basis_to, evaluation_samples, groundtruth);                                          
     

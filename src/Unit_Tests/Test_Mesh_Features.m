@@ -90,6 +90,30 @@ classdef Test_Mesh_Features < matlab.unittest.TestCase
     % trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), Lf);
     % shading interp; axis equal; 
 
+    
+    %%  %%  Testing new way of computing geodesics. 
+%     id                = 1;
+%     set_indicator     = zeros(inmesh.num_vertices, 1);
+%     set_indicator(id) = 1;
+%           
+%     [geo_dist]        = Mesh_Features.geodesic_distance_to_set(inmesh, LB, set_indicator);
+%         
+%     figure;
+%     trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), geo_dist);
+%     axis equal; shading interp;
+%       
+%     geo_dist2 = comp_geodesics_to_all(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.triangles', id, 1);
+%        
+%     figure;
+%     trisurf(inmesh.triangles, inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), geo_dist2);
+%     axis equal; shading interp; colorbar;
+%     
+%     d1 = geo_dist ./ max(geo_dist);
+%     d2 = geo_dist2 ./ max(geo_dist2);    
+%     norm(d1-d2) / norm(d2)
+%     norm(geo_dist -geo_dist2) / norm(geo_dist)
+    
+    
     methods (Static)
         
       function [WKS] = wks_Aubry(evecs, evals, energies, sigma)   
