@@ -44,11 +44,11 @@ classdef Functional_Map
 
                 to_dists       = comp_geodesics_to_all(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', inmap(centers(i)));
                 to_dists       = to_dists( inmap(id_from) );
-                to_radius(:,i) = cummax(to_dists);
+                    to_radius(:,i) = cummax(to_dists);
             end
         end
         
-        function [dists] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, groundtruth, indices, nsamples, fast)
+        function [dists, indices] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, groundtruth, indices, nsamples, fast)
             %% Document.
             %  Symmetries? e.g., decode Rodola's file
 

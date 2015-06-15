@@ -323,9 +323,8 @@ classdef Mesh < dynamicprops
         function [bool] = is_supported_area_type(area_type)
             % Returns 1 iff the area_type (string) corresponds to a
             % method of creating vertex areas, that is supported by Mesh class.                
-            valid_area_types = Mesh.valid_area_strings();
-            area_type = lower(area_type);  % Keywords are case independent.
-            index = strcmpi(area_type, valid_area_types);
+            valid_area_types = Mesh.valid_area_strings();            
+            index = strcmpi(area_type, valid_area_types);           % Keywords are case independent.
             bool = any(index);
         end
         
