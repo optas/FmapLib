@@ -1,12 +1,29 @@
 classdef Functional_Map
     % A class implementing a variety of utilities related to the Functional
     % Maps framework.
-        
-    properties
+
+    properties (GetAccess = public, SetAccess = private)
+        % Basic properties that every instance of the Functional_Map class has.        
+        source_basis = [];  % LB1? or only evecs? 
+        target_basis = [];                        
     end
     
-    methods (Static)
-        
+    methods (Access = public)
+        % Class Constructor.        
+        function obj = Functional_Map(varargin)     
+            if nargin == 0                
+                % Construct an empty Mesh.            
+                obj.source_basis = [];
+                obj.target_basis = [];                
+            else 
+                obj.source_basis = varargin{1};
+                obj.target_basis = varargin{2};
+            end
+        end
+    end
+       
+
+    methods (Static)                
         function [centers, from_radius, to_radius] = ball_distortion_of_map(inmap, from_mesh, to_mesh, ngeoballs)
             % Computes the distortion of a geodesic ball by the given map. 
             % The centers of the balls are uniformally distributed random
@@ -48,24 +65,45 @@ classdef Functional_Map
             end
         end
         
-        function [dists, indices] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, groundtruth, indices, nsamples, fast)
+        function [dists, indices] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, groundtruth, varargin)
+            
             %% Document.
-            %  Symmetries? e.g., decode Rodola's file
-
-            if exist('indices' ,'var')
-                [deltas, ~] = Functional_Map.random_delta_functions(from_mesh, dummyvar(1), indices);                       
-            else
-                [deltas, indices] = Functional_Map.random_delta_functions(from_mesh, nsamples);                           
+            %  Symmetries? e.g., decode Rodola's file                        
+            % indices, nsamples, fast
+            
+            switch varargin{1}
+                case 'nsamples'
+                    nsamples = varargin{2};
+                    [deltas, indices] = Functional_Map.random_delta_functions(from_mesh, nsamples);                           
+                case 'indices'
+                    indices = varargin{2};
+                    [deltas, ~] = Functional_Map.random_delta_functions(from_mesh, 0, indices);                       
+                otherwise
+                    error('You must provide either a set of random sample points, or how many you want to be produced.')
             end
-
+            
+            if length(varargin) == 3
+                if ~ strcmp(varargin{3}, 'fast')
+                    error('The last argument can be only the string ''fast'', to enable the Dijkstra approximation of the geodesics.')
+                else
+                    fast = 1;
+                end
+            end
+                    
             proj_deltas       = from_basis' * diag(from_mesh.get_vertex_areas()) * deltas;                              % A set of random delta functions on from_mesh.    
+            
+%             A                 = from_mesh.get_vertex_areas();
+%             Ad                = spdiags(A, 0, length(A), length(A));
+%             proj_deltas       = from_basis' * Ad * deltas;                              % TODO-P, : Is it faster?
+            
             deltas_transfered = inmap * proj_deltas;                                                                    % Use inmap to transfer them in to_mesh.            
             [ids, ~]          = knnsearch((to_basis'*diag(sqrt(to_mesh.get_vertex_areas())))' , deltas_transfered');    % Find closest function for its tranfered on (Euclidean dist is used).
                                                                                                                         % TODO-P,E solve 'Ties' in knn.                                              
             pairs = [ids, groundtruth(indices)];                                                           
-            if exist('fast' ,'var') && fast ~= 0                                                                        % Compute true geodesics or use approx. by Dijkstra.
+            
+            if fast                                                                                                     % Compute true geodesics or use approx. by Dijkstra.                           
                 dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs, 1);
-            else
+            else 
                 dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs);
             end                            
         end
@@ -92,16 +130,20 @@ classdef Functional_Map
             %               inmesh.num_vertices.
             
             if ~exist('indices' ,'var')                       
-                indices = randsample(inmesh.num_vertices, nsamples);                       
+                indices = randsample(inmesh.num_vertices, nsamples);                                       
+            else
+                nsamples = length(indices);
             end
+            
             Av      = inmesh.get_vertex_areas();
-            areas   = 1 ./ sqrt(Av(indices));               %TODO-P remember/explain the inner product wrt triangle areas.                                                                                      
+            areas   = 1 ./ sqrt(Av(indices));               %TODO-P remember/explain the inner product wrt triangle areas.                                                                                                  
             S       = sparse(indices, 1:nsamples, areas, inmesh.num_vertices, nsamples);            
         end
         
         
         
         function [X] = groundtruth_functional_map(basis_from, basis_to, correspondences_from_to)            
+            
             nodes_from = size(basis_from, 1);
             nodes_to   = size(basis_to, 1);  
             

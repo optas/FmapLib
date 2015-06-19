@@ -38,7 +38,7 @@ classdef Mesh_Features < dynamicprops
             end
         end
         
-        function [gauss_curv] = gaussian_curvature(inmesh, smoothing_time)                                        
+        function [gauss_curv] = gaussian_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
             % Computes the Gaussian curvature at each vertex of a given mesh.
             % (Optional) A smoothing using the heat diffusion can be done
             % as post-processing.
@@ -47,6 +47,8 @@ classdef Mesh_Features < dynamicprops
             % Differential-Geometry Operators for Triangulated 2-Manifolds."
             %
             % Input:  inmesh            -  (Mesh) 
+            %         laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the
+            %                                inmesh.
             %         smoothing         -  (k x 1, Optional) vector with time for the
             %                              heat diffusion processing.
             %
@@ -72,12 +74,9 @@ classdef Mesh_Features < dynamicprops
                 areas = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
             end
             
-            gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;
+            gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;   % TODO-E: Is it OK that areas not normalized?
         
-            if exist('smoothing_time', 'var')                
-                if ~exist('laplace_beltrami', 'var') % If not given compute LB operator.
-                    laplace_beltrami = Laplace_Beltrami(inmesh);
-                end                
+            if exist('smoothing_time', 'var')                                               
                 gauss_curv_smooth = Mesh_Features.heat_diffusion_smoothing(laplace_beltrami.W, gauss_curv, smoothing_time);
                 gauss_curv        = [gauss_curv, gauss_curv_smooth];
             end
@@ -145,7 +144,7 @@ classdef Mesh_Features < dynamicprops
             
             low_pass_filter = exp(- evals * T);
             signatures = evecs.^2 * low_pass_filter;
-            scale = sum(low_pass_filter, 1);     %TODO-E
+            scale = sum(low_pass_filter, 1);
             signatures = divide_columns(signatures, scale);
             assert(all(all(signatures >= 0)))
         end

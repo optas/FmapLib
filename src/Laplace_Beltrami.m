@@ -2,8 +2,8 @@ classdef Laplace_Beltrami < dynamicprops
     
     properties (GetAccess = public, SetAccess = private)
         W           = [];               % Weight matrix of cotangent Laplacian.
-        M           = [];               % Associated Mesh of LB.   
-        spectra     = containers.Map;   % A dictionary carrying various types of eigenvalues and eigenvectors
+        M           = [];               % Associated Mesh of LB.
+        spectra     = containers.Map;   % A dictionary carrying various types of eigenvalues and eigenvectors.
     end
     
     methods
@@ -38,7 +38,7 @@ classdef Laplace_Beltrami < dynamicprops
                 catch                                       
                     obj.M.set_vertex_areas(area_type);
                     A = obj.M.get_vertex_areas(area_type);
-                end                
+                end                                
                 A              = spdiags(A, 0, length(A), length(A));
                 [evecs, evals] = Laplace_Beltrami.compute_spectra(obj.W, A, eigs_num);                
                 obj.spectra(area_type) = struct('evals', evals, 'evecs', evecs); % Store computed spectra.
@@ -140,15 +140,18 @@ classdef Laplace_Beltrami < dynamicprops
         end
         
         function [Phi, lambda] = compute_spectra(W, vertex_areas, eigs_num)
-            % Returns the sorted ..add comments..
-            % TODO-P if vertex_ares == ones(), solve the simple version
-            % directly.
-            % TOdO-P assert(ares are positive).
-            if eigs_num < 1 || eigs_num > size(W, 1)-1;
-                error('Eigenvalues must be in range of [1, num_of_vertices-1].')
-            end
+            % Returns the eigenvalues and the eigenvectors associated with a mesh and its W-vertex_ares. (TODO:P add explanations)            
+            % TODO-P if vertex_ares == ones(), solve the simpler eigenvalue problem directly.
             
-            [Phi, lambda] = eigs(W, vertex_areas, eigs_num, -1e-5);
+            if eigs_num < 1 || eigs_num > size(W, 1)-1;
+                error('Eigenvalues must be in range of [1, num_of_vertices-1].');
+            end
+            if any(diag(vertex_areas) <= 0 ) 
+                error ('The areas of the vertices must be positive.');
+            end
+                        
+            sigma = -1e-5; % TODO-V: sigma=0 or 'SM'?
+            [Phi, lambda] = eigs(W, vertex_areas, eigs_num, sigma);
             lambda        = diag(lambda);
             
             if ~isreal(Phi) || ~isreal(lambda)
@@ -156,14 +159,15 @@ classdef Laplace_Beltrami < dynamicprops
             end            
             if sum(lambda < 0) > 1                
                 warning ('More than one *negative* eigenvalue were produced. LB is PSD and only the 1st eigenvalue is expected to potentially be smaller than zero (instead of exactly zero).')
+            end            
+            atol = 1e-08; rtol = +Inf;            
+            if ~all_close(Phi' * vertex_areas * Phi, eye(eigs_num), atol, rtol) 
+                error ('The produced eigenvectors are not orthogonal wrt. the Inner Product defined by the vertex areas.')
             end
-            
-%             assert( all_close(Phi' * vertex_areas * Phi, eye(eigs_num)));   % Assert orthogonality.            
-
-            lambda        = abs(real(lambda));
+  
+            lambda        = abs(lambda);
             [lambda, idx] = sort(lambda);
-            Phi           = Phi(:,idx);            
-            
+            Phi           = Phi(:,idx);                        
         end
             
     end
