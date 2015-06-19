@@ -69,7 +69,7 @@ classdef Functional_Map
             
             %% Document.
             %  Symmetries? e.g., decode Rodola's file                        
-            % indices, nsamples, fast
+            %  indices, nsamples, fast
             
             switch varargin{1}
                 case 'nsamples'
@@ -82,6 +82,8 @@ classdef Functional_Map
                     error('You must provide either a set of random sample points, or how many you want to be produced.')
             end
             
+            
+            
             if length(varargin) == 3
                 if ~ strcmp(varargin{3}, 'fast')
                     error('The last argument can be only the string ''fast'', to enable the Dijkstra approximation of the geodesics.')
@@ -90,14 +92,18 @@ classdef Functional_Map
                 end
             end
                     
-            proj_deltas       = from_basis' * diag(from_mesh.get_vertex_areas()) * deltas;                              % A set of random delta functions on from_mesh.    
+%             proj_deltas       = from_basis' * diag(from_mesh.get_vertex_areas()) * deltas;                              % A set of random delta functions on from_mesh.    
             
-%             A                 = from_mesh.get_vertex_areas();
-%             Ad                = spdiags(A, 0, length(A), length(A));
-%             proj_deltas       = from_basis' * Ad * deltas;                              % TODO-P, : Is it faster?
+            A                 = from_mesh.get_vertex_areas();
+            Ad                = spdiags(A, 0, length(A), length(A));
+            proj_deltas       = from_basis' * Ad * deltas;                              % TODO-P, : Is it faster?
             
             deltas_transfered = inmap * proj_deltas;                                                                    % Use inmap to transfer them in to_mesh.            
-            [ids, ~]          = knnsearch((to_basis'*diag(sqrt(to_mesh.get_vertex_areas())))' , deltas_transfered');    % Find closest function for its tranfered on (Euclidean dist is used).
+            
+            A                 = sqrt(to_mesh.get_vertex_areas());
+            Ads               = spdiags(A, 0, length(A), length(A));
+            
+            [ids, ~]          = knnsearch((to_basis'* Ads)' , deltas_transfered');    % Find closest function for its tranfered on (Euclidean dist is used).
                                                                                                                         % TODO-P,E solve 'Ties' in knn.                                              
             pairs = [ids, groundtruth(indices)];                                                           
             
@@ -142,16 +148,17 @@ classdef Functional_Map
         
         
         
-        function [X] = groundtruth_functional_map(basis_from, basis_to, correspondences_from_to)            
+        function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)            
             
-            nodes_from = size(basis_from, 1);
-            nodes_to   = size(basis_to, 1);  
-            
-            non_zero   = length(correspondences_from_to(:, 2));
-
-            P          = sparse(correspondences_from_to(:, 2), correspondences_from_to(:, 1), ones(non_zero,1), nodes_to, nodes_from);            
-            X = basis_to' * P * basis_from;
-%         TODO-E:  do we have to adjust via the areas: diag(mesh2.get_vertex_areas()) 
+%             nodes_from = size(basis_from, 1);
+%             nodes_to   = size(basis_to, 1);              
+%             non_zero   = length(correspondences_from_to(:, 2));
+%             P          = sparse(correspondences_from_to(:, 2), correspondences_from_to(:, 1), ones(non_zero,1), nodes_to, nodes_from);            
+%             X          = basis_to' * P * basis_from;
+            basis_from = basis_from(gt_from_to ~= 0, :) ;               % Remove dimensions for which you do not know the groundtruth (i.e., map -ith- vertex to 0).
+            basis_from = basis_from(gt_from_to(gt_from_to ~= 0), :);   % Permute the basis to reflect the corresponding ground_truth.            
+            A          = spdiags(to_areas, 0, length(to_areas), length(to_areas));      %TODO-P: we added the areas to have the real pinv of LB1.
+            X          = basis_to' * A * basis_from;                       
         end
         
         function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)

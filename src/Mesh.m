@@ -134,7 +134,7 @@ classdef Mesh < dynamicprops
                 A = obj.(prop_name);
             else
                 ME = MException('Mesh:variable_not_initialized.', ...
-                    'Variable %s has not been initialized via set_area_vertices() method.', strjoin('vertex_area_', area_type));
+                    'Variable %s has not been initialized via set_area_vertices() method.', ['vertex_area_', area_type]);   
                 throw(ME)
             end           
         end
@@ -307,8 +307,7 @@ classdef Mesh < dynamicprops
                 Jn  = [J;I;I];
                 Mn  = [Mij;Mji;Mii];
                 M   = sparse(In, Jn, Mn, nv, nv);                   
-                Av  = sum(M,2);
-
+                Av  = full(sum(M,2));
             else
                 % Compute based on Voronoi.
                 % (following the algorithm decribed in 
