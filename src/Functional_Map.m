@@ -1,17 +1,34 @@
 classdef Functional_Map
     % A class implementing a variety of utilities related to the Functional
     % Maps framework.
-        
-    properties
+
+    properties (GetAccess = public, SetAccess = private)
+        % Basic properties that every instance of the Functional_Map class has.        
+        source_basis = [];  % LB1? or only evecs? 
+        target_basis = [];                        
     end
     
-    methods (Static)
-        
-        
+    methods (Access = public)
+        % Class Constructor.        
+        function obj = Functional_Map(varargin)     
+            if nargin == 0                
+                % Construct an empty Mesh.            
+                obj.source_basis = [];
+                obj.target_basis = [];                
+            else 
+                obj.source_basis = varargin{1};
+                obj.target_basis = varargin{2};
+            end
+        end
+    end
+       
+
+    methods (Static)                
         function [centers, from_radius, to_radius] = ball_distortion_of_map(inmap, from_mesh, to_mesh, ngeoballs)
             % Computes the distortion of a geodesic ball by the given map. 
             % The centers of the balls are uniformally distributed random
-            % points. For growing radius of the initial geodesic ball correspond the
+            % points. 
+            % TODO-E,P: Improve: For growing radius of the initial geodesic ball correspond the
             % radius of the mapped geodesic balls.
             % 
             % Input:
@@ -31,93 +48,118 @@ classdef Functional_Map
             %                           from_mesh.
             %           to_radius   -   (num_vertices x ngeoballs)
             %                           Corresponging radius on to_mesh.
-            
+
             % TODO-E Test
             centers = Functional_Map.random_delta_functions(from_mesh, ngeoballs, 1);
-            
+
             from_radius = zeros(from_mesh.num_vertices, ngeoballs);
             to_radius   = zeros(from_mesh.num_vertices, ngeoballs);
-            
+
             for i = 1:ngeoballs
                 from_dists                  = comp_geodesics_to_all(from_mesh.vertices(:,1), from_mesh.vertices(:,2), from_mesh.vertices(:,3), from_mesh.triangles', centers(i));
                 [from_radius(:,i), id_from] = sort(from_dists);
-                
+
                 to_dists       = comp_geodesics_to_all(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', inmap(centers(i)));
                 to_dists       = to_dists( inmap(id_from) );
-                to_radius(:,i) = cummax(to_dists); % WARNING exists only in MATLAB15a (redefined below)
+                    to_radius(:,i) = cummax(to_dists);
             end
         end
         
-        function y = cummax(x)
-            % Computes the cummulative maxmum elements of a vector.
-            %
-            % Input:
-            %           x      -  (n x 1) Vector.                                                                                      
-            %
-            % Output:   y      -  (n x 1) Vector such that y(i) = max(x(1:i))
-            %                          
-            % WARNING: Is an internal MATLAB15a function.
+        function [dists, indices] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, groundtruth, varargin)
             
-            y = x;
-            for i = 2:length(x)
-                y(i) = max(y(i), y(i-1));
+            %% Document.
+            %  Symmetries? e.g., decode Rodola's file                        
+            %  indices, nsamples, fast
+            
+            switch varargin{1}
+                case 'nsamples'
+                    nsamples = varargin{2};
+                    [deltas, indices] = Functional_Map.random_delta_functions(from_mesh, nsamples);                           
+                case 'indices'
+                    indices = varargin{2};
+                    [deltas, ~] = Functional_Map.random_delta_functions(from_mesh, 0, indices);                       
+                otherwise
+                    error('You must provide either a set of random sample points, or how many you want to be produced.')
             end
-        end
-        
-
-       function [dists] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, nsamples, fast)                                
-           %% Document.
-           %  Symmetries? e.g., decode Rodola's file           
             
-%             proj_deltas = (from_basis \ deltas);                           % Delta functions projected in the from_basis.                                                
-%             deltas_transfered = inmap * proj_deltas;                        
-%             all_to_deltas = (to_basis \ speye(size(to_basis, 1)));                     
-%             [ids, dist]  = knn(all_to_deltas'  ,deltas_transfered');         %TODO-P, 'IncludeTies', 'True');                       
             
-            deltas            = Functional_Map.random_delta_functions(from_mesh, nsamples, 1);
-            proj_deltas       = from_basis(deltas, :)';                     % Delta functions expressed in from_basis.
-            deltas_transfered = inmap * proj_deltas;                        % Use inmap to transfer them in to_mesh.
-            [ids, dist]       = knnsearch(to_basis', deltas_transfered');   % Find closest function for its tranfered on (Euclidean dist is used).
-                                                                            % TODO-P,E solve 'Ties' in knn.                                              
-
-            pairs = [ids, groundtruth(deltas)];                                                           
-            if exist('fast' ,'var') && fast ~= 0  % compute true geodesics or use approx. by Dijkstra.
+            
+            if length(varargin) == 3
+                if ~ strcmp(varargin{3}, 'fast')
+                    error('The last argument can be only the string ''fast'', to enable the Dijkstra approximation of the geodesics.')
+                else
+                    fast = 1;
+                end
+            end
+                    
+%             proj_deltas       = from_basis' * diag(from_mesh.get_vertex_areas()) * deltas;                              % A set of random delta functions on from_mesh.    
+            
+            A                 = from_mesh.get_vertex_areas();
+            Ad                = spdiags(A, 0, length(A), length(A));
+            proj_deltas       = from_basis' * Ad * deltas;                              % TODO-P, : Is it faster?
+            
+            deltas_transfered = inmap * proj_deltas;                                                                    % Use inmap to transfer them in to_mesh.            
+            
+            A                 = sqrt(to_mesh.get_vertex_areas());
+            Ads               = spdiags(A, 0, length(A), length(A));
+            
+            [ids, ~]          = knnsearch((to_basis'* Ads)' , deltas_transfered');    % Find closest function for its tranfered on (Euclidean dist is used).
+                                                                                                                        % TODO-P,E solve 'Ties' in knn.                                              
+            pairs = [ids, groundtruth(indices)];                                                           
+            
+            if fast                                                                                                     % Compute true geodesics or use approx. by Dijkstra.                           
                 dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs, 1);
-            else
+            else 
                 dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs);
             end                            
         end
-
-        function [S] = random_delta_functions(inmesh, nsamples, index_only)
+        
+        function [S, indices] = random_delta_functions(inmesh, nsamples, indices)
             % Computes uniformly i.i.d. random delta functions of the given mesh
             % vertices. The delta function of vertex -i- is a vector 
-            % which has a single non-zero entry at its i-th dimension. 
+            % which has a single non-zero entry at its i-th dimension.
+            % TODO-P
             % The total number of dimensions of such a vector is equal 
             % to the number of vertices of the given mesh. The sampling is
             % done without replacement.
             % 
             % Input:
             %           inmesh      -   (Mesh) Input mesh.             
-            %           nsamples    -   (int)  Number of delta functions to
-            %                            be produced.            
-            %           index_only  -   (optional, Boolean) If 1, only the indices 
-            %                            of the vertices are returned.
-            %                                                                                     
+            %           nsamples    -   (int)  Number of delta functions to be produced.
+            %                            
+            % Output:   
+            %           S           -   (num_vertices x nsamples) Sparse matrix with the 
+            %                           delta functions on as column vectors.
+            %           indices     -   (nsamples, 1) The vertices of the deltas.
             %
-            % Output:   S           -     (num_vertices x nsamples) Sparse matrix.            
-            %                       - or, (nsamples, 1) if index_only == 1.
-            %                          
             % Precondition: nsamples must be at most as large as
             %               inmesh.num_vertices.
-                       
-            vertices = randsample(inmesh.num_vertices, nsamples);           
-            if exist(index_only, 'var') && index_only == 1
-                S = vertices;
-                return
+            
+            if ~exist('indices' ,'var')                       
+                indices = randsample(inmesh.num_vertices, nsamples);                                       
+            else
+                nsamples = length(indices);
             end
-            S  = sparse(vertices, 1:nsamples, ones(1,nsamples), inmesh.num_vertices, nsamples);                       
+            
+            Av      = inmesh.get_vertex_areas();
+            areas   = 1 ./ sqrt(Av(indices));               %TODO-P remember/explain the inner product wrt triangle areas.                                                                                                  
+            S       = sparse(indices, 1:nsamples, areas, inmesh.num_vertices, nsamples);            
         end
         
+        
+        
+        function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)            
+            
+%             nodes_from = size(basis_from, 1);
+%             nodes_to   = size(basis_to, 1);              
+%             non_zero   = length(correspondences_from_to(:, 2));
+%             P          = sparse(correspondences_from_to(:, 2), correspondences_from_to(:, 1), ones(non_zero,1), nodes_to, nodes_from);            
+%             X          = basis_to' * P * basis_from;
+            basis_from = basis_from(gt_from_to ~= 0, :) ;               % Remove dimensions for which you do not know the groundtruth (i.e., map -ith- vertex to 0).
+            basis_from = basis_from(gt_from_to(gt_from_to ~= 0), :);   % Permute the basis to reflect the corresponding ground_truth.            
+            A          = spdiags(to_areas, 0, length(to_areas), length(to_areas));      %TODO-P: we added the areas to have the real pinv of LB1.
+            X          = basis_to' * A * basis_from;                       
+        end
         
         function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             % This code uses plain least squares techniques to 
