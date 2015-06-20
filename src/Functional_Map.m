@@ -65,10 +65,9 @@ classdef Functional_Map
             end
         end
         
-        function [dists, indices] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, groundtruth, varargin)
-            
+        function [dists, indices] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, groundtruth, varargin)            
             %% Document.
-            %  Symmetries? e.g., decode Rodola's file                        
+            %  TODO - Symmetries
             %  indices, nsamples, fast
             
             switch varargin{1}
@@ -90,9 +89,7 @@ classdef Functional_Map
                     fast = 1;
                 end
             end
-                    
-%             proj_deltas       = from_basis' * diag(from_mesh.get_vertex_areas()) * deltas;                              % A set of random delta functions on from_mesh.    
-            
+                                
             A                 = from_mesh.get_vertex_areas();
             Ad                = spdiags(A, 0, length(A), length(A));
             proj_deltas       = from_basis' * Ad * deltas;                
