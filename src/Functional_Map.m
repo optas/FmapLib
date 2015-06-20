@@ -59,7 +59,7 @@ classdef Functional_Map
                 from_dists                  = comp_geodesics_to_all(from_mesh.vertices(:,1), from_mesh.vertices(:,2), from_mesh.vertices(:,3), from_mesh.triangles', centers(i));
                 [from_radius(:,i), id_from] = sort(from_dists);
 
-                to_dists       = comp_geodesics_to_all(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', inmap(centers(i)));
+                to_dists       = comp_geodesics_to_all(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', inmap(centers(i)), 1);
                 to_dists       = to_dists( inmap(id_from) );
                     to_radius(:,i) = cummax(to_dists);
             end
@@ -82,8 +82,7 @@ classdef Functional_Map
                     error('You must provide either a set of random sample points, or how many you want to be produced.')
             end
             
-            
-            
+
             if length(varargin) == 3
                 if ~ strcmp(varargin{3}, 'fast')
                     error('The last argument can be only the string ''fast'', to enable the Dijkstra approximation of the geodesics.')
@@ -96,7 +95,7 @@ classdef Functional_Map
             
             A                 = from_mesh.get_vertex_areas();
             Ad                = spdiags(A, 0, length(A), length(A));
-            proj_deltas       = from_basis' * Ad * deltas;                              % TODO-P, : Is it faster?
+            proj_deltas       = from_basis' * Ad * deltas;                
             
             deltas_transfered = inmap * proj_deltas;                                                                    % Use inmap to transfer them in to_mesh.            
             
@@ -105,7 +104,7 @@ classdef Functional_Map
             
             [ids, ~]          = knnsearch((to_basis'* Ads)' , deltas_transfered');    % Find closest function for its tranfered on (Euclidean dist is used).
                                                                                                                         % TODO-P,E solve 'Ties' in knn.                                              
-            pairs = [ids, groundtruth(indices)];                                                           
+            pairs = [ids, groundtruth(indices)]';                                                           
             
             if fast                                                                                                     % Compute true geodesics or use approx. by Dijkstra.                           
                 dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs, 1);
