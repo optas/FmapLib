@@ -34,8 +34,7 @@ classdef Mesh < dynamicprops
                 % Construct with explicitly given vertices/triangles.
                 obj.vertices  = varargin{1};
                 obj.triangles = varargin{2};
-            end
-            
+            end            
             % Take care of sizes and name.
             obj.num_vertices  = size(obj.vertices, 1);
             obj.num_triangles = size(obj.triangles, 1);                           
@@ -63,6 +62,18 @@ classdef Mesh < dynamicprops
             end           
         end
         
+        function [F] = plot(this, vertex_function)
+            F = figure; 
+            if ~exist('vertex_values', 'var')                
+                trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3));                
+            else                
+                trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function);                                
+                shading interp;
+            end
+            axis equal; 
+        end
+       
+        
     end
 
     methods (Access = public)        
@@ -84,7 +95,7 @@ classdef Mesh < dynamicprops
         end
         
         function obj = set_triangle_normals(obj)
-            Mesh.add_or_reset_property(obj, 'triangle_normals', @Mesh.normals_of_triangles, obj.vertices, obj.triangles);           
+            Mesh.add_or_reset_property(obj, 'triangle_normals', @Mesh.normals_of_triangles, obj.vertices, obj.triangles, 1);           
         end 
         
         function obj = set_vertex_normals(obj)
@@ -108,15 +119,22 @@ classdef Mesh < dynamicprops
         end
 
         function [A] = get_vertex_areas(obj, area_type)
+            
+            if ~exist('area_type', 'var')
+                area_type = 'barycentric';
+            end
+            
             if ~ Mesh.is_supported_area_type(area_type)            
                 error(strcat('Area must be one of these strings: ', strjoin(Mesh.valid_area_strings(), ', '), '.'))
             end
+            
+            
             prop_name = strcat(area_type, '_v_area');
             if isprop(obj,prop_name)
                 A = obj.(prop_name);
             else
                 ME = MException('Mesh:variable_not_initialized.', ...
-                    'Variable %s has not been initialized via set_area_vertices() method.', strjoin('vertex_area_', area_type));
+                    'Variable %s has not been initialized via set_area_vertices() method.', ['vertex_area_', area_type]);   
                 throw(ME)
             end           
         end
@@ -289,8 +307,7 @@ classdef Mesh < dynamicprops
                 Jn  = [J;I;I];
                 Mn  = [Mij;Mji;Mii];
                 M   = sparse(In, Jn, Mn, nv, nv);                   
-                Av  = sum(M,2);
-
+                Av  = full(sum(M,2));
             else
                 % Compute based on Voronoi.
                 % (following the algorithm decribed in 
@@ -304,15 +321,12 @@ classdef Mesh < dynamicprops
         function [bool] = is_supported_area_type(area_type)
             % Returns 1 iff the area_type (string) corresponds to a
             % method of creating vertex areas, that is supported by Mesh class.                
-            valid_area_types = Mesh.valid_area_strings();
-            area_type = lower(area_type);  % Keywords are case independent.
-            index = strcmpi(area_type, valid_area_types);
+            valid_area_types = Mesh.valid_area_strings();            
+            index = strcmpi(area_type, valid_area_types);           % Keywords are case independent.
             bool = any(index);
         end
         
-        function [div_vf] = divergence_of_vector_field(vf, V, T, N, Av)
-            % Computes the outward normal of each verices given the
-            % weighted normal at each triangle, in a triangular mesh.
+        function [div_vf] = divergence_of_vector_field(vf, V, T, N, Av)           
             % Input:
             %           vf - (num_of_vertices x 3) Vector field values at each
             %           face.
@@ -347,27 +361,24 @@ classdef Mesh < dynamicprops
             div_vf = div_vf ./ ( 2 * Av );
         end
         
-        function [df] = gradient_of_function(f, V, T, N, A)
-            % Computes the outward normal of each verices given the
-            % weighted normal at each triangle, in a triangular mesh.
+        function [df] = gradient_of_function(f, V, T, N, A)            
             % Input:
-            %           f  - (num_of_vertices x 1) Functions values at each
-            %           vertex.
-            %           V  - (num_of_vertices x 3) 3D coordinates of
-            %           the mesh vertices.
-            %           T  - (num_of_triangles x 3) T[i] are the 3 indices
-            %           corresponding to the 3 vertices of the i-th
-            %           triangle. The indexing is based on -V-.                
-            %           N  - (num_of_triangles x 3) N(i,:) are the
-            %           coordinates of the outward normal of the i-th
-            %           triangle. The length of this normal should
-            %           conrerespond to its weight in the sum.
-            %           A  - (num_of_triangles x 1) an array containing
-            %           the areas of all the triangles.
-            %
+            %           f  - (num_of_vertices x 1)  A vector encoding a function with a value at every vertex of a mesh.
+            %                                       f[i] is the function's value on vertex -i-.
+            %           V  - (num_of_vertices x 3)  3D coordinates of the mesh vertices.            
+            %             
+            %           T  - (num_of_triangles x 3) T[i] are the 3 indices corresponding to the 3 vertices of the i-th
+            %                                       triangle. The indexing is based on -V-.                
+            %           N  - (num_of_triangles x 3) N(i,:) are the coordinates of the outward normal of the i-th
+            %                                       triangle. The length of this normal should conrerespond to its 
+            %                                                   weight in the sum.  TODO-E ?
+            %           A  - (num_of_triangles x 1) an array containing the areas of all the triangles.
+            %           
             % Output:   df - (num_of_triangles x 3) Gradient of f: one vector 
-            %           per face.
-
+            %           per face.            
+            %
+            % DOI: 'Polygon Mesh Processing, Botsch et al., 1st edition - 2010,  page 44.'
+            
             idj = [2 3 1];
             idK = [3 1 2];
             df = zeros(size(T, 1), 3);

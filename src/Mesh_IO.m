@@ -128,7 +128,17 @@ classdef Mesh_IO
                 fclose(fid);
             end            
         end
-        
+    
+        function [converted] = string_or_num(x)
+            [converted, status] = str2num(x);
+            if ~ status
+                converted = x;
+            end
+        end
+                
     end
+    
+    
+    
 end
 

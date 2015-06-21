@@ -1,2 +1,4 @@
 *DS_Store
 *~
+# Ignore all files in the data/output directory.
+data/output/
