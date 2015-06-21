@@ -27,7 +27,7 @@ classdef Laplace_Beltrami < dynamicprops
                 
         function [evals, evecs] = get_spectra(obj, eigs_num, area_type)
             if ~ Mesh.is_supported_area_type(area_type)
-                error('You specidied an area_type which is not supported by the Mesh Library.')
+                error('You specified an area_type which is not supported by the Mesh Library.')
             end
                         
             if ~ obj.spectra.isKey(area_type) || ...                  % This type of spectra has not been computed before, or,
