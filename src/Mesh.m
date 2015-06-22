@@ -1,16 +1,15 @@
 classdef Mesh < dynamicprops
-    % This class represents a triangular Mesh of a 3D surface. It comes
-    % equipped with a series of associated functions mostly of geometric
-    % nature.
+    % This class represents a triangular Mesh of a 3D surface. It is equipped with a variety of related functions 
+    % mostly of geometric nature.
     
     properties (GetAccess = public, SetAccess = private)
-    % Basic properties that every instance of the Mesh class has.        
-        num_vertices    %   (int)               -    number of vertices of mesh.
-        num_triangles   %   (int)               -    number of triangles of mesh.num_
-        vertices        %   (num_vertices  x 3) -    array containing the 3D embedding of each vertex of the mesh.
-        triangles       %   (num_triangles x 3) -    array containing for each face, the index of the 3 vertices
-                        %                            that are part of it. The index ids are wrt. the array 'vertices'.
-        name = ''       %   (string)            -    (default = '') a string identifying the mesh, e.g., 'Dragon_1'.
+        % Basic properties that every instance of the Mesh class has.        
+        num_vertices    %   (int)                -    Number of mesh vertices.
+        num_triangles   %   (int)                -    Number of mesh triangles.
+        vertices        %   (num_vertices  x 3)  -    Array containing the 3D coordinates of each vertex of the mesh.
+        triangles       %   (num_triangles x 3)  -    Array containing for each triangle the index of its 3 vertices.
+                        %                             The indices refer to positions in the array 'vertices'.
+        name = ''       %   (string)             -    (default = '') A string identifying the mesh, e.g., 'Happy_Dragon'.
     end
     
     methods (Access = public)
