@@ -34,6 +34,9 @@ classdef Optimization
                 A_star_y = zeros(dim, dim);
                 A_star_y(ids_A) = y;
                 A_star_y = A_star_y + A_star_y';
+                for i=1:dim
+                    A_star_y(i,i) = A_star_y(i,i)/2;
+                end
                 Z1 = (W + (A_star_y + S - C) - mu*(X_0 + E - X))/2;
                 Z2 = (W - (A_star_y + S - C) - mu*(-X_0 + E + X))/2;
                 Z1 = max(Z1, 0);

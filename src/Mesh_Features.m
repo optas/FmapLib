@@ -260,7 +260,7 @@ classdef Mesh_Features < dynamicprops
         end
         
         
-        function [signatures] = D2()
+        function [signatures] = D2(inmesh, laplace_beltrami, num_samples, isprob)
             signatures = 0;
             % TODO-V: Stub
 %         The simplest shape descriptor is the "D2 shape descriptor." This consists of taking pairs of random points, 
@@ -271,6 +271,66 @@ classdef Mesh_Features < dynamicprops
 %         that most points are within a distance 3 of the origin after the first step. So I simply chose to put everything further away from 
 %         3 in the 3 bin. I then have 100 bins total spaced from a distance of 0 to a distance of 3, and I can take as many random samples as I want to construct the histogram in this interval.
 %         NOTE: In order for the comparisons to make sense between shapes, the same number of random samples should be taken in each shape. If we wanted a different number of samples for some reason, but we still wanted to be as correct as possible, we should scale each bin down by the number of samples (thus, turning the histogram into an actual probability density function which sums to 1). I didn't do this in my program since I'm always comparing objects with the same number of random samples.
+
+% Computes an approximation the geodesic distance of all vertices to a set.
+            % This approximation comes from an heat diffusion process.
+            %
+            % Input:    inmesh            -  (Mesh) Input mesh with inmesh.num_vertices 
+            %                                vertices.
+            %                                
+            %           laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the
+            %                                inmesh.
+            %           num_samples       - (1 x 1) Scalar with value of number of sample pairs
+            %                               we need to use to generate
+            %                               histogram.
+            %           isprob            - (1 x 1) Scalar taking value 1
+            %                                if further scaling is to be
+            %                                done.
+            %         
+            %
+            % Output:   signatures         -  (300 x 1) histogram containing the histogram of computed distances.
+            
+
+%           The first part of the code is written to compute num_samples
+%           number of unique pairs of vertices.
+
+            num_vertices = imesh.num_vertices;
+            S = zeros(num_vertices*(num_vertices-1)/2,2);
+            pointer = 1;
+            for i=1:num_vertices
+                for j=i+1:num_vertices
+                    S(pointer,:) = [i j];
+                    pointer = pointer+1;
+                end
+            end
+            sample_pairs = datasample(S,num_samples);
+            
+%           For every vertex, the below code computes the geo-desic distances
+%           of the vertex from every other vertex, and then pulls out the
+%           relevant distances alone. This is a heavy computation step.
+%
+            I = eye(num_vertices);
+            samp_val = zeros(num_samples,1);
+            pointer = 1;
+            for i=1:num_vertices
+                list_of_vertex_i = find(sample_pairs(:,1) == i);
+                if ~isempty(list_of_vertex_i)
+                    geo_dist = geodesic_distance_to_set(inmesh,laplace_beltrami,I(:,i));
+                    samp_val(pointer:pointer+length(list_of_vertex_i)-1) = geo_dist(list_of_vertex_i,2);
+                    pointer = pointer+list_of_vertex_i;
+                end
+            end
+            
+%           Once the distances have been computed, we bin it in the set of
+%           bins with centers 0 to 300, in gaps of 0.03. Also if
+%           normalizing by the number of samples has to be done, it is done as well. 
+
+            xcenters = linspace(0,3,100);
+            signatures = hist(samp_val,xcenters);
+          
+            if isprob==1
+                signatures = signatures/num_samples;
+            end
         end
         
 
