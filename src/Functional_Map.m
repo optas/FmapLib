@@ -103,7 +103,7 @@ classdef Functional_Map
                                                                                                                         % TODO-P,E solve 'Ties' in knn.                                              
             pairs = [ids, groundtruth(indices)]';                                                           
             
-            if fast                                                                                                     % Compute true geodesics or use approx. by Dijkstra.                           
+            if fast == 1                                                                                                    % Compute true geodesics or use approx. by Dijkstra.                            
                 dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs, 1);
             else 
                 dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs);
@@ -156,6 +156,7 @@ classdef Functional_Map
             A          = spdiags(to_areas, 0, length(to_areas), length(to_areas));      %TODO-P: we added the areas to have the real pinv of LB1.
             X          = basis_to' * A * basis_from;                       
         end
+        
         
         function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             % This code uses plain least squares techniques to 
