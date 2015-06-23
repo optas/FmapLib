@@ -109,6 +109,39 @@ classdef Mesh < dynamicprops
             end
         end
                 
+        function obj = set_default_vertex_areas(obj, area_type)
+            % Computes and stores on the mesh the vertex areas according to a rule described by 'area_type'.
+            % Also it makes for this mesh the default rule for finding vertex areas to be the one given by
+            % 'area_type'. This is useful for avoiding re-specifying the area_type in other function calls that
+            % operate on the mesh.
+            % Input:
+            %        area_type - (String) 'barycentric' or 'voronoi'.
+            %
+            
+            if ~ Mesh.is_supported_area_type(area_type)            
+                error(strcat('Area must be one of these strings: ', strjoin(Mesh.valid_area_strings(), ', '), '.'))
+            end
+            propname = 'default_v_area';
+            if isprop(obj, propname) && ~strcmp(obj.(propname), area_type)                
+                warning ('Changing default vertex areas from %s ', obj.(propname), 'to %s', area_type, '.')
+                obj.(propname) = area_type;
+            else
+                obj.addprop(propname);
+                obj.(propname) = area_type;
+            end            
+            prop_name = strcat(area_type, '_v_area');
+            Mesh.add_or_reset_property(obj, prop_name, @Mesh.area_of_vertices, obj.vertices, obj.triangles, area_type);            
+        end
+        
+        function [area_type] = get_default_vertex_areas(obj)
+            propname = 'default_v_area';
+            if ~isprop(obj, propname)
+                error('Default value has not been set.')                
+            else
+                area_type = obj.(propname);
+            end            
+        end
+        
         function obj = set_vertex_areas(obj, area_type)
             if ~ Mesh.is_supported_area_type(area_type)                            
                 error(strcat('Area must be one of these strings: ', strjoin(Mesh.valid_area_strings(), ', '), '.'))
@@ -116,18 +149,16 @@ classdef Mesh < dynamicprops
             prop_name = strcat(area_type, '_v_area');
             Mesh.add_or_reset_property(obj, prop_name, @Mesh.area_of_vertices, obj.vertices, obj.triangles, area_type);
         end
-
+        
         function [A] = get_vertex_areas(obj, area_type)
-            
             if ~exist('area_type', 'var')
-                area_type = 'barycentric';
+                area_type = obj.get_default_vertex_areas();
             end
             
             if ~ Mesh.is_supported_area_type(area_type)            
                 error(strcat('Area must be one of these strings: ', strjoin(Mesh.valid_area_strings(), ', '), '.'))
             end
-            
-            
+
             prop_name = strcat(area_type, '_v_area');
             if isprop(obj,prop_name)
                 A = obj.(prop_name);
@@ -140,48 +171,23 @@ classdef Mesh < dynamicprops
                
     end
     
-    
-    methods (Static, Access = private)        
-        % Functions used only internally from other functions of this
-        % class.
-        
-        function [S] = valid_area_strings()
-            % We implement the following types of vertex-area
-            % constructions.
-            S = {'barycentric', 'voronoi'};
-        end            
-        
-        function [] = add_or_reset_property(obj, propname, setter, varargin)
-            % Check if the dynamic property already exists. In this case it
-            % only updates it via the setter and the varargin. Otherwise, 
-            % it first adds it on the object.            
-            if isprop(obj, propname)
-                obj.(propname) = setter(varargin{:});
-            else
-                obj.addprop(propname);
-                obj.(propname) = setter(varargin{:});
-            end
-        end        
-    end
-    
-            
     methods (Static)
         
         function [N] = normals_of_vertices(V, T)
-            % Computes the normalized outward normal at each vertex by adding the 
-            % weighted normals of each triangle a vertex is adjacent to.
-            % The weights that are used are the actual area of the triangle
-            % a normal comes from.
-            % 
+            % Computes the normalized outward normal at each vertex by adding the weighted normals of each triangle a 
+            % vertex is adjacent to. The weights that are used are the actual area of the triangle a normal comes from.
+            %             
             % Input:
             %           V   -   (num_of_vertices x 3) 3D coordinates of
             %                   the mesh vertices.
+            %             
             %           T   -   (num_of_triangles x 3) T[i] are the 3 indices
             %                   corresponding to the 3 vertices of the i-th
             %                   triangle. The indexing is based on -V-.                
             %
             % Output:   N   -   (num_of_vertices x 3) an array containing
             %                   the normalized outward normals of all the vertices.
+            %             
             % TODO-E,P -  add varargin to take potential diff weights (maybe_in_future)or
             % reuse already computed triangle normals.
             
@@ -191,19 +197,19 @@ classdef Mesh < dynamicprops
         end
         
         function [N] = normals_of_triangles(V, T, normalize)
-            % Computes the outward normal vector of each triangle, of a triangular
-            % mesh. Each normal has unit lenght.
+            % Computes the outward normal vector of each triangle of a given mesh.            
             %
             % Input:
-            %           V           -   (num_of_vertices x 3) 3D coordinates of
-            %                           the mesh vertices.
-            %           T           -   (num_of_triangles x 3) T[i] are the 3 indices
-            %                           corresponding to the 3 vertices of the i-th
-            %                           triangle. The indexing is based on -V-.                
+            %           V           -   (num_of_vertices x 3) 3D coordinates of the mesh vertices.
+            %                           
+            %           T           -   (num_of_triangles x 3) T[i] are the 3 indices corresponding to the 3 vertices of                         
+            %                           the i-th triangle. The indexing is based on -V-.                
+            %             
             %           normalize   -   (int, optional) if 1, the normals
             %                           will be normalized to have unit lenght.
             %                           
-            % Output:   N           -   (num_of_triangles x 3) an array containing
+            % Output:   
+            %           N           -   (num_of_triangles x 3) an array containing
             %                           the outward normals of all the triangles.
             
             % TODO-P: We do an assumption on the order of the vertices.
@@ -260,11 +266,11 @@ classdef Mesh < dynamicprops
             % Input:
             %   option 1:   [A] = angles_of_triangles(V, T)
             % 
-            %               V  - (num_of_vertices x 3) 3D coordinates of
-            %                    the mesh vertices.
-            %               T  - (num_of_triangles x 3) T[i] are the 3 indices
-            %                    corresponding to the 3 vertices of the i-th
-            %                    triangle. The indexing is based on -V-.                
+            %               V   - (num_of_vertices x 3) 3D coordinates of
+            %                     the mesh vertices.
+            %               T   - (num_of_triangles x 3) T[i] are the 3 indices
+            %                     corresponding to the 3 vertices of the i-th
+            %                     triangle. The indexing is based on -V-.                
             %
             %   option 2:   [A] = angles_of_triangles(L)
             %                               
@@ -321,7 +327,7 @@ classdef Mesh < dynamicprops
             % Returns 1 iff the area_type (string) corresponds to a
             % method of creating vertex areas, that is supported by Mesh class.                
             valid_area_types = Mesh.valid_area_strings();            
-            index = strcmpi(area_type, valid_area_types);           % Keywords are case independent.
+            index = strcmpi(area_type, valid_area_types);  % Keywords are case independent.
             bool = any(index);
         end
         
@@ -361,22 +367,26 @@ classdef Mesh < dynamicprops
         end
         
         function [df] = gradient_of_function(f, V, T, N, A)            
+            % Computes the gradient of a function defined on the vertices of a mesh. The function is assumed to be
+            % interpolated linearly (via the barycentric basis functions) at each triangle. For more information see: 
+            %           'Polygon Mesh Processing, Botsch et al., 1st edition - 2010,  page 44.'
+            %             
             % Input:
-            %           f  - (num_of_vertices x 1)  A vector encoding a function with a value at every vertex of a mesh.
-            %                                       f[i] is the function's value on vertex -i-.
+            %           f  - (num_of_vertices x 1)  A vector representing a function with a value at every vertex of a 
+            %                                       mesh. f[i] is the function's value on vertex -i-.
+            %
             %           V  - (num_of_vertices x 3)  3D coordinates of the mesh vertices.            
             %             
             %           T  - (num_of_triangles x 3) T[i] are the 3 indices corresponding to the 3 vertices of the i-th
-            %                                       triangle. The indexing is based on -V-.                
+            %                                       triangle. The indices refer to vertices of -V-.                
+            %
             %           N  - (num_of_triangles x 3) N(i,:) are the coordinates of the outward normal of the i-th
-            %                                       triangle. The length of this normal should conrerespond to its 
-            %                                                   weight in the sum.  TODO-E ?
+            %                                       triangle. 
+            %             
             %           A  - (num_of_triangles x 1) an array containing the areas of all the triangles.
             %           
-            % Output:   df - (num_of_triangles x 3) Gradient of f: one vector 
-            %           per face.            
-            %
-            % DOI: 'Polygon Mesh Processing, Botsch et al., 1st edition - 2010,  page 44.'
+            % Output:   
+            %           df - (num_of_triangles x 3) The gradient of the function i.e., one vector per triangle.
             
             idj = [2 3 1];
             idK = [3 1 2];
@@ -391,8 +401,27 @@ classdef Mesh < dynamicprops
             df = cross(N, df, 2) ./ repmat(2 * A, [1, 3]);
         end
         
+    end
+    
+    methods (Static, Access = private)
+        % Functions used only internally from other functions of this class.
         
+        function [S] = valid_area_strings()
+            % We implement the following types of vertex-area constructions.            
+            S = {'barycentric', 'voronoi'};
+        end            
         
-     end
+        function [] = add_or_reset_property(obj, propname, setter, varargin)
+            % Check if the dynamic property already exists. In this case it
+            % only updates it via the setter and the varargin. Otherwise, 
+            % it first adds it on the object.            
+            if isprop(obj, propname)
+                obj.(propname) = setter(varargin{:});
+            else
+                obj.addprop(propname);
+                obj.(propname) = setter(varargin{:});
+            end
+        end        
+    end 
    
 end

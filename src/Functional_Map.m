@@ -1,10 +1,10 @@
-classdef Functional_Map
+classdef Functional_Map < dynamicprops
     % A class implementing a variety of utilities related to the Functional
     % Maps framework.
 
     properties (GetAccess = public, SetAccess = private)
-        % Basic properties that every instance of the Functional_Map class has.        
-        source_basis = [];  % LB1? or only evecs? 
+        % Basic properties that every instance of the Functional_Map class has.
+        source_basis = [];        
         target_basis = [];                        
     end
     
@@ -22,7 +22,7 @@ classdef Functional_Map
         end
     end
        
-
+ 
     methods (Static)                
         function [centers, from_radius, to_radius] = ball_distortion_of_map(inmap, from_mesh, to_mesh, ngeoballs)
             % Computes the distortion of a geodesic ball by the given map. 
@@ -65,7 +65,7 @@ classdef Functional_Map
             end
         end
         
-        function [dists, indices] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, groundtruth, varargin)            
+        function [dists, indices] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, groundtruth, varargin)
             %% Document.
             %  TODO - Symmetries
             %  indices, nsamples, fast
@@ -132,11 +132,10 @@ classdef Functional_Map
             %               inmesh.num_vertices.
             
             if ~exist('indices' ,'var')                       
-                indices = randsample(inmesh.num_vertices, nsamples);                                       
+                indices = randsample(inmesh.num_vertices, nsamples);
             else
                 nsamples = length(indices);
-            end
-            
+            end            
             Av      = inmesh.get_vertex_areas();
             areas   = 1 ./ sqrt(Av(indices));               %TODO-P remember/explain the inner product wrt triangle areas.                                                                                                  
             S       = sparse(indices, 1:nsamples, areas, inmesh.num_vertices, nsamples);            
