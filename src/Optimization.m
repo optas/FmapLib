@@ -34,6 +34,9 @@ classdef Optimization
                 A_star_y = zeros(dim, dim);
                 A_star_y(ids_A) = y;
                 A_star_y = A_star_y + A_star_y';
+                for i=1:dim
+                    A_star_y(i,i) = A_star_y(i,i)/2;
+                end
                 Z1 = (W + (A_star_y + S - C) - mu*(X_0 + E - X))/2;
                 Z2 = (W - (A_star_y + S - C) - mu*(-X_0 + E + X))/2;
                 Z1 = max(Z1, 0);
@@ -63,7 +66,7 @@ classdef Optimization
             end
         end
 
-        function [X_all] = rank_min(X_0, W, n, m)
+        function [X_all] = rank_min(X_0, W, n, m)            
             dim = n*m;
             C = eye(2*dim)/2;
             W = [zeros(dim, dim), W;
