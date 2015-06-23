@@ -65,11 +65,11 @@ classdef Laplace_Beltrami < dynamicprops
         end
         
         function [E] = evecs(obj, eigs_num)
-            [~, E] = obj.get_spectra(obj, eigs_num);
+            [~, E] = obj.get_spectra(eigs_num);
         end
         
         function [E] = evals(obj, eigs_num)
-            [E, ~] = obj.get_spectra(obj, eigs_num);
+            [E, ~] = obj.get_spectra(eigs_num);
         end
         
         

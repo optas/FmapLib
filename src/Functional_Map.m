@@ -20,11 +20,70 @@ classdef Functional_Map < dynamicprops
                 obj.target_basis = varargin{2};
             end
         end
+        
     end
-       
- 
+    
     methods (Static)                
-        function [centers, from_radius, to_radius] = ball_distortion_of_map(inmap, from_mesh, to_mesh, ngeoballs)
+        
+        function [dists, indices] = pairwise_distortion_of_map(inmap, source_mesh, target_mesh, source_basis, target_basis, groundtruth, varargin)
+            %% Document.
+            
+            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);        
+            option_names = fieldnames(options); % Read the acceptable names.
+            nvargs = length(varargin);
+            if round(nvargs/2) ~= nvargs/2
+                error('Expecting property_name/property_value pairs.')
+            end
+            for pair = reshape(varargin, 2, []) % Pair is {propName;propValue}.
+                inp_name = lower(pair{1}); % Make case insensitive.
+                if any(strcmp(inp_name, option_names))
+                    options.(inp_name) = pair{2};
+                else
+                    error('%s is not a recognized parameter name.',inp_name)
+                end
+            end
+
+            if ~isempty (options.indices)  % TODO-P add type_checking.
+                [deltas, ~]       = Functional_Map.random_delta_functions(source_mesh, 0, options.indices);
+                indices           = options.indices;
+            else                
+                [deltas, indices] = Functional_Map.random_delta_functions(source_mesh, options.nsamples);                           
+            end
+                                    
+            A                 = source_mesh.get_vertex_areas();     %TODO-P fix dependency on areas.
+            Ad                = spdiags(A, 0, length(A), length(A));
+            proj_deltas       = source_basis' * Ad * deltas;                
+            
+            deltas_transfered = inmap * proj_deltas;                % Use inmap to transfer them in target_mesh.            
+            
+            A                 = sqrt(target_mesh.get_vertex_areas());
+            Ads               = spdiags(A, 0, length(A), length(A));
+            
+            [ids, ~]          = knnsearch((target_basis'* Ads)' , deltas_transfered');    % Find closest function for its tranfered on (Euclidean dist is used).
+                                                                                          % TODO-P,E solve 'Ties' in knn.                                              
+            pairs = [ids, groundtruth(indices)]';                                                           
+            dists = comp_geos(pairs);
+
+            if ~ isempty(options.symmetries)
+                for i=1:size(options.symmetries, 2)
+                    pairs = [ids, options.symmetries(indices, i)]';                                                           
+                    dists = min(comp_geos(pairs), dists);
+                end                
+            end
+            
+            function [dists] = comp_geos(pairs)
+                if options.fast == 1                                            % Compute true geodesics or use approx. by Dijkstra.                            
+                    dists = comp_geodesics_pairs(target_mesh.vertices(:,1), target_mesh.vertices(:,2), target_mesh.vertices(:,3), target_mesh.triangles', pairs, 1);
+                else 
+                    dists = comp_geodesics_pairs(target_mesh.vertices(:,1), target_mesh.vertices(:,2), target_mesh.vertices(:,3), target_mesh.triangles', pairs);
+                end                
+            end
+            
+        end
+        
+        
+        
+        function [centers, from_radius, to_radius] = ball_distortion_of_map(inmap, source_mesh, target_mesh, ngeoballs)
             % Computes the distortion of a geodesic ball by the given map. 
             % The centers of the balls are uniformally distributed random
             % points. 
@@ -33,82 +92,38 @@ classdef Functional_Map < dynamicprops
             % 
             % Input:
             %           inmap       -   (num_vertices x 1) The i-th vertex
-            %                           of from_mesh correspond to the
-            %                           inmap(i)-th vertex of to_mesh.
-            %           from_mesh   -   (Mesh) Input mesh. 
-            %           to_mesh     -   (Mesh) Input mesh. 
+            %                           of source_mesh correspond to the
+            %                           inmap(i)-th vertex of target_mesh.
+            %           source_mesh   -   (Mesh) Input mesh. 
+            %           target_mesh     -   (Mesh) Input mesh. 
             %           ngeoballs   -   (int)  Number of geodesic balls to
             %                            be produced.                              
             %
-            % Output:   centers     -   (ngeoballs x 1) List of indeices on from_mesh
+            % Output:   centers     -   (ngeoballs x 1) List of indeices on source_mesh
             %                            corresponding to the center of a
             %                            geodesic balls.
             %           from_radius -   (num_vertices x ngeoballs) Growing
             %                           radius of a geodesic ball on
-            %                           from_mesh.
+            %                           source_mesh.
             %           to_radius   -   (num_vertices x ngeoballs)
-            %                           Corresponging radius on to_mesh.
+            %                           Corresponging radius on target_mesh.
 
             % TODO-E Test
-            centers = Functional_Map.random_delta_functions(from_mesh, ngeoballs, 1);
+            centers = Functional_Map.random_delta_functions(source_mesh, ngeoballs, 1);
 
-            from_radius = zeros(from_mesh.num_vertices, ngeoballs);
-            to_radius   = zeros(from_mesh.num_vertices, ngeoballs);
+            from_radius = zeros(source_mesh.num_vertices, ngeoballs);
+            to_radius   = zeros(source_mesh.num_vertices, ngeoballs);
 
             for i = 1:ngeoballs
-                from_dists                  = comp_geodesics_to_all(from_mesh.vertices(:,1), from_mesh.vertices(:,2), from_mesh.vertices(:,3), from_mesh.triangles', centers(i));
+                from_dists                  = comp_geodesics_to_all(source_mesh.vertices(:,1), source_mesh.vertices(:,2), source_mesh.vertices(:,3), source_mesh.triangles', centers(i));
                 [from_radius(:,i), id_from] = sort(from_dists);
 
-                to_dists       = comp_geodesics_to_all(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', inmap(centers(i)), 1);
+                to_dists       = comp_geodesics_to_all(target_mesh.vertices(:,1), target_mesh.vertices(:,2), target_mesh.vertices(:,3), target_mesh.triangles', inmap(centers(i)), 1);
                 to_dists       = to_dists( inmap(id_from) );
                     to_radius(:,i) = cummax(to_dists);
             end
         end
         
-        function [dists, indices] = pairwise_distortion_of_map(inmap, from_mesh, to_mesh, from_basis, to_basis, groundtruth, varargin)
-            %% Document.
-            %  TODO - Symmetries
-            %  indices, nsamples, fast
-            
-            switch varargin{1}
-                case 'nsamples'
-                    nsamples = varargin{2};
-                    [deltas, indices] = Functional_Map.random_delta_functions(from_mesh, nsamples);                           
-                case 'indices'
-                    indices = varargin{2};
-                    [deltas, ~] = Functional_Map.random_delta_functions(from_mesh, 0, indices);                       
-                otherwise
-                    error('You must provide either a set of random sample points, or how many you want to be produced.')
-            end
-            
-
-            if length(varargin) == 3
-                if ~ strcmp(varargin{3}, 'fast')
-                    error('The last argument can be only the string ''fast'', to enable the Dijkstra approximation of the geodesics.')
-                else
-                    fast = 1;
-                end
-            end
-                                
-            A                 = from_mesh.get_vertex_areas();
-            Ad                = spdiags(A, 0, length(A), length(A));
-            proj_deltas       = from_basis' * Ad * deltas;                
-            
-            deltas_transfered = inmap * proj_deltas;                                                                    % Use inmap to transfer them in to_mesh.            
-            
-            A                 = sqrt(to_mesh.get_vertex_areas());
-            Ads               = spdiags(A, 0, length(A), length(A));
-            
-            [ids, ~]          = knnsearch((to_basis'* Ads)' , deltas_transfered');    % Find closest function for its tranfered on (Euclidean dist is used).
-                                                                                                                        % TODO-P,E solve 'Ties' in knn.                                              
-            pairs = [ids, groundtruth(indices)]';                                                           
-            
-            if fast == 1                                                                                                    % Compute true geodesics or use approx. by Dijkstra.                            
-                dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs, 1);
-            else 
-                dists = comp_geodesics_pairs(to_mesh.vertices(:,1), to_mesh.vertices(:,2), to_mesh.vertices(:,3), to_mesh.triangles', pairs);
-            end                            
-        end
         
         function [S, indices] = random_delta_functions(inmesh, nsamples, indices)
             % Computes uniformly i.i.d. random delta functions of the given mesh

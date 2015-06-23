@@ -60,31 +60,36 @@
 
        
     %% Make the Fmap Using all eigenvectors    
-    
     lambda            = 20;                
-    X                 = Functional_Map.sum_of_squared_frobenius_norms(source_probes, target_probes, LB1.get_spectra(num_eigs, 'barycentric') , LB2.get_spectra(num_eigs, 'barycentric'), lambda);                
+    X                 = Functional_Map.sum_of_squared_frobenius_norms(source_probes, target_probes, LB1.evals(num_eigs) , LB2.evals(num_eigs), lambda);                
 
     %%  Add to unit-test    
     % Make the groundtruth Functional Map
     gt_map            = (1:mesh1.num_vertices)';   % Ground truth correspondences from Source_Mesh to Target_Mesh.    
-    [~, source_basis] = LB1.get_spectra(num_eigs, 'barycentric');
-    [~, target_basis] = LB2.get_spectra(num_eigs, 'barycentric');    
+    [~, source_basis] = LB1.get_spectra(num_eigs);
+    [~, target_basis] = LB2.get_spectra(num_eigs);
     X_opt             = Functional_Map.groundtruth_functional_map(source_basis, target_basis, gt_map, mesh2.get_vertex_areas('barycentric'));  %TODO-P, Ugly.
+    % Evaluate the X_opt
+    eval_points = 200;
+    [dists,  random_points]  = Functional_Map.pairwise_distortion_of_map(X_opt, mesh1, mesh2, source_basis, target_basis, gt_map, 'nsamples', eval_points);            
+    [dists2, random_points2] = Functional_Map.pairwise_distortion_of_map(X_opt, mesh1, mesh2, source_basis, target_basis, gt_map, 'indices', random_points);
+    assert(length(dists) == eval_points);
+    assert(all(dists==dists2) && all(random_points == random_points2));
     
-    [dists,  random_points]  = Functional_Map.pairwise_distortion_of_map(X_opt, mesh1, mesh2, source_basis, target_basis, gt_map, 'nsamples', 200, 'fast');    
-    [dists2, random_points2] = Functional_Map.pairwise_distortion_of_map(X_opt, mesh1, mesh2, source_basis, target_basis, sym, 'indices', random_points, 'fast');    
-    assert(all(dists==dists2) && all(random_points == random_points2))
+    % Use symmetries.    
+    C = textread('../data/kid_rodola/sym.txt', '%s', 'delimiter', ' ');  % Read symmetries:
+    C = cell2mat(C); sym = str2num(C);            
+    [dists3, random_points3] = Functional_Map.pairwise_distortion_of_map(X_opt, mesh1, mesh2, source_basis, target_basis, gt_map, 'indices', random_points, 'symmetries', sym);
+    assert(all(dists3 <= dists2));
 
+    %% Use a small number of eigenvectors to do the Fmap.
     [~, source_basis] = LB1.get_spectra(10, 'barycentric');
     [~, target_basis] = LB2.get_spectra(10, 'barycentric');    
     X_opt_small       = Functional_Map.groundtruth_functional_map(source_basis, target_basis, gt_map, mesh2.get_vertex_areas('barycentric'));
     [dists2, random_points2] = Functional_Map.pairwise_distortion_of_map(X_opt_small, mesh1, mesh2, source_basis, target_basis, gt_map, 'indices', random_points, 'fast');
-    assert(mean(dists2) > mean(dists)) % change to something more reasonable.
+    assert(mean(dists2) > mean(dists)) % TODO-P Change to something more reasonable.
     
-    % Read symmetries:
-    C = textread('../data/kid_rodola/sym.txt', '%s', 'delimiter', ' ');
-    C = cell2mat(C);
-    sym =  str2num(C);
+    
     
 
     
