@@ -66,7 +66,7 @@ classdef Optimization
             end
         end
 
-        function [X_all] = rank_min(X_0, W, n, m)
+        function [X_all] = rank_min(X_0, W, n, m)            
             dim = n*m;
             C = eye(2*dim)/2;
             W = [zeros(dim, dim), W;

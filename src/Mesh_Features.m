@@ -12,6 +12,7 @@ classdef Mesh_Features < dynamicprops
             %                                
             %           laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the
             %                                inmesh.
+            %             
             %           smoothing         -  (k x 1, optional) Vector with values corresponding to time samples 
             %                                for the heat diffusion smoothing TODO-P: explain more.            
             %
@@ -23,7 +24,8 @@ classdef Mesh_Features < dynamicprops
             % Notes:
             %       Meyer, M. Desbrun, P. Schroder, and A. H. Barr. "Discrete
             %       Differential-Geometry Operators for Triangulated 2-Manifolds."
-           
+            % TODO-E: Let's talk for completeness this to take as optional arguement the normals of vertices.
+            
             if isprop(inmesh, 'vertex_normals')
                 N = inmesh.vertex_normals;
             else
@@ -68,11 +70,7 @@ classdef Mesh_Features < dynamicprops
                 angles  = Mesh.angles_of_triangles(L);
             end
             
-            if isprop(inmesh, 'barycentric_v_area')    %TODO-P: dependency on area-type
-                areas = inmesh.barycentric_v_area;
-            else           
-                areas = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
-            end
+            areas = laplace_beltrami.A;
             
             gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;   % TODO-E: Is it OK that areas not normalized?
         
@@ -134,10 +132,9 @@ classdef Mesh_Features < dynamicprops
             %         evals         - (k x 1) corresponding eigenvalues
             %         T             - (1 x t) time values over which the kernel is evaluated
             %
-            % Output: signatures    - (n x t) matrix with the values of the HKS for different T in  its columns
-            %
-            % (c) Panos Achlioptas 2014   http://www.stanford.edu/~optas
-                
+            % Output: 
+            %         signatures    - (n x t) matrix with the values of the HKS for different T in  its columns
+    
             if(size(evals, 1) ~= size(evecs, 2))
                 error('The number of eigenvalues given does not aggree with the number of eigenvectors.')
             end
@@ -240,8 +237,6 @@ classdef Mesh_Features < dynamicprops
                 smoothed_fct(:,i) = ( speye(n, n) + diffusion_time(i) * W ) \ fct ;
             end
         end
-        
-        
         
         
         function mc = MC_multiscale(meanCurvature, L, t, step)
