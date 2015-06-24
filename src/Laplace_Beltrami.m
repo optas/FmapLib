@@ -44,8 +44,7 @@ classdef Laplace_Beltrami < dynamicprops
                 obj.A = spdiags(vertex_areas, 0, length(vertex_areas), length(vertex_areas)); 
                 obj.spectra.evals = 0; obj.spectra.evecs = [];
             end
-            
-            
+             
         end
                 
         function [evals, evecs] = get_spectra(obj, eigs_num)
@@ -71,8 +70,7 @@ classdef Laplace_Beltrami < dynamicprops
         function [E] = evals(obj, eigs_num)
             [E, ~] = obj.get_spectra(eigs_num);
         end
-        
-        
+                
         function [Proj] = project_functions(obj, eigs_num, varargin)
             %   Projects a set of given functions on the corresponding
             %   eigenfunctions of the Laplace Beltrami operator. Each LB
@@ -118,13 +116,16 @@ classdef Laplace_Beltrami < dynamicprops
             % Project feauture vectors into reduced LB basis.            
             Proj = zeros(eigs_num, functions_total);            % Pre-allocate space.
             right = 0;         
+            projector = evecs(:, 1:eigs_num)' * obj.A;
             for i = 1:n_varargin
                 left  = right + 1;
                 right = right + size(varargin{i}, 2);                                
-                Proj(:, left:right)  = evecs(:, 1:eigs_num) \ varargin{i};                
-            % TODO-E shall we use the pseudo-inverse instead?
+%                 Proj(:, left:right)  = evecs(:, 1:eigs_num) \ varargin{i};                
+                  Proj(:, left:right)  = projector * varargin{i};                            
             end                        
         end
+        
+        
 
     end
     
