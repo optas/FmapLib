@@ -56,9 +56,7 @@ classdef Functional_Map < dynamicprops
                     
                     if options.normalize == 1 
                         source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));%normc(source_feat);
-                        target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));%normc(target_feat);
-                    else options.area_normalize == 1 
-                        error('TODO-E normalize them to have unit norm wrt to source-areas.')                        
+                        target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));%normc(target_feat);                        
                     end
                     
                     [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, [], [], 0);
@@ -183,7 +181,11 @@ classdef Functional_Map < dynamicprops
 
             if ~ isempty(options.symmetries)
                 for i=1:size(options.symmetries, 2)
-                    pairs = [ids, options.symmetries(indices, i)]';                                                           
+                    sym = options.symmetries(indices, i);
+                    idx = find(sym);
+                    sym(sym == 0) = idx;
+                    
+                    pairs = [ids, sym]';                                                           
                     dists = min(comp_geos(pairs), dists);
                 end                
             end
