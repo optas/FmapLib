@@ -55,10 +55,8 @@ classdef Functional_Map < dynamicprops
                     target_feat = obj.target_basis.project_functions(neigs_target, target_feat);                                        
                     
                     if options.normalize == 1 
-                        source_feat = normc(source_feat);
-                        target_feat = normc(target_feat);
-                    else options.area_normalize == 1 
-                        error('TODO-E normalize them to have unit norm wrt to source-areas.')                        
+                        source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));%normc(source_feat);
+                        target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));%normc(target_feat);                        
                     end
                     
                     [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, [], [], 0);
@@ -79,11 +77,13 @@ classdef Functional_Map < dynamicprops
                 error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
             end
             
-            transfered_basis = obj.target_basis.evecs(obj.target_neigs) * obj.fmap;
-            target_inner_prod = transfered_basis' * obj.target_basis.A * transfered_basis;            
+            target_evecs = obj.target_basis.evecs(obj.target_neigs);
+            target_inner_prod = target_evecs' * obj.target_basis.A * target_evecs;  
+            
             source_evecs = obj.source_basis.evecs(obj.source_neigs);            
-            source_inner_prod = source_evecs' * obj.source_basis.A * source_evecs;                                   
-            D = pinv(source_inner_prod) * target_inner_prod;        
+            source_inner_prod = source_evecs' * obj.source_basis.A * source_evecs;   
+            
+            D = pinv(source_inner_prod) * ( obj.fmap' * target_inner_prod * obj.fmap );        
         end
         
         function [D] = area_difference2(obj)
@@ -93,15 +93,32 @@ classdef Functional_Map < dynamicprops
             D = obj.fmap'* obj.fmap;       
         end
         
-%         
-%         function [D] = conformal_difference(obj)
-%             if isempty(obj.fmap)
-%                 error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
-%             end
-%             obj.fmap
-%             D = obj.source_basis.evecs(:, )
-%         end
-%         
+        
+        function [D] = conformal_difference(obj, laplace_beltrami)
+            if isempty(obj.fmap)
+                error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
+            end
+            
+            target_evecs = obj.target_basis.evecs(obj.target_neigs);
+            target_inner_prod = target_evecs' * laplace_beltrami.W * target_evecs;  
+            
+            source_evecs = obj.source_basis.evecs(obj.source_neigs);            
+            source_inner_prod = source_evecs' * laplace_beltrami.W * source_evecs;   
+            
+            D = pinv(source_inner_prod) * ( obj.fmap' * target_inner_prod * obj.fmap ); 
+        end
+        
+        function [D] = conformal_difference2(obj)
+            if isempty(obj.fmap)
+                error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
+            end
+            
+            [source_evals, ~]    = obj.source_basis.get_spectra(obj.source_neigs);
+            [target_evals, ~]    = obj.target_basis.get_spectra(obj.target_neigs);
+            
+            D = pinv(diag(source_evals)) * ( obj.fmap' * diag(target_evals) * obj.fmap ); 
+        end
+        
         
         function [dists, indices] = pairwise_distortion(obj, groundtruth, varargin)
             [dists, indices] = Functional_Map.pairwise_distortion_of_map(obj.fmap, obj.source_basis, obj.target_basis, groundtruth, varargin{:});
@@ -170,7 +187,11 @@ classdef Functional_Map < dynamicprops
 
             if ~ isempty(options.symmetries)
                 for i=1:size(options.symmetries, 2)
-                    pairs = [ids, options.symmetries(indices, i)]';                                                           
+                    sym = options.symmetries(indices, i);
+                    idx = find(sym);
+                    sym(sym == 0) = idx;
+                    
+                    pairs = [ids, sym]';                                                           
                     dists = min(comp_geos(pairs), dists);
                 end                
             end
