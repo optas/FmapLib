@@ -68,6 +68,12 @@ classdef Functional_Map < dynamicprops
             obj.target_neigs = neigs_target;
         end
         
+        function set_fmap(obj, new_map)
+            obj.fmap = new_map;
+            obj.source_neigs = size(new_map, 2);
+            obj.target_neigs = size(new_map, 1);
+        end
+        
         function [D] = area_difference(obj)
             if isempty(obj.fmap)
                 error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')

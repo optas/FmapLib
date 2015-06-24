@@ -70,7 +70,7 @@ classdef Mesh_Features < dynamicprops
                 angles  = Mesh.angles_of_triangles(L);
             end
             
-            areas = laplace_beltrami.A;
+            areas = diag(laplace_beltrami.A);
             
             gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;   % TODO-E: Is it OK that areas not normalized?
         
