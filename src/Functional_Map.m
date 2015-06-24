@@ -6,6 +6,9 @@ classdef Functional_Map < dynamicprops
         % Basic properties that every instance of the Functional_Map class has.
         source_basis = [];        
         target_basis = [];                        
+        fmap         = [];
+        source_neigs = 0;
+        target_neigs = 0;
     end
     
     methods (Access = public)
@@ -14,21 +17,24 @@ classdef Functional_Map < dynamicprops
             if nargin == 0                
                 % Construct an empty Mesh.            
                 obj.source_basis = [];
-                obj.target_basis = [];                
+                obj.target_basis = [];                               
             else 
                 obj.source_basis = varargin{1};
                 obj.target_basis = varargin{2};
             end
+            obj.fmap = [];
+            obj.source_neigs = 0;
+            obj.target_neigs = 0;
         end
         
-    end
-    
-    methods (Static)                
-        
-        function [dists, indices] = pairwise_distortion_of_map(inmap, source_mesh, target_mesh, source_basis, target_basis, groundtruth, varargin)
-            %% Document.
+        function [F] = compute_f_map(obj, method ,neigs_source, neigs_target, source_feat, target_feat, varargin)
+            ns = obj.source_basis.M.num_vertices;  % Number of vertices on source.
+            nt = obj.target_basis.M.num_vertices;  % Number of vertices on target.
+            if size(source_feat, 1) ~= ns || size(target_feat, 1) ~= nt
+                error('The feature functions are supposed to be given as vectors and their dimensions should equal the number of corresponding mesh vertices.')
+            end
             
-            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);        
+            options = struct('normalize', 1, 'area_normalize', 0);
             option_names = fieldnames(options); % Read the acceptable names.
             nvargs = length(varargin);
             if round(nvargs/2) ~= nvargs/2
@@ -42,25 +48,117 @@ classdef Functional_Map < dynamicprops
                     error('%s is not a recognized parameter name.',inp_name)
                 end
             end
+            
+            switch method
+                case 'functions_only'                    
+                    source_feat = obj.source_basis.project_functions(neigs_source, source_feat);
+                    target_feat = obj.target_basis.project_functions(neigs_target, target_feat);                                        
+                    
+                    if options.normalize == 1 
+                        source_feat = normc(source_feat);
+                        target_feat = normc(target_feat);
+                    else options.area_normalize == 1 
+                        error('TODO-E normalize them to have unit norm wrt to source-areas.')                        
+                    end
+                    
+                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, [], [], 0);
+            end
+            obj.fmap         = F;
+            obj.source_neigs = neigs_source;
+            obj.target_neigs = neigs_target;
+        end
+        
+        function [D] = area_difference(obj)
+            if isempty(obj.fmap)
+                error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
+            end
+            
+            transfered_basis = obj.target_basis.evecs(obj.target_neigs) * obj.fmap;
+            target_inner_prod = transfered_basis' * obj.target_basis.A * transfered_basis;            
+            source_evecs = obj.source_basis.evecs(obj.source_neigs);            
+            source_inner_prod = source_evecs' * obj.source_basis.A * source_evecs;                                   
+            D = pinv(source_inner_prod) * target_inner_prod;        
+        end
+        
+        function [D] = area_difference2(obj)
+            if isempty(obj.fmap)
+                error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
+            end            
+            D = obj.fmap'* obj.fmap;       
+        end
+        
+%         
+%         function [D] = conformal_difference(obj)
+%             if isempty(obj.fmap)
+%                 error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
+%             end
+%             obj.fmap
+%             D = obj.source_basis.evecs(:, )
+%         end
+%         
+        
+        function [dists, indices] = pairwise_distortion(obj, groundtruth, varargin)
+            [dists, indices] = Functional_Map.pairwise_distortion_of_map(obj.fmap, obj.source_basis, obj.target_basis, groundtruth, varargin{:});
+        end
+        
+        
+%         function [F] = groundtruth_fmap(obj)
+%             F = Functional_Map(obj.source_basis, obj.target_basis)
+%             
+%             F.fmap = Functional_Map.groundtruth_functional_map(source_basis.evecs, basis_to, gt_from_to, to_areas)                        
+%             
+%             
+%             function [X] = 
+%             
+%         end
+        
+    end
+    
+    methods (Static)                
+        
+        function [dists, indices] = pairwise_distortion_of_map(inmap, source_basis, target_basis, groundtruth, varargin)
+            %% Document.            
+            % inmap - matrix corresponding to a functional map
+            % source_basis - LB basis of source
+            % target_basis - LB basis of source
+            % groundtruth  - 
+            
+            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);        
+            option_names = fieldnames(options); % Read the acceptable names.
+            nvargs = length(varargin);
+            if round(nvargs/2) ~= nvargs/2
+                error('Expecting property_name/property_value pairs.')
+            end
+            for pair = reshape(varargin, 2, []) % Pair is {propName;propValue}.
+                inp_name = lower(pair{1});      % Make case insensitive.
+                if any(strcmp(inp_name, option_names))
+                    options.(inp_name) = pair{2};
+                else
+                    error('%s is not a recognized parameter name.',inp_name)
+                end
+            end
 
             if ~isempty (options.indices)  % TODO-P add type_checking.
-                [deltas, ~]       = Functional_Map.random_delta_functions(source_mesh, 0, options.indices);
+                [deltas, ~]       = Functional_Map.random_delta_functions(diag(source_basis.A), 0, options.indices);
                 indices           = options.indices;
             else                
-                [deltas, indices] = Functional_Map.random_delta_functions(source_mesh, options.nsamples);                           
+                [deltas, indices] = Functional_Map.random_delta_functions(diag(source_basis.A), options.nsamples);                           
             end
-                                    
-            A                 = source_mesh.get_vertex_areas();     %TODO-P fix dependency on areas.
-            Ad                = spdiags(A, 0, length(A), length(A));
-            proj_deltas       = source_basis' * Ad * deltas;                
             
-            deltas_transfered = inmap * proj_deltas;                % Use inmap to transfer them in target_mesh.            
+            s_neigs = size(inmap, 2);   % Number of source basis used to constuct the inmap.
+            t_neigs = size(inmap, 1);
             
-            A                 = sqrt(target_mesh.get_vertex_areas());
-            Ads               = spdiags(A, 0, length(A), length(A));
+            proj_deltas = source_basis.project_functions(s_neigs, deltas); % Project random delta function on source basis.           
+            deltas_transfered = inmap * proj_deltas;                       % Use inmap to transfer them in target_mesh.            
             
-            [ids, ~]          = knnsearch((target_basis'* Ads)' , deltas_transfered');    % Find closest function for its tranfered on (Euclidean dist is used).
-                                                                                          % TODO-P,E solve 'Ties' in knn.                                              
+            target_deltas     = target_basis.evecs(t_neigs)' * sqrt(target_basis.A); % This is the set of all delta
+                                                                                     % functions defined on target
+                                                                                     % and expressed in the
+                                                                                     % target_basis.
+                                                                                     
+            [ids, ~]          = knnsearch(target_deltas' , deltas_transfered');      % Find closest function for its tranfered on (Euclidean dist is used).
+                                                                                                      % TODO-P,E solve 'Ties' in knn.                                              
+                                                                                                                       
             pairs = [ids, groundtruth(indices)]';                                                           
             dists = comp_geos(pairs);
 
@@ -72,17 +170,18 @@ classdef Functional_Map < dynamicprops
             end
             
             function [dists] = comp_geos(pairs)
+                vertices  = target_basis.M.vertices;
+                triangles = target_basis.M.triangles;
                 if options.fast == 1                                            % Compute true geodesics or use approx. by Dijkstra.                            
-                    dists = comp_geodesics_pairs(target_mesh.vertices(:,1), target_mesh.vertices(:,2), target_mesh.vertices(:,3), target_mesh.triangles', pairs, 1);
+                    dists = comp_geodesics_pairs(vertices(:,1), vertices(:,2), vertices(:,3), triangles', pairs, 1);
                 else 
-                    dists = comp_geodesics_pairs(target_mesh.vertices(:,1), target_mesh.vertices(:,2), target_mesh.vertices(:,3), target_mesh.triangles', pairs);
+                    dists = comp_geodesics_pairs(vertices(:,1), vertices(:,2), vertices(:,3), triangles', pairs);
                 end                
             end
             
         end
         
-        
-        
+                
         function [centers, from_radius, to_radius] = ball_distortion_of_map(inmap, source_mesh, target_mesh, ngeoballs)
             % Computes the distortion of a geodesic ball by the given map. 
             % The centers of the balls are uniformally distributed random
@@ -125,50 +224,56 @@ classdef Functional_Map < dynamicprops
         end
         
         
-        function [S, indices] = random_delta_functions(inmesh, nsamples, indices)
-            % Computes uniformly i.i.d. random delta functions of the given mesh
-            % vertices. The delta function of vertex -i- is a vector 
-            % which has a single non-zero entry at its i-th dimension.
-            % TODO-P
-            % The total number of dimensions of such a vector is equal 
-            % to the number of vertices of the given mesh. The sampling is
-            % done without replacement.
+        function [S, indices] = random_delta_functions(vertex_areas, nsamples, indices)
+            % Computes uniformly i.i.d. random delta functions of the given mesh vertices. The delta function of 
+            % vertex -i- is a vector which has a single non-zero entry at its i-th dimension. The actual value at
+            % the i-th dimension is equal to 1/sqrt(area_of_vertex(i)). This value is chosen to sasisfy the equation:
+            %             delta_function(i)' * diag(Vertex_Areas) * delta_function(i) = 1. 
+            % I.e., it makes a delta function to have a unit of mass wrt. the area inner product of a mesh.
+            % The total number of dimensions of a delta function/vector is equal to the number of vertices of the given 
+            % mesh. Finally, the sampling of the vertices is done done without replacement.
             % 
             % Input:
-            %           inmesh      -   (Mesh) Input mesh.             
-            %           nsamples    -   (int)  Number of delta functions to be produced.
+            %           vertex_areas  -   (num_vertices x 1) The areas associated with each vertex of a Mesh.
+            %              
+            %           nsamples      -   (int)  Number of delta functions to be produced.
+            %           
+            %           indices       -   (optional, k x 1) k positive integers describing the vertices over which
+            %                             the delta functions will be produced. When used this function is deterministic.
             %                            
             % Output:   
-            %           S           -   (num_vertices x nsamples) Sparse matrix with the 
-            %                           delta functions on as column vectors.
-            %           indices     -   (nsamples, 1) The vertices of the deltas.
+            %           S             -   (num_vertices x nsamples) Sparse matrix with the delta functions as column 
+            %                             vectors.
+            %                                       
+            %           indices       -   (nsamples, 1) The vertices of the deltas (equals to 'indices' if passed).
             %
-            % Precondition: nsamples must be at most as large as
-            %               inmesh.num_vertices.
+            % Precondition: nsamples must be at most as large as length(vertex_areas).
+ 
+            num_vertices = length(vertex_areas);
             
-            if ~exist('indices' ,'var')                       
-                indices = randsample(inmesh.num_vertices, nsamples);
+            if ~exist('indices' ,'var')
+                indices = randsample(num_vertices, nsamples);
             else
                 nsamples = length(indices);
-            end            
-            Av      = inmesh.get_vertex_areas();
-            areas   = 1 ./ sqrt(Av(indices));               %TODO-P remember/explain the inner product wrt triangle areas.                                                                                                  
-            S       = sparse(indices, 1:nsamples, areas, inmesh.num_vertices, nsamples);            
+            end                        
+            areas   = 1 ./ sqrt(vertex_areas(indices));
+            S       = sparse(indices, 1:nsamples, areas, num_vertices, nsamples);
         end
         
         
         
-        function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)            
-            
+        function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
 %             nodes_from = size(basis_from, 1);
 %             nodes_to   = size(basis_to, 1);              
 %             non_zero   = length(correspondences_from_to(:, 2));
 %             P          = sparse(correspondences_from_to(:, 2), correspondences_from_to(:, 1), ones(non_zero,1), nodes_to, nodes_from);            
 %             X          = basis_to' * P * basis_from;
-            basis_from = basis_from(gt_from_to ~= 0, :) ;               % Remove dimensions for which you do not know the groundtruth (i.e., map -ith- vertex to 0).
+            
+            basis_from = basis_from(gt_from_to ~= 0, :) ;              % Remove dimensions for which you do not know the groundtruth (i.e., map -ith- vertex to 0).
             basis_from = basis_from(gt_from_to(gt_from_to ~= 0), :);   % Permute the basis to reflect the corresponding ground_truth.            
-            A          = spdiags(to_areas, 0, length(to_areas), length(to_areas));      %TODO-P: we added the areas to have the real pinv of LB1.
+            A          = spdiags(to_areas, 0, length(to_areas), length(to_areas));      %TODO-P: we added the areas to have the real pinv of LB1.            
             X          = basis_to' * A * basis_from;                       
+%             X          = basis_to' * A * basis_from * A_to;  %TODO-E,P                       
         end
         
         

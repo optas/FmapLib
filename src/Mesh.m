@@ -72,7 +72,15 @@ classdef Mesh < dynamicprops
             axis equal; 
         end
        
-        
+        function [M] = normal_expanding_mesh(obj, normal_dist, normal_dirs)
+            if any(size(normal_dirs) ~= [obj.num_vertices, 3])
+                error('')
+            end
+            
+            expanded_vertices = obj.vertices + normal_dist * normal_dirs;
+            M = Mesh(expanded_vertices, obj.triangles);
+        end
+
     end
 
     methods (Access = public)        
@@ -173,7 +181,7 @@ classdef Mesh < dynamicprops
     
     methods (Static)
         
-        function [N] = normals_of_vertices(V, T)
+        function [N] = normals_of_vertices(V, T, weights)
             % Computes the normalized outward normal at each vertex by adding the weighted normals of each triangle a 
             % vertex is adjacent to. The weights that are used are the actual area of the triangle a normal comes from.
             %             
@@ -191,7 +199,16 @@ classdef Mesh < dynamicprops
             % TODO-E,P -  add varargin to take potential diff weights (maybe_in_future)or
             % reuse already computed triangle normals.
             
-            N = Mesh.normals_of_triangles(V, T);
+            if exist('weights', 'var')
+                if any(size(weights) ~= [size(T,1), 1]) || any(weights < 0)
+                    error('Expecteing a positive weight per triangle.')
+                end                    
+                N = Mesh.normals_of_triangles(V, T, 1);
+                N = repmat(weights, [1, 3]) .* N;
+            else
+                N = Mesh.normals_of_triangles(V, T);
+            end
+            
             N = [accumarray(T(:), repmat(N(:,1), [3,1])) , accumarray(T(:), repmat(N(:,2) , [3,1])), accumarray(T(:), repmat(N(:,3), [3,1]))];
             N = N ./ repmat(l2_norm(N), [1, 3]);
         end
