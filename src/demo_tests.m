@@ -1,15 +1,15 @@
 %% Load two Meshes and compute the F-map.
-    num_eigs       = 150;
-    wks_samples    = 150;
-    hks_samples    = 100;
+    num_eigs       = 15;
+    wks_samples    = 15;
+    hks_samples    = 10;
   
     meshfile       = '../data/kid_rodola/0001.isometry.1.off';
     mesh1          = Mesh(meshfile, 'rodola_1_1');        
     mesh1.set_vertex_areas('barycentric');    
-%     LB1            = Laplace_Beltrami(mesh1, mesh1.get_vertex_areas('barycentric'));
-%     [evals, evecs] = LB1.get_spectra(num_eigs);
+    LB1            = Laplace_Beltrami(mesh1, mesh1.get_vertex_areas('barycentric'));
+    [evals, evecs] = LB1.get_spectra(num_eigs);
 %     save('../data/output/LB1', 'LB1');              
-    load('../data/output/LB1');    
+%     load('../data/output/LB1');    
     [evals, evecs] = LB1.get_spectra(num_eigs);
     
     [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
@@ -23,10 +23,10 @@
     meshfile          = '../data/kid_rodola/0002.isometry.1.off';
     mesh2             = Mesh(meshfile, 'rodola_2_1');    
     mesh2.set_default_vertex_areas('barycentric');    
-%     LB2               = Laplace_Beltrami(mesh2); 
-%     [evals, evecs]    = LB2.get_spectra(num_eigs);
+    LB2               = Laplace_Beltrami(mesh2); 
+    [evals, evecs]    = LB2.get_spectra(num_eigs);
 %     save('../data/output/LB2', 'LB2');              
-    load('../data/output/LB2');    
+%     load('../data/output/LB2');    
     [evals, evecs] = LB2.get_spectra(num_eigs);
     
     [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
