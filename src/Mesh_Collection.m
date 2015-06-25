@@ -8,13 +8,19 @@ classdef Mesh_Collection
     end
     
     methods
-        function obj = Mesh_Collection(collection_name, top_directory, attributes_file)                            
+        % Class Constructor.
+        function obj = Mesh_Collection(collection_name, top_directory, attributes)                                        
+            % collection_name  -  (String) Name given to colleciton of meshes (e.g., TOSCA)
+            % top_directory    -  (String) Filepath of the top-directory that includes (e.g., in subdirectories)
+            %                      all the meshes.
+            % attributes       -  (String, optional) File containing attribute-like information of the meshes, see Notes.
+            %
+            % Notes: TODO-P describe format of attributes file
             if nargin == 0                
-                % Construct an empty Mesh_Collection.            
+                % Construct an empty Mesh_Collection.
                 obj.name = '';
-                obj.meshes = containers.Map;                
-            elseif nargin > 1   % At least a collection name and a top_directory were given.
-                
+                obj.meshes = containers.Map;                            
+            elseif nargin == 2 || nargin == 3                
                 % Start by finding all potential objects (.off, .obj files). % TODO-add optional -.mat format.                
                 all_subfiles = rdir([top_directory, '/**/'], 'regexp(name, ''\.obj$|\.off$'')');                                                
                 num_meshes   = length(all_subfiles);
@@ -22,10 +28,10 @@ classdef Mesh_Collection
                     warning(['The given top directory does not contain any .off or .obj files' ...
                              'in it or in any of its sub directories.']);
                     return
-                end                
-                obj.meshes = containers.Map;
-                                
-                for i=1:num_meshes
+                end
+                
+                obj.meshes = containers.Map;                                
+                for i=1:num_meshes   % Load-store meshes.
                     try                          
                         mesh_name = extract_mesh_name(all_subfiles(i).name);
                         if obj.meshes.isKey(mesh_name)
@@ -36,12 +42,9 @@ classdef Mesh_Collection
                         warning([full_path, ' was not loaded.']);
                         continue
                     end
-                end                            
-            
-                if exist('attributes_file', 'var')
+                end                                        
+                if exist('attributes', 'var')
                     % ID - Attribute_1, Attribute_i
-
-  
                 end                
                 obj.name = collection_name;                                
             end
@@ -53,12 +56,9 @@ classdef Mesh_Collection
                 mesh_name = last_word(1:end-4);               % Relying on the fact that length('.off') == length('.obj') == 4.                                                               
             end
             
-            
-            
                        
-            function set_attributes_of_mesh_collection(mesh_collection, attribute_file)            % Move to Mesh_IO
-                
-                C               = textread(attribute_file, '%s', 'delimiter', '\n');                
+            function set_attributes_of_mesh_collection(mesh_collection, attributes)            % TODO-P Move to Mesh_IO.
+                C               = textread(attributes, '%s', 'delimiter', '\n');                
 %                 C               = cellfun(Mesh_IO.string_or_num, C, 'uni', false);
                 
                 attribute_types = strsplit(C{1});
@@ -68,8 +68,7 @@ classdef Mesh_Collection
                     if mesh_collection.meshes.isKey(mesh_name)                        
                         mesh     = mesh_collection.meshes(mesh_name);
                         content  = strsplit(C{line});                   % Attributes of mesh corresponding to line.                        
-                        content  = content(2:end);     
-                                                
+                        content  = content(2:end);                                                     
                         mesh.set_semantics(attribute_types, )
                     end
                     
