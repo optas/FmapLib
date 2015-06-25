@@ -65,7 +65,7 @@
         ensembles{i}.t_feats = target_f;
     end
     
-%% Aggregating Ensemble    
+%% Aggregating Ensembles
     Xmean = zeros(size(ensembles{1}.map));
     for i=1:num_of_maps            
         Xmean = Xmean + ensembles{i}.map.fmap;
@@ -85,27 +85,24 @@
     indices   = randsample(mesh1.num_vertices, 200);
     
     for i=1:num_of_maps        
-        [dists, ~] = ensembles{i}.map.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);        
+        [dists, ~]       = ensembles{i}.map.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);        
         [dists2, ~]      = Fmean.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);        
         all_dists{i}.ens = dists;
         all_dists{i}.agg = dists2;
-    end
     
-%%
-    clc
-    for i=1:num_of_maps        
+    end        
+    for i=1:num_of_maps       %TODO-P save sampling numbers
         fprintf('Ensmble with %d feautures. Mean: %f STD:%f \n', ensembles{i}.nfeat, mean(all_dists{i}.ens), std(all_dists{i}.ens))
         fprintf('A_Fmap Mean:%f STD:%f \n', mean(all_dists{i}.agg), std(all_dists{i}.agg))
         ensembles{i}.nfeat
     end
 
+   
     
-
-    
-%% Etienne's Learning of Weights (after having groundtruth Fmaps, Features and of course the start topology).
+%% Etienne's Learning of Weights (after having groundtruth Fmaps, Features and of course the star topology).
 mask = 1:nbFct;
 
-% x = initial guess of weights.
+% x    = initial guess of weights.
 % map is a tensor containing all the ground-truth maps from reference to rest.
 % Fref = feauture on reference as matrix (projected ans scaled)
 % F    = tensor containing the projected features on each shape (not reference)

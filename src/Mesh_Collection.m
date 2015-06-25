@@ -1,10 +1,10 @@
-classdef Mesh_Collection
+classdef Mesh_Collection < dynamicprops
     % A class offering a variety of utilities in order to collect,
     % maintain and experiment with collecitons of Triangular Meshes.
     
     properties
-        name         %   (string)    -    (default = '') a string identifying the collection i.e., 'Tosca'.    
-        meshes            
+        name    = ''        %   (String)    -    (default = '') A string identifying the collection i.e., 'Tosca'.    
+        meshes  = []        %   (Containers.Map)
     end
     
     methods
@@ -32,8 +32,9 @@ classdef Mesh_Collection
                 
                 obj.meshes = containers.Map;                                
                 for i=1:num_meshes   % Load-store meshes.
+                    full_path = all_subfiles(i).name;
                     try                          
-                        mesh_name = extract_mesh_name(all_subfiles(i).name);
+                        mesh_name = extract_mesh_name(full_path);
                         if obj.meshes.isKey(mesh_name)
                             error('Sorry, but currently every mesh is assumed to have a unique filename.')
                         end                        
@@ -59,7 +60,7 @@ classdef Mesh_Collection
                        
             function set_attributes_of_mesh_collection(mesh_collection, attributes)            % TODO-P Move to Mesh_IO.
                 C               = textread(attributes, '%s', 'delimiter', '\n');                
-%                 C               = cellfun(Mesh_IO.string_or_num, C, 'uni', false);
+%               C               = cellfun(Mesh_IO.string_or_num, C, 'uni', false);
                 
                 attribute_types = strsplit(C{1});
                 
