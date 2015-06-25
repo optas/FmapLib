@@ -192,12 +192,13 @@ classdef Mesh < dynamicprops
             %           T   -   (num_of_triangles x 3) T[i] are the 3 indices
             %                   corresponding to the 3 vertices of the i-th
             %                   triangle. The indexing is based on -V-.                
-            %
+            %           
+            %           weights - (optional, num_of_triangles, x 1) These are positive values that expres how much
+            %           each corresponding traingle will contribute on the vertex normal. Default = . TODO-P
+            %             
             % Output:   N   -   (num_of_vertices x 3) an array containing
             %                   the normalized outward normals of all the vertices.
-            %             
-            % TODO-E,P -  add varargin to take potential diff weights (maybe_in_future)or
-            % reuse already computed triangle normals.
+
             
             if exist('weights', 'var')
                 if any(size(weights) ~= [size(T,1), 1]) || any(weights < 0)

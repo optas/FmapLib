@@ -100,3 +100,26 @@
     end
 
     
+
+    
+%% Etienne's Learning of Weights (after having groundtruth Fmaps, Features and of course the start topology).
+mask = 1:nbFct;
+
+% x = initial guess of weights.
+% map is a tensor containing all the ground-truth maps from reference to rest.
+% Fref = feauture on reference as matrix (projected ans scaled)
+% F    = tensor containing the projected features on each shape (not reference)
+% W    = the way you do the regularization, W contains all matrices (of same size as the fmaps). These matrixec
+%        give you the penalty of the the LB regularization
+% a    = alpa=lambda = weight of regularizaiton (same for all maps)
+%
+% ep   = 
+funObj = @(x) oracle(x, map, FRef, F, W, alpha, mask, 'nuclear', ep);
+
+option.MaxIter = 100;
+option.MaxFunEvals = option.MaxIter;
+
+%  second arg below is is initial solution.
+[x, fmin, exitflag] = minFunc(funObj, ones(size(x)), option);
+
+D = diag(x);
