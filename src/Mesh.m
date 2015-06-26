@@ -63,7 +63,7 @@ classdef Mesh < dynamicprops
         
         function [F] = plot(this, vertex_function)
             F = figure; 
-            if ~exist('vertex_values', 'var')                
+            if ~exist('vertex_function', 'var')                
                 trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3));                
             else                
                 trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function);                                

@@ -34,7 +34,7 @@ classdef Functional_Map < dynamicprops
                 error('The feature functions are supposed to be given as vectors and their dimensions should equal the number of corresponding mesh vertices.')
             end
             
-            options = struct('normalize', 1, 'area_normalize', 0);
+            options = struct('normalize', 1);
             option_names = fieldnames(options); % Read the acceptable names.
             nvargs = length(varargin);
             if round(nvargs/2) ~= nvargs/2
@@ -290,17 +290,20 @@ classdef Functional_Map < dynamicprops
         
         
         function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
-%             nodes_from = size(basis_from, 1);
+
+            %             nodes_from = size(basis_from, 1);
 %             nodes_to   = size(basis_to, 1);              
 %             non_zero   = length(correspondences_from_to(:, 2));
 %             P          = sparse(correspondences_from_to(:, 2), correspondences_from_to(:, 1), ones(non_zero,1), nodes_to, nodes_from);            
 %             X          = basis_to' * P * basis_from;
             
             basis_from = basis_from(gt_from_to ~= 0, :) ;              % Remove dimensions for which you do not know the groundtruth (i.e., map -ith- vertex to 0).
+            
+%             gt_from_to ~= 0; TODO-P cumsum()
+            
             basis_from = basis_from(gt_from_to(gt_from_to ~= 0), :);   % Permute the basis to reflect the corresponding ground_truth.            
-            A          = spdiags(to_areas, 0, length(to_areas), length(to_areas));      %TODO-P: we added the areas to have the real pinv of LB1.            
-            X          = basis_to' * A * basis_from;                       
-%             X          = basis_to' * A * basis_from * A_to;  %TODO-E,P                       
+            X          = basis_to' * to_areas * basis_from;                       
+
         end
         
         

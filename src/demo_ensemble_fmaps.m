@@ -9,7 +9,7 @@
     hks_samples       = 100;
     curvature_samples = 200;
   
-    meshfile       = '../data/kid_rodola/0001.isometry.1.off';
+    meshfile       = '../data/input/kid_rodola/0001.isometry.1.off';
     mesh1          = Mesh(meshfile, 'rodola_1_1');        
     mesh1.set_default_vertex_areas('barycentric');    
 %     LB1            = Laplace_Beltrami(mesh1);
@@ -28,7 +28,7 @@
     source_probes     = [hks_sig wks_sig mc_sig gc_sig];    
 
         
-    meshfile          = '../data/kid_rodola/0002.isometry.1.off';
+    meshfile          = '../data/input/kid_rodola/0002.isometry.1.off';
     mesh2             = Mesh(meshfile, 'rodola_2_1');    
     mesh2.set_default_vertex_areas('barycentric');    
 %     LB2               = Laplace_Beltrami(mesh2); 
@@ -99,24 +99,3 @@
 
    
     
-%% Etienne's Learning of Weights (after having groundtruth Fmaps, Features and of course the star topology).
-mask = 1:nbFct;
-
-% x    = initial guess of weights.
-% map is a tensor containing all the ground-truth maps from reference to rest.
-% Fref = feauture on reference as matrix (projected ans scaled)
-% F    = tensor containing the projected features on each shape (not reference)
-% W    = the way you do the regularization, W contains all matrices (of same size as the fmaps). These matrixec
-%        give you the penalty of the the LB regularization
-% a    = alpa=lambda = weight of regularizaiton (same for all maps)
-%
-% ep   = 
-funObj = @(x) oracle(x, map, FRef, F, W, alpha, mask, 'nuclear', ep);
-
-option.MaxIter = 100;
-option.MaxFunEvals = option.MaxIter;
-
-%  second arg below is is initial solution.
-[x, fmin, exitflag] = minFunc(funObj, ones(size(x)), option);
-
-D = diag(x);
