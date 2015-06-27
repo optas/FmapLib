@@ -288,19 +288,26 @@ classdef Mesh_Features < dynamicprops
             
 %           For every vertex, the below code computes the geo-desic distances
 %           of the vertex from every other vertex, and then pulls out the
-%           relevant distances alone. This is a heavy computation step.
+%           relevant distances alone. This is a heavy computation step. It
+%           has been commented out because we can use the geodesics_pairs
+%           function, but in case there is some problem running that, we
+%           can try running this. 
 %
-            I = eye(num_vertices);
-            samp_val = zeros(num_samples,1);
-            pointer = 1;
-            for i=1:num_vertices
-                list_of_vertex_i = find(sample_pairs(:,1) == i);
-                if ~isempty(list_of_vertex_i)
-                    geo_dist = geodesic_distance_to_set(inmesh,laplace_beltrami,I(:,i));
-                    samp_val(pointer:pointer+length(list_of_vertex_i)-1) = geo_dist(list_of_vertex_i,2);
-                    pointer = pointer+list_of_vertex_i;
-                end
-            end
+
+%             I = eye(num_vertices);
+%             samp_val = zeros(num_samples,1);
+%             pointer = 1;
+%             for i=1:num_vertices
+%                 list_of_vertex_i = find(sample_pairs(:,1) == i);
+%                 if ~isempty(list_of_vertex_i)
+%                     geo_dist = geodesic_distance_to_set(inmesh,laplace_beltrami,I(:,i));
+%                     samp_val(pointer:pointer+length(list_of_vertex_i)-1) = geo_dist(list_of_vertex_i,2);
+%                     pointer = pointer+list_of_vertex_i;
+%                 end
+%             end
+            
+
+            samp_val = geodesics_pairs(inmesh,sample_pairs);
             
 %           Once the distances have been computed, we bin it in the set of
 %           bins with centers 0 to 300, in gaps of 0.03. Also if
