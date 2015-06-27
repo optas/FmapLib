@@ -41,11 +41,11 @@ function [bool] = all_close(A, B, atol, rtol)
     abs_difs = abs(A(:) - B(:));
     
     if atol == +Inf
-        bool = all(abs_difs < rtol * abs(B(:)) ) ;
+        bool = all(abs_difs < (rtol * abs(B(:)))) ;
     elseif rtol == + Inf
         bool = all(abs_difs < atol);
     else
-        bool = all(abs_difs < atol && abs_difs < rtol * abs(B(:)) );
+        bool = all(abs_difs < atol) && all(abs_difs < (rtol * abs(B(:))));
     end    
 
 end

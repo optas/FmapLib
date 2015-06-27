@@ -1,7 +1,7 @@
 classdef Mesh_Features < dynamicprops
     
     methods (Static)
-  
+   
         function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
             % Computes the mean curvature at each vertex of a given mesh.
             % This implementation utilizes the Laplace Beltrami (LB) operator of
@@ -70,7 +70,7 @@ classdef Mesh_Features < dynamicprops
                 angles  = Mesh.angles_of_triangles(L);
             end
             
-            areas = laplace_beltrami.A;
+            areas = diag(laplace_beltrami.A);
             
             gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;   % TODO-E: Is it OK that areas not normalized?
         
@@ -99,10 +99,8 @@ classdef Mesh_Features < dynamicprops
             %                        the fitted gausian. Default = TODO_add.
             %
             % Output: signatures   - (n x e) Matrix with the values of the WKS for
-            %                                different energies in its columns.
-            %
-            % (c) Panos Achlioptas 2014   http://www.stanford.edu/~optas
-
+            %                                different energies in its columns.            
+            
             if(size(evals, 1) ~= size(evecs, 2))
                 error('The number of eigenvalues given does not aggree with the number of eigenvectors.')
             end
@@ -201,7 +199,7 @@ classdef Mesh_Features < dynamicprops
             signatures = evecs * diag((1 ./ sqrt(evals)));            
         end
 
-                
+               
         function [smoothed_fct] = heat_diffusion_smoothing(W, fct, diffusion_time) 
             % Computes the heat diffusion of a function for a given time using an implicit Euler scheme.
             % As a result the function will appear smoother.
@@ -216,6 +214,7 @@ classdef Mesh_Features < dynamicprops
             if size(diffusion_time, 1) > 1
                  diffusion_time = diffusion_time';
             end
+            
             if size(diffusion_time, 1) ~= 1
                 error('Variable "Time" should be vector');
             end
@@ -229,32 +228,19 @@ classdef Mesh_Features < dynamicprops
                 error('Variable "Function" should be a column vector');
             end
             
+            diffusion_time = sort(diffusion_time);    % Time must be increasing.
             n = size(W, 2);
             k = size(diffusion_time, 2);
             
-            smoothed_fct = zeros(n, k);
-            for i = 1:k
-                smoothed_fct(:,i) = ( speye(n, n) + diffusion_time(i) * W ) \ fct ;
+            smoothed_fct       = zeros(n, k);
+            smoothed_fct(:,1)  = (speye(n, n) + (diffusion_time(1) * W )) \ fct;
+            for i = 2:k
+                smoothed_fct(:,i) = ( speye(n, n) + (diffusion_time(i) - diffusion_time(i-1) ) * W ) \ smoothed_fct(:, i-1) ;
             end
         end
         
         
-        function mc = MC_multiscale(meanCurvature, L, t, step)
-            %Example Usage: 
-            %              t = -0.01; step = 100;
-            %              [~, L] = LB.get_spectra()            
-            %TODO-E compare with what we have.
-            nVertex = size(L, 1);
-            mc = zeros(nVertex, step);
-            mc(:,1) = meanCurvature;
-            H = inv((eye(nVertex) - t * L));
-            % Hi = (eye(nVertex) - t * L);
-            for i = 2:step
-                mc(:,i) =  H * mc(:,i-1);
-            end
-        end
-        
-        
+
         function [signatures] = D2(inmesh, laplace_beltrami, num_samples, isprob)
             signatures = 0;
             % TODO-V: Stub
@@ -397,8 +383,24 @@ classdef Mesh_Features < dynamicprops
             div_vf   = Mesh.divergence_of_vector_field(grad_heat_diff, inmesh.vertices, inmesh.triangles, N, area_vertices);
             geo_dist = full( laplace_beltrami.W \ ( area_vertices .* div_vf ) );
             geo_dist = geo_dist - min(geo_dist);
-        end
+          end
         
+          function [F] = default_mesh_feauture(inmesh, laplace_beltrami, neigs)
+                wks_samples = 10;
+                hks_samples = 10;
+                curvature_samples = 10;                
+                evals = laplace_beltrami.evals(neigs);
+                evecs = laplace_beltrami.evecs(neigs);                
+                [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
+                wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
+                heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
+                hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
+                heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), curvature_samples-1);
+                mc_sig            = Mesh_Features.mean_curvature(inmesh, laplace_beltrami, heat_time);                    
+                gc_sig            = Mesh_Features.gaussian_curvature(inmesh, laplace_beltrami, heat_time);                
+                F     = [hks_sig wks_sig mc_sig gc_sig];    
+          end
+    
   end    
 
 end

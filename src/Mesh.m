@@ -63,7 +63,7 @@ classdef Mesh < dynamicprops
         
         function [F] = plot(this, vertex_function)
             F = figure; 
-            if ~exist('vertex_values', 'var')                
+            if ~exist('vertex_function', 'var')                
                 trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3));                
             else                
                 trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function);                                
@@ -72,7 +72,15 @@ classdef Mesh < dynamicprops
             axis equal; 
         end
        
-        
+        function [M] = normal_expanding_mesh(obj, normal_dist, normal_dirs)
+            if any(size(normal_dirs) ~= [obj.num_vertices, 3])
+                error('')
+            end
+            
+            expanded_vertices = obj.vertices + normal_dist * normal_dirs;
+            M = Mesh(expanded_vertices, obj.triangles);
+        end
+
     end
 
     methods (Access = public)        
@@ -173,7 +181,7 @@ classdef Mesh < dynamicprops
     
     methods (Static)
         
-        function [N] = normals_of_vertices(V, T)
+        function [N] = normals_of_vertices(V, T, weights)
             % Computes the normalized outward normal at each vertex by adding the weighted normals of each triangle a 
             % vertex is adjacent to. The weights that are used are the actual area of the triangle a normal comes from.
             %             
@@ -184,14 +192,24 @@ classdef Mesh < dynamicprops
             %           T   -   (num_of_triangles x 3) T[i] are the 3 indices
             %                   corresponding to the 3 vertices of the i-th
             %                   triangle. The indexing is based on -V-.                
-            %
+            %           
+            %           weights - (optional, num_of_triangles, x 1) These are positive values that expres how much
+            %           each corresponding traingle will contribute on the vertex normal. Default = . TODO-P
+            %             
             % Output:   N   -   (num_of_vertices x 3) an array containing
             %                   the normalized outward normals of all the vertices.
-            %             
-            % TODO-E,P -  add varargin to take potential diff weights (maybe_in_future)or
-            % reuse already computed triangle normals.
+
             
-            N = Mesh.normals_of_triangles(V, T);
+            if exist('weights', 'var')
+                if any(size(weights) ~= [size(T,1), 1]) || any(weights < 0)
+                    error('Expecteing a positive weight per triangle.')
+                end                    
+                N = Mesh.normals_of_triangles(V, T, 1);
+                N = repmat(weights, [1, 3]) .* N;
+            else
+                N = Mesh.normals_of_triangles(V, T);
+            end
+            
             N = [accumarray(T(:), repmat(N(:,1), [3,1])) , accumarray(T(:), repmat(N(:,2) , [3,1])), accumarray(T(:), repmat(N(:,3), [3,1]))];
             N = N ./ repmat(l2_norm(N), [1, 3]);
         end
