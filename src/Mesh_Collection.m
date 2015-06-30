@@ -57,7 +57,10 @@ classdef Mesh_Collection < dynamicprops
                 last_word = path_substrings{end};
                 mesh_name = last_word(1:end-4);               % Relying on the fact that length('.off') == length('.obj') == 4.                                                               
             end
+
             
+            
+              
                        
 %             function set_attributes_of_mesh_collection(mesh_collection, attributes)            % TODO-P Move to Mesh_IO.
 %                 C               = textread(attributes, '%s', 'delimiter', '\n');                
@@ -80,6 +83,21 @@ classdef Mesh_Collection < dynamicprops
 %             end
             
         end
+        
+        function [C] = get_property_of_meshes(obj, mesh_list, property_name)
+                
+                if ~ isprop(obj, property_name)                    
+                    error('Property requested does not exist.')
+                end
+                
+                C = cell(length(mesh_list), 1);
+                
+                for i = 1:length(mesh_list)
+                    meshname = mesh_list{i};
+                    C{i} = obj.(property_name)(meshname);
+                end
+       end
+        
         
 %         function B = subsref(obj, S)
 %             if strcmp(S(1).type, '()')                
@@ -124,29 +142,43 @@ classdef Mesh_Collection < dynamicprops
             end
         end
         
-        function [fmaps] = compute_grpund_truth_fmaps(obj, pairs, groundtruth)                        
-            nb_pairs = size(pairs, 1);
-            fmaps    = cell(nb_pairs, 1);
-            
-            for i = 1:nb_pairs               
+        function [C] = project_features(obj, mesh_list, eigs_num, features)
+                C = cell(length(mesh_list), 1);
+                
+                for i = 1:length(mesh_list)
+                    meshname = mesh_list{i};                    
+                    
+                    if strcmp(eigs_num, 'all')
+                        eigs_num = length(obj.lb_basis(meshname).spectra.evals);
+                    end
+
+                    C{i} = obj.lb_basis(meshname).project_functions(eigs_num, features{i});
+                    normalize = 0; % TODO-P
+                    if normalize
+                        C{i} = divide_columns(C{i}, l2_norm(C{i}'));
+                    end
+                end
+
+        end
+        
+        
+        
+        function [fmaps] = compute_ground_truth_fmaps(obj, pairs, groundtruth)                        
+            num_pairs = size(pairs, 1);
+            fmaps     = cell(num_pairs, 1);
+           
+            for i = 1:num_pairs
                 meshname_source = pairs{i,1};
-                meshname_target = pairs{i,2};
-                             
+                meshname_target = pairs{i,2};            
+                
                 lb_src   = obj.lb_basis(meshname_source);
                 lb_tar   = obj.lb_basis(meshname_target);
-
+                
                 fmaps{i} = Functional_Map.groundtruth_functional_map(lb_src.spectra.evecs, lb_tar.spectra.evecs, groundtruth{i}, lb_tar.A);  
             end
         end
         
-        
-%         function 
-%             
-%         end
-%         [~, source_basis] = LB1.get_spectra(num_eigs);
-%         [~, target_basis] = LB2.get_spectra(num_eigs);    
-%         X_opt             = Functional_Map.groundtruth_functional_map(source_basis, target_basis, gt_map, mesh2.get_vertex_areas('barycentric'));  %TODO-P, Ugly barycentric.    
-        
+       
         
     end
  

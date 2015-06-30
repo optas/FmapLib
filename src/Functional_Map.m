@@ -1,7 +1,6 @@
 classdef Functional_Map < dynamicprops
-    % A class implementing a variety of utilities related to the Functional
-    % Maps framework.
-
+    % A class implementing a variety of utilities related to the Functional Maps framework.
+    
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.
         source_basis = [];        
@@ -287,7 +286,10 @@ classdef Functional_Map < dynamicprops
             S       = sparse(indices, 1:nsamples, areas, num_vertices, nsamples);
         end
         
-        
+
+%         function [] = functional_map_to_point_to_point()
+%                         
+%         end
         
         function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
 

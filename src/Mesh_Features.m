@@ -386,9 +386,9 @@ classdef Mesh_Features < dynamicprops
           end
         
           function [F] = default_mesh_feauture(inmesh, laplace_beltrami, neigs)
-                wks_samples = 10;
-                hks_samples = 10;
-                curvature_samples = 10;                
+                wks_samples = 100;
+                hks_samples = 100;
+                curvature_samples = 30;                
                 evals = laplace_beltrami.evals(neigs);
                 evecs = laplace_beltrami.evecs(neigs);                
                 [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
@@ -398,7 +398,7 @@ classdef Mesh_Features < dynamicprops
                 heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), curvature_samples-1);
                 mc_sig            = Mesh_Features.mean_curvature(inmesh, laplace_beltrami, heat_time);                    
                 gc_sig            = Mesh_Features.gaussian_curvature(inmesh, laplace_beltrami, heat_time);                
-                F     = [hks_sig wks_sig mc_sig gc_sig];    
+                F                 = [hks_sig wks_sig mc_sig gc_sig];    
           end
     
   end    
