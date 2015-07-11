@@ -1,27 +1,34 @@
 classdef Mesh_Collection < dynamicprops
-    % A class offering a variety of utilities in order to collect,
-    % maintain and experiment with collecitons of Triangular Meshes.
-    
-    properties
-        name    = ''        %   (String)    -    (default = '') A string identifying the collection i.e., 'Tosca'.    
-        meshes  = []        %   (Containers.Map)
+    % A class offering a variety of utilities for collecting, maintaining and experimenting with collections of 
+    % Triangular Meshes.
+        
+    properties               % Each Mesh_Collection object has at least the following properties.        
+        name                 % (String)            -   (default = '') A string identifying the collection i.e., 'Tosca'.    
+        meshes               % (Containers.Map)    -   A dictionary storing as values the meshes of the collection. The 
+                             %                         keys are strings corresponding to mesh names.
     end
     
     methods
-        % Class Constructor.
+        
         function obj = Mesh_Collection(collection_name, top_directory, attributes)                                        
-            % collection_name  -  (String) Name given to colleciton of meshes (e.g., TOSCA)
-            % top_directory    -  (String) Filepath of the top-directory that includes (e.g., in subdirectories)
-            %                      all the meshes.
-            % attributes       -  (String, optional) File containing attribute-like information of the meshes, see Notes.
+            % Class Constructor.
+            % Input:
+            %             
+            %           collection_name  -  (String) Name given to colleciton of meshes (e.g., TOSCA)
+            %             
+            %           top_directory    -  (String) Filepath of the top-directory that includes (e.g., in sub-directories)
+            %                               the meshes of the collection.
+            %              
+            %           attributes       -  (String, optional) File containing attribute-like information of the meshes, see Notes.
             %
             % Notes: TODO-P describe format of attributes file
+            
             if nargin == 0                
                 % Construct an empty Mesh_Collection.
                 obj.name = '';
                 obj.meshes = containers.Map;                            
             elseif nargin == 2 || nargin == 3                
-                % Start by finding all potential objects (.off, .obj files). % TODO-add optional -.mat format.                
+                % Find all potential mesh files (.off, .obj files).
                 all_subfiles = rdir([top_directory, '/**/'], 'regexp(name, ''\.obj$|\.off$'')');                                                
                 num_meshes   = length(all_subfiles);
                 if num_meshes == 0
@@ -31,7 +38,7 @@ classdef Mesh_Collection < dynamicprops
                 end
                 
                 obj.meshes = containers.Map;                                
-                for i=1:num_meshes   % Load-store meshes.
+                for i=1:num_meshes   % Load and store the meshes.
                     full_path = all_subfiles(i).name;
                     try                          
                         mesh_name = extract_mesh_name(full_path);
@@ -46,7 +53,7 @@ classdef Mesh_Collection < dynamicprops
                     end
                 end                                        
                 if exist('attributes', 'var')
-                    % ID - Attribute_1, Attribute_i
+                    error('Not implemented yet.')                    
                 end                
                 obj.name = collection_name;                                
             end
@@ -58,10 +65,7 @@ classdef Mesh_Collection < dynamicprops
                 mesh_name = last_word(1:end-4);               % Relying on the fact that length('.off') == length('.obj') == 4.                                                               
             end
 
-            
-            
-              
-                       
+                     
 %             function set_attributes_of_mesh_collection(mesh_collection, attributes)            % TODO-P Move to Mesh_IO.
 %                 C               = textread(attributes, '%s', 'delimiter', '\n');                
 % %               C               = cellfun(Mesh_IO.string_or_num, C, 'uni', false);
@@ -84,10 +88,15 @@ classdef Mesh_Collection < dynamicprops
             
         end
         
-        function [C] = get_property_of_meshes(obj, mesh_list, property_name)
-                
+        %         function B = subsref(obj, S)
+        %             if strcmp(S(1).type, '()')                
+        %                 B = obj.meshes(S.subs{:});
+        %             end
+        %         end
+        
+        function [C] = get_property_of_meshes(obj, property_name, mesh_list)                
                 if ~ isprop(obj, property_name)                    
-                    error('Property requested does not exist.')
+                    error('Property requested does not exist.');
                 end
                 
                 C = cell(length(mesh_list), 1);
@@ -97,13 +106,6 @@ classdef Mesh_Collection < dynamicprops
                     C{i} = obj.(property_name)(meshname);
                 end
        end
-        
-        
-%         function B = subsref(obj, S)
-%             if strcmp(S(1).type, '()')                
-%                 B = obj.meshes(S.subs{:});
-%             end
-%         end
                 
         function compute_laplace_beltrami_basis(obj, num_eigs, area_type)                        
             if ~ isprop(obj, 'lb_basis')
@@ -123,8 +125,7 @@ classdef Mesh_Collection < dynamicprops
                 disp(['Computing Laplace Beltrami basis for: ', meshname, ' done.']);
             end
         end
-        
-        
+                
         function compute_default_feautures(obj)                        
             if ~ isprop(obj, 'raw_features')
                 obj.addprop('raw_features');
@@ -133,15 +134,14 @@ classdef Mesh_Collection < dynamicprops
                                              
             for key = obj.meshes.keys               
                 meshname = key{:};               
-                m    = obj.meshes(meshname);
-                lb   = obj.lb_basis(meshname);
+                m     = obj.meshes(meshname);
+                lb    = obj.lb_basis(meshname);
                 neigs = length(lb.spectra.evals);                
-                F = Mesh_Features.default_mesh_feauture(m, lb, neigs);
+                F     = Mesh_Features.default_mesh_feauture(m, lb, neigs);
                 obj.raw_features(meshname) = F;
-
             end
         end
-        
+                
         function [C] = project_features(obj, mesh_list, eigs_num, features)
                 C = cell(length(mesh_list), 1);
                 
@@ -161,8 +161,7 @@ classdef Mesh_Collection < dynamicprops
 
         end
         
-        
-        
+
         function [fmaps] = compute_ground_truth_fmaps(obj, pairs, groundtruth)                        
             num_pairs = size(pairs, 1);
             fmaps     = cell(num_pairs, 1);

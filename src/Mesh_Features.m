@@ -244,9 +244,10 @@ classdef Mesh_Features < dynamicprops
         end
         
 
-        function [signatures] = D2_shape_distribution(inmesh, pairs, num_bins, true_geodesic)
-            % Computes an approximation the geodesic distance of all vertices to a set.
-            % This approximation comes from an heat diffusion process.
+        function [signature] = D2_shape_distribution(inmesh, pairs, num_bins, true_geodesic)
+            % Computes the global shape descriptor "D2" which concicely describes the histogram of pairiwse geodesic
+            % distances between points that live on the mesh. This signature characterizes the whole mesh at once
+            % and is not suitable for vertex-wise feature extraction.
             %
             % Input:    
             %           inmesh         -  (Mesh) Input mesh.
@@ -266,8 +267,8 @@ classdef Mesh_Features < dynamicprops
             pairs = sample_random_pairs(pairs, inmesh.num_vertices, 0, 0);  % A list of unique pairs of vertices.
             dists = comp_geodesics_pairs(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.triangles', pairs, 1);            
             xcenters   = linspace(max(dists)/num_bins, max(dists), num_bins);
-            signatures = hist(dists, xcenters);
-            signatures = signatures / sum(signatures);                      % Converting histogram into a pmf.            
+            signature = hist(dists, xcenters);
+            signature = signature / sum(signature);                      % Converting histogram into a pmf.            
         end
         
 
@@ -281,7 +282,7 @@ classdef Mesh_Features < dynamicprops
             
             signatures = zeros(v_num, num_bins);
             for i = 1:v_num
-                distlist = sum((repmat(inmesh.vertices(i,:), [v_num-1, 1]) - inmesh.vertices([1:i-1 i+1:end],:)).^2, 2);  % TODO-V check if pdist2 is faster.
+                distlist = sum((repmat(inmesh.vertices(i,:), [v_num-1, 1]) - inmesh.vertices([1:i-1 i+1:end],:)).^2, 2);  % TODO-P check if pdist2 is faster.
                 signatures(i,:) = hist(distlist, xcenters)/(v_num - 1);
             end    
         end
