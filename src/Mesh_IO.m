@@ -1,5 +1,5 @@
 classdef Mesh_IO
-    % Implementing a set of functions facilitating Input - Output operations
+    % Implementing a set of functions facilitating Input and Output operations
     % on Triangular Meshes.
        
     methods (Static)
@@ -220,10 +220,9 @@ classdef Mesh_IO
                     continue
                 end
            end                                        
-                
-            
+
         end
-                
+                                
     end
     
     

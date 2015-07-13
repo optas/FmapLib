@@ -10,7 +10,7 @@ classdef Mesh_Collection < dynamicprops
     
     methods
         
-        function obj = Mesh_Collection(collection_name, top_directory, attributes)                                        
+        function obj = Mesh_Collection(collection_name, top_directory, attributes_file)                                        
             % Class Constructor.
             % Input:
             %             
@@ -27,6 +27,8 @@ classdef Mesh_Collection < dynamicprops
                 % Construct an empty Mesh_Collection.
                 obj.name = '';
                 obj.meshes = containers.Map;                            
+            elseif nargin == 1
+                error('Wrong input arguements.')
             elseif nargin == 2 || nargin == 3                
                 % Find all potential mesh files (.off, .obj files).
                 all_subfiles = rdir([top_directory, '/**/'], 'regexp(name, ''\.obj$|\.off$'')');                                                
@@ -52,12 +54,13 @@ classdef Mesh_Collection < dynamicprops
                         continue
                     end
                 end                                        
-                if exist('attributes', 'var')
+                if exist('attributes_file', 'var')
                     error('Not implemented yet.')                    
                 end                
                 obj.name = collection_name;                                
             end
            
+            
             
             function [mesh_name] = extract_mesh_name(full_path)                
                 path_substrings = strsplit(full_path, '/');   % TODO: use separator of current system.
@@ -65,29 +68,15 @@ classdef Mesh_Collection < dynamicprops
                 mesh_name = last_word(1:end-4);               % Relying on the fact that length('.off') == length('.obj') == 4.                                                               
             end
 
-                     
-%             function set_attributes_of_mesh_collection(mesh_collection, attributes)            % TODO-P Move to Mesh_IO.
-%                 C               = textread(attributes, '%s', 'delimiter', '\n');                
-% %               C               = cellfun(Mesh_IO.string_or_num, C, 'uni', false);
-%                 
-%                 attribute_types = strsplit(C{1});
-%                 
-%                 for line=2:length(C)
-%                     mesh_name = C{line}{1};
-%                     if mesh_collection.meshes.isKey(mesh_name)                        
-%                         mesh     = mesh_collection.meshes(mesh_name);
-%                         content  = strsplit(C{line});                   % Attributes of mesh corresponding to line.                        
-%                         content  = content(2:end);                                                     
-%                         mesh.set_semantics(attribute_types, )
-%                     end
-%                     
-%                 end
-% 
-%             
-%             end
-            
+                                 
         end
         
+        function [bool] = contains(obj, mesh_name)
+            % Returns true iff the collection contains a mesh with the given mesh_name.
+            bool = obj.meshes.isKey(mesh_name);
+        end
+        
+       
         %         function B = subsref(obj, S)
         %             if strcmp(S(1).type, '()')                
         %                 B = obj.meshes(S.subs{:});
@@ -178,7 +167,68 @@ classdef Mesh_Collection < dynamicprops
         end
         
        
+    
+        function [D, i] = set_semantics_of_meshes(obj, semantics)
+            % TODO-P Deal with missing data
+            fid = fopen(semantics);
+            C   = textscan(fid, '%s', 'delimiter', '\n');
+            C   = C{1};
+            
+            i = 1; % Skip comments and empty lines.
+            while(all(isstrprop(C{i}, 'wspace')) || C{i}(1)=='#')
+                i = i+1;
+            end
+                       
+            A = cellfun(@strsplit, C(i:end, :), 'UniformOutput', false);
+            B = cell(1);      
+            m = 1;
+            for i=1:length(A)                
+                if i==1  || (obj.contains(A{i}{1}))   % Keep info for stored meshes (i=1 case to get semantics header).                
+                    for j=1:length(A{i})
+                        B{m,j} = Mesh_IO.string_or_num(A{i}{j});
+                    end
+                    m = m+1;
+                end
+            end
+        
+            D  = cell2dataset(B, 'readObsName', true);
+
+            if ~ isprop(obj, 'mesh_semantics')
+                obj.addprop('mesh_semantics');
+                obj.mesh_semantics = D;                
+            end
+
+  
+%             
+%             
+%             semantic_types = strsplit(C{i});
+%             
+%             
+%             
+%             
+%             semantic_types = semantic_types (2:end); % First column correspond to name, is ignored.
+% 
+%             obj.mesh_semantics.types = semantic_types;
+%             
+%             for line=i:length(C)
+%                 content = strsplit(C{line});
+%                 if length(content) ~= length(attributes) + 1
+%                     error('Semantics file format. Use ''-'' for missing values.')
+%                 end
+%                 mesh_name = content{1};
+%                 if obj.contains(mesh_name)                        
+%                    content(2:end)
+% 
+%                    obj.mesh_semantics.C
+%                    (mesh_name, attribute_types, ); 
+%                 end
+% 
+%             end
+        end
+        
         
     end
+    
+   
  
 end
