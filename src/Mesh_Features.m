@@ -342,21 +342,21 @@ classdef Mesh_Features < dynamicprops
         geo_dist = geo_dist - min(geo_dist);
         end
         
-          function [F] = default_mesh_feauture(inmesh, laplace_beltrami, neigs)
-                wks_samples = 100;
-                hks_samples = 100;
-                curvature_samples = 30;                
-                evals = laplace_beltrami.evals(neigs);
-                evecs = laplace_beltrami.evecs(neigs);                
-                [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
-                wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
-                heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
-                hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
-                heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), curvature_samples-1);
-                mc_sig            = Mesh_Features.mean_curvature(inmesh, laplace_beltrami, heat_time);                    
-                gc_sig            = Mesh_Features.gaussian_curvature(inmesh, laplace_beltrami, heat_time);                
-                F                 = [hks_sig wks_sig mc_sig gc_sig];    
-          end
+        function [F] = default_mesh_feautures(inmesh, laplace_beltrami, neigs)
+            wks_samples = 100;
+            hks_samples = 100;
+            curvature_samples = 50;                
+            evals = laplace_beltrami.evals(neigs);
+            evecs = laplace_beltrami.evecs(neigs);                
+            [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
+            wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
+            heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
+            hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
+            heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), curvature_samples-1);
+            mc_sig            = Mesh_Features.mean_curvature(inmesh, laplace_beltrami, heat_time);                    
+            gc_sig            = Mesh_Features.gaussian_curvature(inmesh, laplace_beltrami, heat_time);                
+            F                 = [hks_sig wks_sig mc_sig gc_sig];    
+        end
     
   end    
 

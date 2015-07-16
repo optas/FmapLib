@@ -1,7 +1,7 @@
 function [P] = sample_random_pairs(pairs, max_elem, order, replacement)
-    % Computes random pairs of integers in the range [1, max_elem]. A pair (a1,b1) will always consist of different
+    % Computes random pairs of integers in the range [1, max_elem]. A pair (a1, b1) always consists of different
     % integers (a1 ~= b1). The sampling can be with or without replacement and the ordering betwen two elements 
-    % is taken into account only if order == 1. In all other cases (a1,b1) is considered equal to (b1,a1).
+    % is taken into account only if order == 1. In all other cases (a1, b1) is considered equal to (b1, a1).
     %
     % Input:
     %        pairs       - (int) number of pairs requested

@@ -26,14 +26,14 @@ classdef Functional_Map < dynamicprops
             obj.target_neigs = 0;
         end
         
-        function [F] = compute_f_map(obj, method ,neigs_source, neigs_target, source_feat, target_feat, varargin)
+        function [F] = compute_f_map(obj, method, neigs_source, neigs_target, source_feat, target_feat, varargin)
             ns = obj.source_basis.M.num_vertices;  % Number of vertices on source.
             nt = obj.target_basis.M.num_vertices;  % Number of vertices on target.
             if size(source_feat, 1) ~= ns || size(target_feat, 1) ~= nt
-                error('The feature functions are supposed to be given as vectors and their dimensions should equal the number of corresponding mesh vertices.')
+                error('The feature functions must be vectors and their dimensions should equal the number of corresponding mesh vertices.')
             end
             
-            options = struct('normalize', 1);
+            options = struct('normalize', 1, 'lambda', 0);
             option_names = fieldnames(options); % Read the acceptable names.
             nvargs = length(varargin);
             if round(nvargs/2) ~= nvargs/2
@@ -44,25 +44,37 @@ classdef Functional_Map < dynamicprops
                 if any(strcmp(inp_name, option_names))
                     options.(inp_name) = pair{2};
                 else
-                    error('%s is not a recognized parameter name.',inp_name)
+                    error('%s is not a recognized parameter name.', inp_name)
                 end
             end
             
-            switch method
+            source_feat = obj.source_basis.project_functions(neigs_source, source_feat);
+            target_feat = obj.target_basis.project_functions(neigs_target, target_feat);                                        
+            if options.normalize == 1 
+                source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));
+                target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));
+            end
+            
+            if options.lambda ~= 0
+                source_reg = obj.source_basis.evals(neigs_source);      % This includes the zeroth eigenvalue of LB.
+                target_reg = obj.target_basis.evals(neigs_target);
+            else
+                source_reg = [];
+                target_reg = [];
+            end
+            
+            switch method                
                 case 'functions_only'                    
-                    source_feat = obj.source_basis.project_functions(neigs_source, source_feat);
-                    target_feat = obj.target_basis.project_functions(neigs_target, target_feat);                                        
-                    
-                    if options.normalize == 1 
-                        source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));%normc(source_feat);
-                        target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));%normc(target_feat);                        
-                    end
-                    
-                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, [], [], 0);
+                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, 0);
+                case 'frobenius_square'
+                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                otherwise
+                    error('Non existing method for creating a functional map was requested.')
             end
             obj.fmap         = F;
             obj.source_neigs = neigs_source;
             obj.target_neigs = neigs_target;
+
         end
         
         function set_fmap(obj, new_map)
@@ -309,7 +321,7 @@ classdef Functional_Map < dynamicprops
         end
         
         
-        function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
+        function [X] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             % This code uses plain least squares techniques to 
             % solve the objective function using Frobenius norm squared
             % terms.
