@@ -1,7 +1,6 @@
 classdef Functional_Map < dynamicprops
-    % A class implementing a variety of utilities related to the Functional
-    % Maps framework.
-
+    % A class implementing a variety of utilities related to the Functional Maps framework.
+    
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.
         source_basis = [];        
@@ -27,14 +26,14 @@ classdef Functional_Map < dynamicprops
             obj.target_neigs = 0;
         end
         
-        function [F] = compute_f_map(obj, method ,neigs_source, neigs_target, source_feat, target_feat, varargin)
+        function [F] = compute_f_map(obj, method, neigs_source, neigs_target, source_feat, target_feat, varargin)
             ns = obj.source_basis.M.num_vertices;  % Number of vertices on source.
             nt = obj.target_basis.M.num_vertices;  % Number of vertices on target.
             if size(source_feat, 1) ~= ns || size(target_feat, 1) ~= nt
-                error('The feature functions are supposed to be given as vectors and their dimensions should equal the number of corresponding mesh vertices.')
+                error('The feature functions must be vectors and their dimensions should equal the number of corresponding mesh vertices.')
             end
             
-            options = struct('normalize', 1, 'area_normalize', 0);
+            options = struct('normalize', 1, 'lambda', 0);
             option_names = fieldnames(options); % Read the acceptable names.
             nvargs = length(varargin);
             if round(nvargs/2) ~= nvargs/2
@@ -45,25 +44,43 @@ classdef Functional_Map < dynamicprops
                 if any(strcmp(inp_name, option_names))
                     options.(inp_name) = pair{2};
                 else
-                    error('%s is not a recognized parameter name.',inp_name)
+                    error('%s is not a recognized parameter name.', inp_name)
                 end
             end
             
-            switch method
+            source_feat = obj.source_basis.project_functions(neigs_source, source_feat);
+            target_feat = obj.target_basis.project_functions(neigs_target, target_feat);                                        
+            if options.normalize == 1 
+                source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));
+                target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));
+            end
+            
+            if options.lambda ~= 0
+                source_reg = obj.source_basis.evals(neigs_source);      % This includes the zeroth eigenvalue of LB.
+                target_reg = obj.target_basis.evals(neigs_target);
+            else
+                source_reg = [];
+                target_reg = [];
+            end
+            
+            switch method                
                 case 'functions_only'                    
-                    source_feat = obj.source_basis.project_functions(neigs_source, source_feat);
-                    target_feat = obj.target_basis.project_functions(neigs_target, target_feat);                                        
-                    
-                    if options.normalize == 1 
-                        source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));%normc(source_feat);
-                        target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));%normc(target_feat);                        
-                    end
-                    
-                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, [], [], 0);
+                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, 0);
+                case 'frobenius_square'
+                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                otherwise
+                    error('Non existing method for creating a functional map was requested.')
             end
             obj.fmap         = F;
             obj.source_neigs = neigs_source;
             obj.target_neigs = neigs_target;
+
+        end
+        
+        function set_fmap(obj, new_map)
+            obj.fmap = new_map;
+            obj.source_neigs = size(new_map, 2);
+            obj.target_neigs = size(new_map, 1);
         end
         
         function [D] = area_difference(obj)
@@ -281,24 +298,30 @@ classdef Functional_Map < dynamicprops
             S       = sparse(indices, 1:nsamples, areas, num_vertices, nsamples);
         end
         
-        
+
+%         function [] = functional_map_to_point_to_point()
+%                         
+%         end
         
         function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
-%             nodes_from = size(basis_from, 1);
+
+            %             nodes_from = size(basis_from, 1);
 %             nodes_to   = size(basis_to, 1);              
 %             non_zero   = length(correspondences_from_to(:, 2));
 %             P          = sparse(correspondences_from_to(:, 2), correspondences_from_to(:, 1), ones(non_zero,1), nodes_to, nodes_from);            
 %             X          = basis_to' * P * basis_from;
             
             basis_from = basis_from(gt_from_to ~= 0, :) ;              % Remove dimensions for which you do not know the groundtruth (i.e., map -ith- vertex to 0).
+            
+%             gt_from_to ~= 0; TODO-P cumsum()
+            
             basis_from = basis_from(gt_from_to(gt_from_to ~= 0), :);   % Permute the basis to reflect the corresponding ground_truth.            
-            A          = spdiags(to_areas, 0, length(to_areas), length(to_areas));      %TODO-P: we added the areas to have the real pinv of LB1.            
-            X          = basis_to' * A * basis_from;                       
-%             X          = basis_to' * A * basis_from * A_to;  %TODO-E,P                       
+            X          = basis_to' * to_areas * basis_from;                       
+
         end
         
         
-        function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
+        function [X] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             % This code uses plain least squares techniques to 
             % solve the objective function using Frobenius norm squared
             % terms.

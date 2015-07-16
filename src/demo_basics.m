@@ -4,17 +4,34 @@
     cd FmapLib/src
 
 %% Load a Mesh and calculate basic quantities.
-    meshfile  = '../data/kid_rodola/0001.isometry.1.off';
-    inmesh    = Mesh(meshfile, 'rodola_1_1');    
+    meshfile  = '../data/input/tosca_cats/cat0.off';
+    inmesh    = Mesh(meshfile, 'cat0');    
     inmesh.set_triangle_angles();
     inmesh.set_vertex_areas('barycentric');              
-    LB        = Laplace_Beltrami(inmesh, inmesh.get_vertex_areas('barycentric'));
+    LB = Laplace_Beltrami(inmesh, inmesh.get_vertex_areas('barycentric'));
     eigs_num = 100;
     [evals, evecs] = LB.get_spectra(eigs_num);  % Calculate the first 100 spectra, based on barycentric vertex areas.
-    save('../data/output/mesh_and_LB', 'inmesh', 'LB'); 
-    % Load Precomputed ones.
-%     load('../data/output/mesh_and_LB', 'inmesh', 'LB');
+    save('../data/output/cat0_mesh_and_100_LB', 'inmesh', 'LB'); 
+% Load Precomputed ones.
+%     load('../data/output/cat0_mesh_and_100_LB', 'inmesh', 'LB');
 %     [evals, evecs] = LB.get_spectra(eigs_num);
+
+%%
+
+    tic
+    pairs = 1000; num_bins = 100;
+    D21 = Mesh_Features.D2_shape_distribution(inmesh, pairs, num_bins);    
+    toc
+
+    tic
+    pairs = 10000; num_bins = 100;
+    D22 = Mesh_Features.D2_shape_distribution(inmesh, pairs, num_bins);
+    toc
+    
+    tic
+    pairs = 30000; num_bins = 100;
+    D23 = Mesh_Features.D2_shape_distribution(inmesh, pairs, num_bins);
+    toc
 
 %% Two Meshes and an F-map.
     num_eigs       = 150;
