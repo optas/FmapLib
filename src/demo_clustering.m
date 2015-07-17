@@ -1,7 +1,6 @@
 %% Load the collection of Meshes and their semantic attributes (i.e., class of each represented mesh).
 gitdir
 cd 'FmapLib/src'
-
 collection_name = 'Tosca';
 collection_file = '../data/input/tosca';
 semantics       = '../data/input/TOSCA_class_attributes';
@@ -39,22 +38,23 @@ end
 
 all_maps = Tosca.compute_fmaps(pairs, Tosca.raw_features, 'frobenius_square', 'lambda', 20);
 
+%% 
+% All inter-class pairs of training examples.
+class_id = 1;
+inter_pairs   = Learning.inter_class_pairs(train_labels, train_data, class_id);
+init_cat_maps = Tosca.compute_fmaps(inter_pairs, Tosca.raw_features, 'frobenius_square', 'lambda', 20);
+%% 
+lala = Learning.low_rank_training_of_fmaps(init_cat_maps, class_id, train_data, train_labels);
+
+%%
+
+
+
+% Functional_Map.low_rank_filtering(maps, W)
+
 
 
 %% Learning
-Learning.fmap_classify_naively(test_data, train_data, train_labels, all_maps);
+scores = Learning.fmap_classify_naively(test_data, train_data, train_labels, all_maps)
 
-
-
-
-
-
-%%
-offs = [];
-mi   = [];
-for i=1:2:length(all_maps)
-    A = all_maps{i}.fmap * all_maps{i+1}.fmap;    
-    offs(end+1) = sum(sum(abs(A))) - sum(abs(diag(A)));
-    mi(end+1)   = norm(A-eye(size(A,1)));
-end
 

@@ -438,14 +438,14 @@ classdef Functional_Map < dynamicprops
         end
     
     
-        function [maps_new, X_all] = low_rank_filtering(maps, W)
-            % Panos figuring this out:
+        function [maps_new, X_all] = low_rank_filtering(maps, W)            
+            % Works if all fmaps are m x m matrices.
 
-            % maps      -   mn x mn matrix with all initial pairwise maps (m x m)
+            % maps      -   n x n cell_array with all initial pairwise maps (m x m)
             %               between n objects.
 
             % W         -   n x n: global similarity between each pair of objects. When
-            %               two objects are very similar, being inconcsisten will be
+            %               two objects are very similar, being inconcsistent will be
             %               penalized more.
 
             % X_all     -   must be the collection of the sequential mn x mn matrices that correspond
