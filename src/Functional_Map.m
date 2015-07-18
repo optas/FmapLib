@@ -3,11 +3,15 @@ classdef Functional_Map < dynamicprops
     
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.
-        source_basis = [];        
-        target_basis = [];                        
-        fmap         = [];
-        source_neigs = 0;
-        target_neigs = 0;
+        source_basis    = [];        
+        source_neigs    = 0;
+        source_features = [];        
+        
+        target_basis    = [];                        
+        target_neigs    = 0;
+        target_features = [];
+        
+        fmap            = [];              
     end
     
     methods (Access = public)
@@ -26,6 +30,22 @@ classdef Functional_Map < dynamicprops
             obj.target_neigs = 0;
         end
         
+        function obj = copy(this)
+            % Define what is copied when a deep copy is performed.
+            % Instantiate new object of the same class.
+            obj = feval(class(this));
+                        
+            % Copy all non-hidden properties (including dynamic ones)
+            % TODO: Hidden properties?
+            p = properties(this);
+            for i = 1:length(p)
+                if ~isprop(obj, p{i})   % Adds all the dynamic properties.
+                    obj.addprop(p{i});
+                end                
+                obj.(p{i}) = this.(p{i});
+            end           
+        end
+        
         function [F] = compute_f_map(obj, method, neigs_source, neigs_target, source_feat, target_feat, varargin)
             ns = obj.source_basis.M.num_vertices;  % Number of vertices on source.
             nt = obj.target_basis.M.num_vertices;  % Number of vertices on target.
@@ -34,27 +54,16 @@ classdef Functional_Map < dynamicprops
             end
             
             options = struct('normalize', 1, 'lambda', 0);
-            option_names = fieldnames(options); % Read the acceptable names.
-            nvargs = length(varargin);
-            if round(nvargs/2) ~= nvargs/2
-                error('Expecting property_name/property_value pairs.')
-            end
-            for pair = reshape(varargin, 2, []) % Pair is {propName;propValue}.
-                inp_name = lower(pair{1}); % Make case insensitive.
-                if any(strcmp(inp_name, option_names))
-                    options.(inp_name) = pair{2};
-                else
-                    error('%s is not a recognized parameter name.', inp_name)
-                end
-            end
+            options = load_key_value_input_pairs(options, varargin{:});
             
             source_feat = obj.source_basis.project_functions(neigs_source, source_feat);
             target_feat = obj.target_basis.project_functions(neigs_target, target_feat);                                        
+            
             if options.normalize == 1 
                 source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));
                 target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));
-            end
-            
+            end            
+
             if options.lambda ~= 0
                 source_reg = obj.source_basis.evals(neigs_source);      % This includes the zeroth eigenvalue of LB.
                 target_reg = obj.target_basis.evals(neigs_target);

@@ -29,8 +29,7 @@ classdef Learning
         function [scores] = fmap_classify_naively(test_data, train_data, train_labels, maps)
             classes_num  = length(unique(train_labels));
             tests        = length(test_data);
-            scores       = zeros(tests, classes_num);
-            
+            scores       = zeros(tests, classes_num);            
             for test = 1:tests
                 test_name = test_data{test};
                 targets = maps(test_name);
@@ -45,11 +44,48 @@ classdef Learning
                         M = src_tar.fmap * tar_src.fmap;
                         scores(test, target_class) = scores(test, target_class) + sum(sum(abs(M))) - sum(abs(diag(M)));                        
                     end
-                end
-                
-            end
-            
+                end                
+            end            
         end
+
+        function [low_rank_maps] = low_rank_filtering_of_fmaps(init_maps)                     %TODO-P move to Mesh_Collection
+            % Convert the init_maps a cell array that will be passed in Functional_Map.low_rank_filtering.
+            index_dict   = string_keys_to_ints(init_maps);            
+            n            = length(init_maps.keys);
+            init_maps_as_cell = cell(n, n);
+            for src_name = init_maps.keys                
+                src_dict = init_maps(src_name{:});
+                src_ind  = index_dict(src_name{:});
+                for trg_name = src_dict.keys                    
+                    init_maps_as_cell{src_ind, index_dict(trg_name{:})} = src_dict(trg_name{:}).fmap;
+                end
+            end            
+            % Call the optimization routine.
+            W = repmat(1/n, n, n); % TODO-P setting a constant W.
+            [maps_optim, ~] = Functional_Map.low_rank_filtering(init_maps_as_cell, W);                        
+            
+            % Write back the resulting cell array as a contrainers.Map
+            low_rank_maps = containers.Map;
+            for src_name = init_maps.keys                
+                low_rank_maps(src_name{:}) = containers.Map;                                
+                src_dict_in  = init_maps(src_name{:});                
+                src_ind      = index_dict(src_name{:});
+                temp         = low_rank_maps(src_name{:});
+                for trg_name = src_dict_in.keys                                   
+                    temp(trg_name{:}) = src_dict_in(trg_name{:}).copy();
+                    temp(trg_name{:}).set_fmap(maps_optim{src_ind, index_dict(trg_name{:})});     %TODO-P: Simplify.
+                end
+            end            
+        end
+        
+        
+        
+
+                
+%         , class_id, train_data, train_labels
+%         class_examples = find(train_labels == class_id);
+%         names          = train_data(class_examples);            % Cell with the names of the class members.
+        
         
         function [pairs] = inter_class_pairs(train_labels, train_data, class_id)
             class_examples = find(train_labels == class_id);
@@ -75,24 +111,19 @@ classdef Learning
             assert(m == pairs_num + 1);
         end
             
+
+        
+        
+        
+        function [weights] = feature_weights_of_class(fmaps)
+            
+            if iscell(fmaps)                    
+                size(fmaps)
+            end
             
         
-        function [maps_optim, maps_per_iter] = low_rank_training_of_fmaps(all_maps, class_id, train_data, train_labels)        
-            class_examples = find(train_labels == class_id);
-            names          = train_data(class_examples);            % Cell with the names of the class members.
-            init_maps      = cell(length(names), length(names));
-            for i=1:length(names)
-                idict = all_maps(names{i});
-                for j=1:length(names)
-                    if i ~=j
-                        init_maps{i,j} = idict(names{j}).fmap;
-                    end
-                end
-            end            
-            W = 1/length(names) .* ones(length(names),length(names)) % TODO-P setting a constant W 
-            [maps_optim, maps_per_iter] = Functional_Map.low_rank_filtering(init_maps, W);
-            
         end
+        
         
         
         

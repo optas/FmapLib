@@ -21,6 +21,7 @@ Tosca.compute_default_feautures();                      % Computes hks, wks, mea
 cats   = Tosca.meshes_with_semantic_condition('Class_2', 'Cat');    % See semantics file.
 dogs   = Tosca.meshes_with_semantic_condition('Class_2', 'Dog');
 humans = Tosca.meshes_with_semantic_condition('Class_1', 'Human');
+
 [train_data, test_data, train_labels, test_labels] = Learning.sample_class_observations(0.2, cats, dogs, humans);
 
 
@@ -35,26 +36,21 @@ for i=test_data
         p = p + 2;
     end
 end
-
 all_maps = Tosca.compute_fmaps(pairs, Tosca.raw_features, 'frobenius_square', 'lambda', 20);
+
+%% 1. Naive Learning
+scores = Learning.fmap_classify_naively(test_data, train_data, train_labels, all_maps);
+%%
+
+class_id      = 1;
+inter_pairs   = Learning.inter_class_pairs(train_labels, train_data, class_id);
+init_cat_maps = Tosca.compute_fmaps(inter_pairs, Tosca.raw_features, 'frobenius_square', 'lambda', 20, 'eigs', 5); 
+low_rank_cats = Learning.low_rank_filtering_of_fmaps(init_cat_maps);
+
+%%
+weights       = Learning.extract_feature_weights(low_rank_cats);
+scores2       = Learning.fmap_classify_with_trained_weights(test_data, train_data, train_labels, weights);
+
 
 %% 
 % All inter-class pairs of training examples.
-class_id = 1;
-inter_pairs   = Learning.inter_class_pairs(train_labels, train_data, class_id);
-init_cat_maps = Tosca.compute_fmaps(inter_pairs, Tosca.raw_features, 'frobenius_square', 'lambda', 20);
-%% 
-lala = Learning.low_rank_training_of_fmaps(init_cat_maps, class_id, train_data, train_labels);
-
-%%
-
-
-
-% Functional_Map.low_rank_filtering(maps, W)
-
-
-
-%% Learning
-scores = Learning.fmap_classify_naively(test_data, train_data, train_labels, all_maps)
-
-
