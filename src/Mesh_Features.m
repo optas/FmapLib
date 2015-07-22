@@ -1,5 +1,57 @@
 classdef Mesh_Features < dynamicprops
     
+    properties (GetAccess = public, SetAccess = private)
+        % Each Mesh_Feature object has at least the following properties.
+        M;                   % (Mesh) Mesh over which the feautures are computed.   %TODO-P keep only if we create feats independent of an LB.
+        LB;                  % (Laplace_Beltrami) Associated LB operator which will be used to generate most of the 
+                             %                    potential feautures.
+        F;                   % (Matrix) carrying the computed feautures.
+        index;               % Strucutre holding the positions of each type of computed features stored at F.
+    end
+        
+    methods (Access = public)
+        % Class Constructor.        
+        function obj = Mesh_Features(inmesh, laplace_beltrami)     
+            if nargin == 0                
+                % Construct empty Mesh_Features.            
+                obj.M  = Mesh();
+                obj.LB = Laplace_Beltrami();                
+            else
+               obj.M   = inmesh;
+               obj.LB  = laplace_beltrami;               
+            end
+            obj.F  = [];
+            obj.index  = struct();
+        end
+        
+        function obj = copy(this)
+            % Define what is copied when a 'deep copy' is performed.
+            % I.e. when obj.copy() is called.
+            obj = feval(class(this)); % Instantiate new object of the same class.
+                        
+            % Copy all non-hidden properties (including dynamic ones).            
+            p = properties(this);
+            for i = 1:length(p)
+                if ~isprop(obj, p{i})   % Adds all the dynamic properties.
+                    obj.addprop(p{i});
+                end                
+                obj.(p{i}) = this.(p{i});
+            end           
+        end
+        
+        function obj = compute_default_feautures(obj, neigs, wks_samples, hks_samples, mc_samples, gc_samples)
+            if strcmp(neigs, 'all')
+                neigs = length(obj.LB.spectra.evals);
+            end
+            obj.F = Mesh_Features.default_mesh_feautures(obj.M, obj.LB, neigs, wks_samples, hks_samples, mc_samples, gc_samples);            
+            Mesh_Features.index_features(obj, 'wks', wks_samples, 'hks', hks_samples, 'mc', mc_samples, 'gc', gc_samples);
+        end
+    
+    end
+    
+    
+    
+    
     methods (Static)
    
         function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
@@ -342,24 +394,63 @@ classdef Mesh_Features < dynamicprops
         geo_dist = geo_dist - min(geo_dist);
         end
         
-        function [F] = default_mesh_feautures(inmesh, laplace_beltrami, neigs)
-            wks_samples = 100;
-            hks_samples = 100;
-            curvature_samples = 50;                
+        function [F] = default_mesh_feautures(inmesh, laplace_beltrami, neigs, wks_samples, hks_samples, mc_samples, gc_samples)                       
+            % Computes the wks, hks, mean_curvature and gaussian curvature with default parameter values.
+            % Input:
+
             evals = laplace_beltrami.evals(neigs);
             evecs = laplace_beltrami.evecs(neigs);                
-            [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
-            wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
-            heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
-            hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
-            heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), curvature_samples-1);
-            mc_sig            = Mesh_Features.mean_curvature(inmesh, laplace_beltrami, heat_time);                    
-            gc_sig            = Mesh_Features.gaussian_curvature(inmesh, laplace_beltrami, heat_time);                
-            F                 = [hks_sig wks_sig mc_sig gc_sig];    
+            if wks_samples > 1
+                [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
+                wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);                
+            else
+                wks_sig            = [];
+            end
+            if hks_samples > 1
+                heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
+                hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
+            else
+                hks_sig            = [];
+            end            
+            if mc_samples > 1
+                heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), mc_samples-1);
+                mc_sig            = Mesh_Features.mean_curvature(inmesh, laplace_beltrami, heat_time);                    
+            else
+                mc_sig            = [];
+            end
+            if gc_samples > 1
+                heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), gc_samples-1);
+                gc_sig            = Mesh_Features.gaussian_curvature(inmesh, laplace_beltrami, heat_time);
+            else
+                gc_sig            = [];
+            end
+            
+            F                 = [hks_sig wks_sig mc_sig gc_sig];
         end
     
-  end    
+    end    
 
+    methods (Static, Access = private)
+        % Functions used only internally from other functions of this class.
+        
+        function obj = index_features(obj, varargin)            
+            nvargs = length(varargin);
+            if round(nvargs/2) ~= nvargs/2
+                error('Expecting feature_name/nsamples pairs.')
+            end
+            pos = 0;            
+            for pair = reshape(varargin, 2, [])  % Pair is a cell {propName;propValue}.
+                feat_name = lower(pair{1});      % Make case insensitive.
+                if pair{2} < 1
+                    obj.index.(feat_name) = [];  % Feautures of this type were not calculated.
+                else                
+                    obj.index.(feat_name) = [pos+1, pos+pair{2}];
+                    pos = pos + pair{2};
+                end
+            end
+        end
+        
+    end
 end
 
 

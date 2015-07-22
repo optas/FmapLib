@@ -1,5 +1,5 @@
 function options = load_key_value_input_pairs(options, varargin)
-        option_names = fieldnames(options); % Read the acceptable key names.
+    option_names = fieldnames(options); % Read the acceptable key names.
     nvargs = length(varargin);
     if round(nvargs/2) ~= nvargs/2
         error('Expecting property_name/property_value pairs.')

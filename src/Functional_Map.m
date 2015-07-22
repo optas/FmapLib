@@ -23,7 +23,7 @@ classdef Functional_Map < dynamicprops
                 obj.target_basis = [];                               
             else 
                 obj.source_basis = varargin{1};
-                obj.target_basis = varargin{2};
+                obj.target_basis = varargin{2};                                
             end
             obj.fmap = [];
             obj.source_neigs = 0;
@@ -31,15 +31,13 @@ classdef Functional_Map < dynamicprops
         end
         
         function obj = copy(this)
-            % Define what is copied when a deep copy is performed.
-            % Instantiate new object of the same class.
-            obj = feval(class(this));
+            % Define what is copied when a deep copy is performed.            
+            obj = feval(class(this));           % Instantiate new object of the same class.
                         
             % Copy all non-hidden properties (including dynamic ones)
-            % TODO: Hidden properties?
             p = properties(this);
             for i = 1:length(p)
-                if ~isprop(obj, p{i})   % Adds all the dynamic properties.
+                if ~isprop(obj, p{i})           % Adds all the dynamic properties.
                     obj.addprop(p{i});
                 end                
                 obj.(p{i}) = this.(p{i});
@@ -49,16 +47,19 @@ classdef Functional_Map < dynamicprops
         function [F] = compute_f_map(obj, method, neigs_source, neigs_target, source_feat, target_feat, varargin)
             ns = obj.source_basis.M.num_vertices;  % Number of vertices on source.
             nt = obj.target_basis.M.num_vertices;  % Number of vertices on target.
-            if size(source_feat, 1) ~= ns || size(target_feat, 1) ~= nt
+            if size(source_feat.F, 1) ~= ns || size(target_feat.F, 1) ~= nt
                 error('The feature functions must be vectors and their dimensions should equal the number of corresponding mesh vertices.')
             end
-            
+
             options = struct('normalize', 1, 'lambda', 0);
             options = load_key_value_input_pairs(options, varargin{:});
-            
-            source_feat = obj.source_basis.project_functions(neigs_source, source_feat);
-            target_feat = obj.target_basis.project_functions(neigs_target, target_feat);                                        
-            
+
+            obj.source_features = source_feat;  % Store the raw features used.
+            obj.target_features = target_feat;
+
+            source_feat = obj.source_basis.project_functions(neigs_source, source_feat.F);
+            target_feat = obj.target_basis.project_functions(neigs_target, target_feat.F);                                        
+
             if options.normalize == 1 
                 source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));
                 target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));
@@ -71,7 +72,7 @@ classdef Functional_Map < dynamicprops
                 source_reg = [];
                 target_reg = [];
             end
-            
+
             switch method                
                 case 'functions_only'                    
                     [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, 0);
@@ -83,10 +84,14 @@ classdef Functional_Map < dynamicprops
             obj.fmap         = F;
             obj.source_neigs = neigs_source;
             obj.target_neigs = neigs_target;
+        end
 
+        function plot(obj)
+            imagesc(obj.fmap);
+            colorbar;
         end
         
-        function set_fmap(obj, new_map)
+        function obj = set_fmap(obj, new_map)
             obj.fmap = new_map;
             obj.source_neigs = size(new_map, 2);
             obj.target_neigs = size(new_map, 1);
@@ -138,48 +143,22 @@ classdef Functional_Map < dynamicprops
             
             D = pinv(diag(source_evals)) * ( obj.fmap' * diag(target_evals) * obj.fmap ); 
         end
-        
-        
-        function [dists, indices] = pairwise_distortion(obj, groundtruth, varargin)
+                
+        function [dists, indices] = pairwise_distortion(obj, groundtruth, varargin)                                    
             [dists, indices] = Functional_Map.pairwise_distortion_of_map(obj.fmap, obj.source_basis, obj.target_basis, groundtruth, varargin{:});
         end
         
-        
-%         function [F] = groundtruth_fmap(obj)
-%             F = Functional_Map(obj.source_basis, obj.target_basis)
-%             
-%             F.fmap = Functional_Map.groundtruth_functional_map(source_basis.evecs, basis_to, gt_from_to, to_areas)                        
-%             
-%             
-%             function [X] = 
-%             
-%         end
-        
     end
-    
-    methods (Static)                
-        
+      
+    methods (Static)                        
         function [dists, indices] = pairwise_distortion_of_map(inmap, source_basis, target_basis, groundtruth, varargin)
             %% Document.            
             % inmap - matrix corresponding to a functional map
             % source_basis - LB basis of source
             % target_basis - LB basis of source
-            % groundtruth  - 
-            
-            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);        
-            option_names = fieldnames(options); % Read the acceptable names.
-            nvargs = length(varargin);
-            if round(nvargs/2) ~= nvargs/2
-                error('Expecting property_name/property_value pairs.')
-            end
-            for pair = reshape(varargin, 2, []) % Pair is {propName;propValue}.
-                inp_name = lower(pair{1});      % Make case insensitive.
-                if any(strcmp(inp_name, option_names))
-                    options.(inp_name) = pair{2};
-                else
-                    error('%s is not a recognized parameter name.',inp_name)
-                end
-            end
+            % groundtruth  -             
+            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);                                
+            options = load_key_value_input_pairs(options, varargin{:});
 
             if ~isempty (options.indices)  % TODO-P add type_checking.
                 [deltas, ~]       = Functional_Map.random_delta_functions(diag(source_basis.A), 0, options.indices);
@@ -207,9 +186,12 @@ classdef Functional_Map < dynamicprops
 
             if ~ isempty(options.symmetries)
                 for i=1:size(options.symmetries, 2)
-                    sym = options.symmetries(indices, i);
-                    idx = find(sym);
-                    sym(sym == 0) = idx;
+                    
+                    sym = options.symmetries(groundtruth(indices), i);
+                    
+%                     idx = find(sym);          TODO-E why?                    
+%                     sym(sym == 0) = idx     %TODO-P fix for nodes with not known symmetries.
+%                       sym(sym == 0) = ids(()
                     
                     pairs = [ids, sym]';                                                           
                     dists = min(comp_geos(pairs), dists);
@@ -307,14 +289,10 @@ classdef Functional_Map < dynamicprops
             S       = sparse(indices, 1:nsamples, areas, num_vertices, nsamples);
         end
         
-
-%         function [] = functional_map_to_point_to_point()
-%                         
-%         end
-        
+                   
         function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
-
-            %             nodes_from = size(basis_from, 1);
+            %TODO-P input should be an LB.
+%             nodes_from = size(basis_from, 1);
 %             nodes_to   = size(basis_to, 1);              
 %             non_zero   = length(correspondences_from_to(:, 2));
 %             P          = sparse(correspondences_from_to(:, 2), correspondences_from_to(:, 1), ones(non_zero,1), nodes_to, nodes_from);            
@@ -325,7 +303,9 @@ classdef Functional_Map < dynamicprops
 %             gt_from_to ~= 0; TODO-P cumsum()
             
             basis_from = basis_from(gt_from_to(gt_from_to ~= 0), :);   % Permute the basis to reflect the corresponding ground_truth.            
-            X          = basis_to' * to_areas * basis_from;                       
+           
+            A = spdiags(to_areas, 0, length(to_areas), length(to_areas)); 
+            X          = basis_to' * A * basis_from;                       
 
         end
         

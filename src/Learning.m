@@ -48,7 +48,7 @@ classdef Learning
             end            
         end
 
-        function [low_rank_maps] = low_rank_filtering_of_fmaps(init_maps)                     %TODO-P move to Mesh_Collection
+        function [low_rank_maps] = low_rank_filtering_of_fmaps(init_maps)                     % TODO-P Static if nothing is added.
             % Convert the init_maps a cell array that will be passed in Functional_Map.low_rank_filtering.
             index_dict   = string_keys_to_ints(init_maps);            
             n            = length(init_maps.keys);
@@ -60,6 +60,7 @@ classdef Learning
                     init_maps_as_cell{src_ind, index_dict(trg_name{:})} = src_dict(trg_name{:}).fmap;
                 end
             end            
+            init_maps_as_cell
             % Call the optimization routine.
             W = repmat(1/n, n, n); % TODO-P setting a constant W.
             [maps_optim, ~] = Functional_Map.low_rank_filtering(init_maps_as_cell, W);                        
@@ -72,21 +73,34 @@ classdef Learning
                 src_ind      = index_dict(src_name{:});
                 temp         = low_rank_maps(src_name{:});
                 for trg_name = src_dict_in.keys                                   
-                    temp(trg_name{:}) = src_dict_in(trg_name{:}).copy();
-                    temp(trg_name{:}).set_fmap(maps_optim{src_ind, index_dict(trg_name{:})});     %TODO-P: Simplify.
+                    temp(trg_name{:}) = src_dict_in(trg_name{:}).copy();                    
+                    temp(trg_name{:}).set_fmap((maps_optim{src_ind, index_dict(trg_name{:})}));     % TODO-P: Simplify.
                 end
             end            
         end
         
         
-        
-
+        function [weights] = feature_weights_of_class(fmaps)
+            weights = containers.Map;
+            for src_name = fmaps.keys
+                src_dict = fmaps(src_name{:});                
+                for trg_name = src_dict.keys
+                    M  = src_dict(trg_name{:});
+                    Fs = M.source_basis.project_functions(M.source_neigs, M.source_features.F);
+                    Fs = divide_columns(Fs, sqrt(sum(Fs.^2)));                                   % Normalize features.
+                    Ft = M.target_basis.project_functions(M.target_neigs, M.target_features.F);               
+                    Ft = divide_columns(Ft, sqrt(sum(Ft.^2)));                
+                    if weights.isKey(src_name{:})                    
+                        weights(src_name{:}) = weights(src_name{:})  + sum(abs((M.fmap * Fs) - Ft), 1); % TODO-P parameterize with a scoring function.
+                    else
+                        weights(src_name{:}) = zeros(1, size(Fs, 2));
+                    end                    
+                end
+                weights(src_name{:}) = weights(src_name{:}) ./ size(src_dict, 1);
                 
-%         , class_id, train_data, train_labels
-%         class_examples = find(train_labels == class_id);
-%         names          = train_data(class_examples);            % Cell with the names of the class members.
-        
-        
+            end            
+        end
+                
         function [pairs] = inter_class_pairs(train_labels, train_data, class_id)
             class_examples = find(train_labels == class_id);
             names          = train_data(class_examples);            % Cell with the names of the class members.
@@ -110,21 +124,6 @@ classdef Learning
             end
             assert(m == pairs_num + 1);
         end
-            
-
-        
-        
-        
-        function [weights] = feature_weights_of_class(fmaps)
-            
-            if iscell(fmaps)                    
-                size(fmaps)
-            end
-            
-        
-        end
-        
-        
         
         
 

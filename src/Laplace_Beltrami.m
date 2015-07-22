@@ -3,10 +3,10 @@ classdef Laplace_Beltrami < dynamicprops
     % object of the class Mesh.
     
     properties (GetAccess = public, SetAccess = private)
-        W           = [];               % Weight matrix of cotangent Laplacian.
-        M           = [];               % Associated Mesh of LB.        
-        A           = [];               % The areas associated with the vertices of the inmesh.
-        spectra     = struct();         % A struct carrying the eigenvalues and eigenvectors of the LB.
+        M;               % (Mesh) Associated Mesh of LB.        
+        W;               % (M.num_vertices x M.num_vertices) Sparse weight matrix of cotangent Laplacian.                
+        A;               % (M.num_vertices, 1) The areas associated with the vertices of the M.
+        spectra;         % A struct carrying the eigenvalues and eigenvectors of the LB.
     end
     
     methods    
@@ -17,7 +17,7 @@ classdef Laplace_Beltrami < dynamicprops
             %           vertex_areas (num_vertices x 1)
             
             if nargin == 0                                               
-                obj.M = [];          
+                obj.M = Mesh();          
                 obj.W = [];
                 obj.A = [];
                 obj.spectra = struct();                                

@@ -96,6 +96,8 @@ classdef Mesh_Collection < dynamicprops
         
         function [fmaps] = compute_fmaps(obj, pairs, features, method, varargin)
             
+            % features  - containers.map (String to Mesh_Features), String corresponds to the name of a mesh.
+            
             options = struct('eigs', 'all', 'lambda', 0);
             options = load_key_value_input_pairs(options, varargin{:});
             
@@ -125,9 +127,6 @@ classdef Mesh_Collection < dynamicprops
         end
         
 
-        
-        
-        
         function [bool] = contains(obj, mesh_name)
             % Returns true iff the collection contains a mesh with the given mesh_name.
             bool = obj.meshes.isKey(mesh_name);
@@ -146,23 +145,23 @@ classdef Mesh_Collection < dynamicprops
                 end
         end
                    
-        function compute_default_feautures(obj)                        
+        function compute_default_feautures(obj, wks_samples, hks_samples, mc_samples, gc_samples)                        
             if ~ isprop(obj, 'raw_features')
                 obj.addprop('raw_features');
                 obj.raw_features = containers.Map;            
             end
-                                             
+            neigs = 'all';
             for key = obj.meshes.keys               
-                meshname = key{:};               
-                m     = obj.meshes(meshname);
-                lb    = obj.lb_basis(meshname);
-                neigs = length(lb.spectra.evals);                
-                F     = Mesh_Features.default_mesh_feautures(m, lb, neigs);
-                obj.raw_features(meshname) = F;
+                meshname = key{:};                                               
+                feats = Mesh_Features(obj.meshes(meshname), obj.lb_basis(meshname));                                            
+                feats.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+                obj.raw_features(meshname) = feats;
                 disp(['Computing Default raw Features for: ', meshname, ' done.']);
             end
         end
-                
+        
+%         function  compute_projected_features(obj, neigs, )
+            
         function [C] = project_features(obj, mesh_list, eigs_num, features)
                 C = cell(length(mesh_list), 1);
                 
