@@ -15,8 +15,7 @@
     mesh2.set_default_vertex_areas('barycentric');    
     LB2               = Laplace_Beltrami(mesh2); 
     feats2            = Mesh_Features(mesh2, LB2);
-    
-        
+            
 %%  Compute Features           
     neigs          = 200;
     wks_samples    = 100; 
@@ -28,7 +27,7 @@
     feats2.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);    
 %%        
 %   save('../data/output/demo_basics', 'LB1', 'LB2', 'feats1', 'feats2', 'mesh1', 'mesh2');
-load('../data/output/demo_basics');    
+    load('../data/output/demo_basics');    
        
 %%  Make Fmaps
     F1 = Functional_Map(LB1, LB2);

@@ -95,8 +95,8 @@ classdef Mesh < dynamicprops
     methods (Access = public)        
         
         % Setters and Getters.                
-        % TODO: Logic to think about: want if not setted to get an
-        %                 exception? Are the viariables setted only via settter?
+        % TODO-P: Logic to think about: want if not setted to get an exception?
+        %       Are the viariables setted only via settter?
         
         function obj = set_mesh_name(obj, new_name)
                 obj.name = new_name;

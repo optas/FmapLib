@@ -2,9 +2,8 @@ classdef Mesh_Features < dynamicprops
     
     properties (GetAccess = public, SetAccess = private)
         % Each Mesh_Feature object has at least the following properties.
-        M;                   % (Mesh) Mesh over which the feautures are computed.   %TODO-P keep only if we create feats independent of an LB.
-        LB;                  % (Laplace_Beltrami) Associated LB operator which will be used to generate most of the 
-                             %                    potential feautures.
+        M;                   % (Mesh) Mesh over which the feautures are computed.  %TODO-P keep only if we create feats independent of an LB.
+        LB;                  % (Laplace_Beltrami) Associated LB operator.                             
         F;                   % (Matrix) carrying the computed feautures.
         index;               % Strucutre holding the positions of each type of computed features stored at F.
     end
