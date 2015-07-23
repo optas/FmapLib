@@ -1,0 +1,278 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN">
+<html xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   
+      <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      -->
+      <title>RDIR Enhanced - Examples of use</title>
+      <meta name="generator" content="MATLAB 7.5">
+      <meta name="date" content="2014-01-23">
+      <meta name="m-file" content="enhanced_rdir"><style>
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head>
+   <body>
+      <div class="content">
+         <h1>RDIR Enhanced - Examples of use</h1>
+         <introduction>
+            <p>This script demonstrates how to use the different abilities of the enhanced <tt>rdir</tt> function.
+            </p>
+            <p>Examples are based on <tt>matlabroot</tt> directory content. Results may vary depending on your version of Matlab.
+            </p>
+         </introduction>
+         <h2>Contents</h2>
+         <div>
+            <ul>
+               <li><a href="#1">Standard use</a></li>
+               <li><a href="#2">Using double wildcard **</a></li>
+               <li><a href="#3">RDIR output</a></li>
+               <li><a href="#5">Using 3rd argument to shorten output names</a></li>
+               <li><a href="#8">Using a filter with "regexp"</a></li>
+               <li><a href="#9">Using a function handle as filter</a></li>
+               <li><a href="#10">Specific display - No item matching filter</a></li>
+               <li><a href="#11">Specific display - Wrong filter</a></li>
+            </ul>
+         </div>
+         <h2>Standard use<a name="1"></a></h2><pre class="codeinput">rdir([matlabroot, <span class="string">'\*.txt'</span>])
+</pre><pre class="codeoutput">  76 kb  02-Aug-2007 16:03:52  C:\Program Files\MATLAB\R2007b\license.txt                       
+ 631  b  02-Aug-2007 15:18:42  C:\Program Files\MATLAB\R2007b\patents.txt                       
+ 413  b  04-Aug-2007 12:16:36  C:\Program Files\MATLAB\R2007b\trademarks.txt                    
+</pre><h2>Using double wildcard **<a name="2"></a></h2>
+         <p>List <tt>".m"</tt> files whose name contains <tt>"tmpl"</tt> in all subdirectories of <tt>matlabroot</tt></p><pre class="codeinput">rdir([matlabroot, <span class="string">'\**\*tmpl*.m'</span>])
+</pre><pre class="codeoutput">  11 kb  20-Dec-2006 03:31:58  C:\Program Files\MATLAB\R2007b\toolbox\simulink\blocks\msfuntmpl.m 
+   8 kb  20-Mar-2007 20:57:30  C:\Program Files\MATLAB\R2007b\toolbox\simulink\blocks\sfuntmpl.m 
+ 455  b  29-Jun-2006 12:23:38  C:\Program Files\MATLAB\R2007b\toolbox\simulink\blocks\ja\msfuntmpl.m 
+   3 kb  29-Jun-2006 12:23:40  C:\Program Files\MATLAB\R2007b\toolbox\simulink\blocks\ja\sfuntmpl.m 
+</pre><h2>RDIR output<a name="3"></a></h2><pre class="codeinput">d = rdir([matlabroot, <span class="string">'\**\*tmpl*.m'</span>])
+</pre><pre class="codeoutput">
+d = 
+
+4x1 struct array with fields:
+    name
+    date
+    bytes
+    isdir
+    datenum
+
+</pre><pre class="codeinput">disp(d(1))
+</pre><pre class="codeoutput">       name: 'C:\Program Files\MATLAB\R2007b\toolbox\simulink\blocks\msfuntmpl.m'
+       date: '20-d&eacute;c.-2006 03:31:58'
+      bytes: 11035
+      isdir: 0
+    datenum: 7.3303e+005
+
+</pre><h2>Using 3rd argument to shorten output names<a name="5"></a></h2>
+         <p>Remove <tt>"C:\Program Files\"</tt> in returned names
+         </p><pre class="codeinput">rdir([matlabroot, <span class="string">'\*.txt'</span>], <span class="string">''</span>, <span class="string">'C:\Program Files\'</span>)
+</pre><pre class="codeoutput">All in : C:\Program Files\
+  76 kb  02-Aug-2007 16:03:52  MATLAB\R2007b\license.txt                                        
+ 631  b  02-Aug-2007 15:18:42  MATLAB\R2007b\patents.txt                                        
+ 413  b  04-Aug-2007 12:16:36  MATLAB\R2007b\trademarks.txt                                     
+</pre><p>Remove <tt>matlabroot</tt> in returned names
+         </p><pre class="codeinput">rdir([matlabroot, <span class="string">'\*.txt'</span>], <span class="string">''</span>, true)
+</pre><pre class="codeoutput">All in : C:\Program Files\MATLAB\R2007b\
+  76 kb  02-Aug-2007 16:03:52  license.txt                                                      
+ 631  b  02-Aug-2007 15:18:42  patents.txt                                                      
+ 413  b  04-Aug-2007 12:16:36  trademarks.txt                                                   
+</pre><p>Optional 2nd <tt>rdir</tt> output indicates common path removed from each output name
+         </p><pre class="codeinput">[d, p] = rdir([matlabroot, <span class="string">'\*.txt'</span>], <span class="string">''</span>, true);
+
+fprintf(<span class="string">'Common path : \n%s\n\n'</span>, p)
+
+disp( d(1) )
+</pre><pre class="codeoutput">Common path : 
+C:\Program Files\MATLAB\R2007b\
+
+       name: 'license.txt'
+       date: '02-ao&ucirc;t-2007 16:03:52'
+      bytes: 77445
+      isdir: 0
+    datenum: 7.3326e+005
+
+</pre><h2>Using a filter with "regexp"<a name="8"></a></h2>
+         <p>List <tt>".mat"</tt> files, then select those whose name match regular expression <tt>'data\d'</tt> (ie <tt>"data"</tt> followed by a numeric digit)
+         </p><pre class="codeinput">rdir([matlabroot <span class="string">'\toolbox\**\*.mat'</span>], <span class="string">'regexp(name, ''data\d'')'</span>, true)
+</pre><pre class="codeoutput">All in : C:\Program Files\MATLAB\R2007b\toolbox\
+   6 kb  01-Mar-2000 13:24:02  ident\ident\iddata1.mat                                          
+   7 kb  01-Mar-2000 13:24:04  ident\ident\iddata2.mat                                          
+   8 kb  01-Mar-2000 13:24:06  ident\ident\iddata3.mat                                          
+   7 kb  01-Mar-2000 13:24:06  ident\ident\iddata4.mat                                          
+   9 kb  01-Mar-2000 13:24:08  ident\ident\iddata5.mat                                          
+   9 kb  01-Mar-2000 13:24:10  ident\ident\iddata6.mat                                          
+  13 kb  01-Mar-2000 13:24:10  ident\ident\iddata7.mat                                          
+  19 kb  01-Mar-2000 13:24:12  ident\ident\iddata8.mat                                          
+</pre><h2>Using a function handle as filter<a name="9"></a></h2><pre class="codeinput">fun = @(d) ~isempty(regexp(d.name, <span class="string">'data\d'</span>)) &amp;&amp; (d.bytes &lt; 10*1024)
+
+rdir([matlabroot <span class="string">'\toolbox\**\*.mat'</span>], fun, true)
+</pre><pre class="codeoutput">
+fun = 
+
+    @(d)~isempty(regexp(d.name,'data\d'))&amp;&amp;(d.bytes&lt;10*1024)
+
+All in : C:\Program Files\MATLAB\R2007b\toolbox\
+   6 kb  01-Mar-2000 13:24:02  ident\ident\iddata1.mat                                          
+   7 kb  01-Mar-2000 13:24:04  ident\ident\iddata2.mat                                          
+   8 kb  01-Mar-2000 13:24:06  ident\ident\iddata3.mat                                          
+   7 kb  01-Mar-2000 13:24:06  ident\ident\iddata4.mat                                          
+   9 kb  01-Mar-2000 13:24:08  ident\ident\iddata5.mat                                          
+   9 kb  01-Mar-2000 13:24:10  ident\ident\iddata6.mat                                          
+</pre><h2>Specific display - No item matching filter<a name="10"></a></h2>
+         <p>When some items match input path, but none match filter, a specific message is displayed.</p><pre class="codeinput">rdir(matlabroot, <span class="string">'strcmp(name, ''unknowtoolbox'')'</span>, 1)
+</pre><pre class="codeoutput">No item matching filter.
+</pre><h2>Specific display - Wrong filter<a name="11"></a></h2>
+         <p>A warning is displayed after the non-filtered result list if entered filter is wrong.</p><pre class="codeinput">rdir(matlabroot, <span class="string">'wrong filter'</span>, 1)
+
+
+<span class="comment">% EOF</span>
+</pre><pre class="codeoutput">All in : C:\Program Files\MATLAB\
+                               R2007b\bin                                                      
+                               R2007b\extern                                                   
+                               R2007b\help                                                     
+                               R2007b\ja                                                       
+                               R2007b\java                                                     
+                               R2007b\jhelp                                                    
+                               R2007b\notebook                                                 
+                               R2007b\rtw                                                      
+                               R2007b\simulink                                                 
+                               R2007b\stateflow                                                
+                               R2007b\sys                                                      
+                               R2007b\toolbox                                                  
+                               R2007b\uninstall                                                
+                               R2007b\work                                                     
+ 775  b  19-Jul-2012 15:20:40  R2007b\MATLAB R2007b.lnk                                         
+  76 kb  02-Aug-2007 16:03:52  R2007b\license.txt                                               
+ 631  b  02-Aug-2007 15:18:42  R2007b\patents.txt                                               
+ 413  b  04-Aug-2007 12:16:36  R2007b\trademarks.txt                                            
+Warning: Invalid TEST "wrong filter" : Error: Unexpected MATLAB expression.
+</pre><p class="footer"><br>
+            Published with MATLAB&reg; 7.5<br></p>
+      </div>
+      <!--
+##### SOURCE BEGIN #####
+%% RDIR Enhanced - Examples of use
+%
+% This script demonstrates how to use the different abilities of the
+% enhanced |rdir| function.
+%
+% Examples are based on |matlabroot| directory content. Results may vary
+% depending on your version of Matlab. 
+%
+
+%% Standard use
+rdir([matlabroot, '\*.txt'])
+
+%% Using double wildcard **
+% List |".m"| files whose name contains |"tmpl"| in all subdirectories of
+% |matlabroot|
+rdir([matlabroot, '\**\*tmpl*.m'])
+
+%% RDIR output
+d = rdir([matlabroot, '\**\*tmpl*.m'])
+
+%%
+disp(d(1))
+
+
+%% Using 3rd argument to shorten output names
+% Remove |"C:\Program Files\"| in returned names
+rdir([matlabroot, '\*.txt'], '', 'C:\Program Files\')
+
+%%
+% Remove |matlabroot| in returned names
+rdir([matlabroot, '\*.txt'], '', true)
+
+%%
+% Optional 2nd |rdir| output indicates common path removed from each output
+% name
+[d, p] = rdir([matlabroot, '\*.txt'], '', true);
+
+fprintf('Common path : \n%s\n\n', p)
+
+disp( d(1) )
+
+%% Using a filter with "regexp"
+% List |".mat"| files, then select those whose name match regular expression
+% |'data\d'| (ie |"data"| followed by a numeric digit)
+rdir([matlabroot '\toolbox\**\*.mat'], 'regexp(name, ''data\d'')', true)
+
+%% Using a function handle as filter
+
+fun = @(d) ~isempty(regexp(d.name, 'data\d')) && (d.bytes < 10*1024)
+
+rdir([matlabroot '\toolbox\**\*.mat'], fun, true)
+
+%% Specific display - No item matching filter
+% When some items match input path, but none match filter, a specific
+% message is displayed.
+rdir(matlabroot, 'strcmp(name, ''unknowtoolbox'')', 1)
+
+
+%% Specific display - Wrong filter
+% A warning is displayed after the non-filtered result list if entered
+% filter is wrong.
+rdir(matlabroot, 'wrong filter', 1)
+
+
+% EOF
+##### SOURCE END #####
+-->
+   </body>
+</html>

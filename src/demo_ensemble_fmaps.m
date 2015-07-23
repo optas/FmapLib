@@ -1,0 +1,130 @@
+%%  A Script researching Ensemble Procedures for Functional Maps.
+    clr;
+    gitdir;
+    cd FmapLib/src
+        
+%% Load two Meshes and compute their LBs 
+    meshfile       = '../data/input/tosca/dog1.off';
+    mesh1          = Mesh(meshfile, 'dog1');
+    mesh1.set_default_vertex_areas('barycentric');    
+    LB1            = Laplace_Beltrami(mesh1);       
+    feats1         = Mesh_Features(mesh1, LB1);
+    
+    meshfile       = '../data/input/tosca/dog2.off';
+    mesh2          = Mesh(meshfile, 'dog2');
+    mesh2.set_default_vertex_areas('barycentric');    
+    LB2            = Laplace_Beltrami(mesh2);       
+    feats2         = Mesh_Features(mesh2, LB2);
+
+%%  Compute Features           
+    neigs = 300;
+    wks_samples    = 100; 
+    hks_samples    = 100;    
+    mc_samples     = 100; 
+    gc_samples     = 100;
+%%    
+    feats1.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+    feats2.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);    
+%%        
+%     save('../data/output/ensembles/demo_ensemble', 'mesh1', 'mesh2', 'LB1', 'LB2', 'feats1', 'feats2');              
+%     load('../data/output/ensembles/demo_ensemble');    
+
+%% Ensembling
+    fmap        = Functional_Map(LB1, LB2);
+    num_of_maps = 30;
+    ensembles   = cell(num_of_maps, 1);
+    all_feats   = size(feats1.F, 2);
+    min_feats   = ceil(0.1*all_feats);
+    
+    for i=1:num_of_maps        
+        feats_i      = floor(min_feats + rand() * (all_feats - min_feats));
+        sample_feat  = randsample(all_feats, feats_i)';
+        source_f.F     = feats1.F(:, sample_feat);          % TODO-P remove .F and make it a class.
+        target_f.F     = feats2.F(:, sample_feat);        
+        fmap.compute_f_map('frobenius_square', neigs, neigs, source_f, target_f, 'lambda', 20);            
+        
+        Fs = fmap.source_basis.project_functions(fmap.source_neigs, source_f.F);
+        Fs = divide_columns(Fs, sqrt(sum(Fs.^2)));                                   % Normalize features.
+        Ft = fmap.target_basis.project_functions(fmap.target_neigs, target_f.F);               
+        Ft = divide_columns(Ft, sqrt(sum(Ft.^2)));                
+                    
+        weight_i = sum(sum(abs((fmap.fmap * Fs) - Ft), 1)) ./ feats_i;
+        
+
+        ensembles{i}.map   = fmap.fmap;              
+        ensembles{i}.score = weight_i;
+    end
+    
+%% Aggregating Ensembles
+%   1. Just the average of them.
+    Xmean = zeros(size(ensembles{1}.map));
+    for i=1:num_of_maps            
+        Xmean = Xmean + ensembles{i}.map;
+    end
+    Xmean = (1/(num_of_maps)) .* Xmean;
+    Fmean = Functional_Map(LB1, LB2);
+    Fmean.set_fmap(Xmean);
+
+%   2. Linear combination based on weights.    
+    Xlin = zeros(size(ensembles{1}.map));
+    for i=1:num_of_maps            
+        Xlin = Xlin + ((1/ensembles{i}.score) * ensembles{i}.map);
+    end
+    Flin = Functional_Map(LB1, LB2);
+    Flin.set_fmap(Xlin ./ num_of_maps);    
+    
+%% Evaluating distortions
+    %% Load symmetries.    
+    fid = fopen('../data/input/tosca_symmetries/cat.sym'); % TODO-P add to IO.read_symmetries();
+    C   = textscan(fid, '%s', 'delimiter', '\n');          % Read symmetries:
+    fclose(fid);
+    symmetries   = str2double(C{:});    
+    
+    % Make groundtuth map (for tosca, within same class i node matched i).
+    groundtruth = (1:mesh1.num_vertices)';      
+    indices     = randsample(mesh1.num_vertices, 400);    
+    all_dists   = cell(num_of_maps, 1);        
+    
+    [dists_m, ~] = Fmean.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);            
+    [dists_l, ~] = Flin.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);        
+    
+    fmap.compute_f_map('frobenius_square', neigs, neigs, feats1, feats2, 'lambda', 20);                      % Use all probe functions.
+    [dists_a, ~] = fmap.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);
+        
+    
+    % Make the optimal/groundtruth map.
+    X_opt                      = Functional_Map.groundtruth_functional_map(LB1.evecs(neigs), LB2.evecs(neigs), groundtruth, diag(LB2.A));       
+    [dists_o,  random_points]  = Functional_Map.pairwise_distortion_of_map(X_opt, LB1, LB2, groundtruth, 'indices', indices, 'symmetries', symmetries);
+    
+    
+    feats1_intr.F = feats1.F(:,wks_samples + hks_samples);                                                   % TODO-P utilize feats.index.
+    feats2_intr.F = feats2.F(:,wks_samples + hks_samples);
+    fmap.compute_f_map('frobenius_square', neigs, neigs, feats1_intr, feats2_intr, 'lambda', 20);            % Use hks/wks only.
+    [dists_i, ~] = fmap.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);
+    
+    mean(dists_i)
+    mean(dists_m)
+    mean(dists_l)
+    mean(dists_a)
+    mean(dists_o)
+    %%
+    
+    
+%     hist(dists)
+       
+      
+%     for i=1:num_of_maps        
+%         [dists, ~]       = ensembles{i}.map.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);        
+%         [dists2, ~]      = Fmean.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);        
+%         all_dists{i}.ens = dists;
+%         all_dists{i}.agg = dists2;
+%     
+%     end        
+%     for i=1:num_of_maps       %TODO-P save sampling numbers
+%         fprintf('Ensmble with %d feautures. Mean: %f STD:%f \n', ensembles{i}.nfeat, mean(all_dists{i}.ens), std(all_dists{i}.ens))
+%         fprintf('A_Fmap Mean:%f STD:%f \n', mean(all_dists{i}.agg), std(all_dists{i}.agg))
+%         ensembles{i}.nfeat
+%     end
+
+   
+    

@@ -1,2 +1,8 @@
 *DS_Store
 *~
+
+# Ignore all files in the data/output directory.
+data/output/
+
+# Ignore binary (mex) files, so that each user can compile/use them independently.
+src/External_Code/Geodesics/*.mex*

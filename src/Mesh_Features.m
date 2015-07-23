@@ -1,42 +1,141 @@
 classdef Mesh_Features < dynamicprops
     
-%     properties (GetAccess = public, SetAccess = private)
-%         m = [];
-%     end
-%     
-%     
-%     
-%     
-%     methods (Access = public)
-%         function obj = Mesh_Features(varargin)     
-%             if nargin == 0                
-%                 obj.m = [];
-%             else
-%                 obj.m = varargin{1};
-%             end
-%         end        
-%     end
-
-
-    methods (Static)
-%         function [mean_curv] = mean_curvature(, )                
-            % Mean curvature
-%             Max = 5; step = 5;
-%             meanCurv = sqrt(sum((Delta*mesh.vertices).^2, 2));
-%             f5 = zeros(mesh.nv, Max);
-%             f6 = zeros(mesh.nv, Max);
-%             f5(:,1) = meanCurv;
-%             f6(:,1) = log(abs(meanCurv) + 1e-10);
-%             for i = 2:Max
-%                 f5(:, i) = (speye(size(Delta)) - step*Delta)\f5(:, i-1);
-%                 f6(:, i) = (speye(size(Delta)) - step*Delta)\f6(:, i-1);
-%             end
-% 
-%             F = [F, f5, f6];
-%             mask = [mask; ones(size(f5, 2), 1)*(max(mask) + 1)];
-%             mask = [mask; ones(size(f6, 2), 1)*(max(mask) + 1)];            
-%         end
+    properties (GetAccess = public, SetAccess = private)
+        % Each Mesh_Feature object has at least the following properties.
+        M;                   % (Mesh) Mesh over which the feautures are computed.  %TODO-P keep only if we create feats independent of an LB.
+        LB;                  % (Laplace_Beltrami) Associated LB operator.                             
+        F;                   % (Matrix) carrying the computed feautures.
+        index;               % Strucutre holding the positions of each type of computed features stored at F.
+    end
         
+    methods (Access = public)
+        % Class Constructor.        
+        function obj = Mesh_Features(inmesh, laplace_beltrami)     
+            if nargin == 0                
+                % Construct empty Mesh_Features.            
+                obj.M  = Mesh();
+                obj.LB = Laplace_Beltrami();                
+            else
+               obj.M   = inmesh;
+               obj.LB  = laplace_beltrami;               
+            end
+            obj.F  = [];
+            obj.index  = struct();
+        end
+        
+        function obj = copy(this)
+            % Define what is copied when a 'deep copy' is performed.
+            % I.e. when obj.copy() is called.
+            obj = feval(class(this)); % Instantiate new object of the same class.
+                        
+            % Copy all non-hidden properties (including dynamic ones).            
+            p = properties(this);
+            for i = 1:length(p)
+                if ~isprop(obj, p{i})   % Adds all the dynamic properties.
+                    obj.addprop(p{i});
+                end                
+                obj.(p{i}) = this.(p{i});
+            end           
+        end
+        
+        function obj = compute_default_feautures(obj, neigs, wks_samples, hks_samples, mc_samples, gc_samples)
+            if strcmp(neigs, 'all')
+                neigs = length(obj.LB.spectra.evals);
+            end
+            obj.F = Mesh_Features.default_mesh_feautures(obj.M, obj.LB, neigs, wks_samples, hks_samples, mc_samples, gc_samples);            
+            Mesh_Features.index_features(obj, 'wks', wks_samples, 'hks', hks_samples, 'mc', mc_samples, 'gc', gc_samples);
+        end
+    
+    end
+    
+    
+    
+    
+    methods (Static)
+   
+        function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
+            % Computes the mean curvature at each vertex of a given mesh.
+            % This implementation utilizes the Laplace Beltrami (LB) operator of the mesh (see Notes).
+            % 
+            %
+            % Input:    
+            %           inmesh            -  (Mesh) Input mesh with inmesh.num_vertices 
+            %                                vertices.
+            %                                
+            %           laplace_beltrami  -  (Laplace_Beltrami) The corresponding LB of the inmesh.
+            %                                             
+            %           smoothing         -  (k x 1, optional) Vector with values corresponding to time samples 
+            %                                for the heat diffusion smoothing TODO-P: explain more.            
+            %
+            % Output:   
+            %           mean_curv         -  (num_vertices x k+1) The mean curvature of each vertex.
+            %                                If smoothing is applied then the first column contains
+            %                                the mean curvature and the k-following columns contain
+            %                                the k-smoothed versions of it.
+            %
+            % Notes:
+            %       Meyer, M. Desbrun, P. Schroder, and A. H. Barr. "Discrete
+            %       Differential-Geometry Operators for Triangulated 2-Manifolds."
+            % TODO-E: Let's talk for completeness this to take as optional arguement the normals of vertices.
+            
+            if isprop(inmesh, 'vertex_normals')
+                N = inmesh.vertex_normals;
+            else
+                N = Mesh.normals_of_vertices(inmesh.vertices, inmesh.triangles);
+            end
+            
+            mean_curv = 0.5 * sum(N .* (laplace_beltrami.W * inmesh.vertices), 2);
+            
+            if exist('smoothing_time', 'var')
+                mean_curv_smooth = Mesh_Features.heat_diffusion_smoothing(laplace_beltrami.W, mean_curv, smoothing_time);
+                mean_curv        = [mean_curv, mean_curv_smooth];
+            end
+        end
+        
+        function [gauss_curv] = gaussian_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
+            % Computes the Gaussian curvature at each vertex of a given mesh.
+            % (Optional) A smoothing using the heat diffusion can be done
+            % as post-processing.
+            %
+            % Input:  
+            %         inmesh            -  (Mesh) 
+            %         
+            %         laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the inmesh.
+            %                              
+            %         smoothing         -  (k x 1, Optional) vector with time for the
+            %                              heat diffusion processing.
+            %
+            % Output: 
+            %         gauss_curv        -  (num_vertices x k+1) The gaussian curvature of each vertex.
+            %                              If smoothing is applied then the first column contains
+            %                              the mean curvature and the k-following columns contain
+            %                              the k-smoothed versions of the mean.
+            %             
+            % Notes: See Meyer, M. Desbrun, P. Schroder, and A. H. Barr. "Discrete
+            %            Differential-Geometry Operators for Triangulated 2-Manifolds."
+            
+            if isprop(inmesh, 'angles')
+                angles = inmesh.angles;
+            else
+                if isprop(inmesh, 'edge_lengths')
+                    L = inmesh.edge_lengths;
+                else
+                    L = Mesh.edge_length_of_triangles(inmesh.vertices, inmesh.triangles);
+                end
+                angles  = Mesh.angles_of_triangles(L);
+            end
+            
+            areas = diag(laplace_beltrami.A);
+            
+            gauss_curv = ( 2 * pi - accumarray(inmesh.triangles(:), angles(:))) ./ areas;   % TODO-E: Is it OK that areas not normalized?
+        
+            if exist('smoothing_time', 'var')                                               
+                gauss_curv_smooth = Mesh_Features.heat_diffusion_smoothing(laplace_beltrami.W, gauss_curv, smoothing_time);
+                gauss_curv        = [gauss_curv, gauss_curv_smooth];
+            end
+        end
+        
+                                        
         function [signatures] = wave_kernel_signature(evecs, evals, energies, sigma)
             % Computes the wave kernel signature according to the spectrum of a graph 
             % derived operator (e.g., the Cotangent Laplacian). 
@@ -55,11 +154,11 @@ classdef Mesh_Features < dynamicprops
             %                        the fitted gausian. Default = TODO_add.
             %
             % Output: signatures   - (n x e) Matrix with the values of the WKS for
-            %                                different energies in its columns.
-            %
-            % (c) Panos Achlioptas 2014   http://www.stanford.edu/~optas
-
-            assert(size(evals, 1) == size(evecs, 2));
+            %                                different energies in its columns.            
+            
+            if(size(evals, 1) ~= size(evecs, 2))
+                error('The number of eigenvalues given does not aggree with the number of eigenvectors.')
+            end
 
             k            = size(evals, 1);                % Number of eigenvalues.
             e            = size(energies, 2);             % Number of energies.
@@ -69,10 +168,8 @@ classdef Mesh_Features < dynamicprops
 
             gauss_kernel = exp(- (( energies-evals ).^2 ) / (2*sigma^2) );
             signatures   = evecs.^2 * gauss_kernel;
-
             scale        = sum(gauss_kernel, 1);            
             signatures   = divide_columns(signatures, scale);
-
             assert(all(all(signatures >= 0)));            
         end
         
@@ -88,11 +185,13 @@ classdef Mesh_Features < dynamicprops
             %         evals         - (k x 1) corresponding eigenvalues
             %         T             - (1 x t) time values over which the kernel is evaluated
             %
-            % Output: signatures    - (n x t) matrix with the values of the HKS for different T in  its columns
-            %
-            % (c) Panos Achlioptas 2014   http://www.stanford.edu/~optas
-                
-            assert(size(evals, 1) == size(evecs, 2))
+            % Output: 
+            %         signatures    - (n x t) matrix with the values of the HKS for different T in  its columns
+    
+            if(size(evals, 1) ~= size(evecs, 2))
+                error('The number of eigenvalues given does not aggree with the number of eigenvectors.')
+            end
+            
             low_pass_filter = exp(- evals * T);
             signatures = evecs.^2 * low_pass_filter;
             scale = sum(low_pass_filter, 1);
@@ -100,17 +199,19 @@ classdef Mesh_Features < dynamicprops
             assert(all(all(signatures >= 0)))
         end
     
+        
         function [E, sigma] = energy_sample_generator(recipie, emin, emax, nsamples, variance)
             % TODO: add comments-explanation. variance of the WKS gaussian (wih respect to the 
             % difference of the two first eigenvalues). For easy or precision tasks 
             % (eg. matching with only isometric deformations) you can take
             % it smaller.  Yes, smaller => more distinctiveness.            
             default_variance = 5;
+            sigma            = 0;
             if emin < 1e-6
                 warning('The smallest eigenvalue (emin) is smaller than 1e-6.')
             end
             switch recipie                
-                case 'log_linear'
+                case 'log_linear'   % Version Used in original WKS.
                     E = linspace(log(emin), (log(emax) / 1.02), nsamples);
                     if ~exist('variance', 'var')               
                         sigma = (E(2) - E(1)) * default_variance;
@@ -126,78 +227,229 @@ classdef Mesh_Features < dynamicprops
                     else
                         sigma = delta * variance;
                     end  
-
+                
+                case 'log_sampled'    % Version Used in original HKS.
+                    % TODO-P: keep here - take care of variance param.
+                    % When you first transform you range to log-scale and then
+                    % sample linearly, you sample more small ranged values.
+                    tmin = abs(4*log(10) / emax);
+                    tmax = abs(4*log(10) / emin);                                        
+                    E    = exp(linspace(log(tmin), log(tmax), nsamples));                    
+                    
                 otherwise
                     error('Given recipie is not recognised.')
             end
             assert(length(E) == nsamples)
         end
-    
         
-      function [WKS] = wks_Aubry(evecs, evals, energies, sigma)   
-
-        % Added by Panos to make the function work
-        N            = length(energies);
-        num_vertices = size(evecs, 1);
-        log_E = log(abs(evals))';        
-        e = energies;
-        % End of Panos addition
-                
-        WKS = zeros(num_vertices, N);
-        C = zeros(1,N); %weights used for the normalization of f_E
-
-        for i = 1:N
-            WKS(:, i) = sum(evecs.^2.* ...
-                       repmat( exp((-(e(i) - log_E).^2) ./ (2*sigma.^2)), num_vertices, 1),2);
-            
-            C(i) = sum(exp((-(e(i)-log_E).^2)/(2*sigma.^2)));
+        
+        function [signatures] = global_point_signature(evecs, evals)
+            % Raif's embedding.
+            % Requires a discrete approximation of area-weighted cotanget Laplacian . Not a graphical one.
+            % DOI: "Laplace-Beltrami eigenfunctions for deformation invariant shape representation. R. Rustamov, SGP 2007."
+            assert(all(evals~=0) & all(evals > 0))
+            if any(abs(evals) < 1e-7) 
+                warning('Eigenvalues with magnitude as small as 1e-7 are used.')
+            end            
+            signatures = evecs * diag((1 ./ sqrt(evals)));            
         end
 
-        % normalize WKS
-        WKS(:,:) = WKS(:,:)./repmat(C,num_vertices,1);        
-      end
-      
-      function [hks] = hks_Sun(evecs, evals, A, scale)
+               
+        function [smoothed_fct] = heat_diffusion_smoothing(W, fct, diffusion_time) 
+            % Computes the heat diffusion of a function for a given time using an implicit Euler scheme.
+            % As a result the function will appear smoother.
+            %
+            % Input:  W                  -  (n x n) Matrix approximating the Laplace-Beltrami
+            %                               operator
+            %         fct                -  (n x 1) Vector containing the function values
+            %         diffusion_time     -  (1 x k) Vector contining the diffusion times
+            %
+            % Output: smoothed_fct       -  (n x k) Matrix with the values of k smoothed function
+            
+            if size(diffusion_time, 1) > 1
+                 diffusion_time = diffusion_time';
+            end
+            
+            if size(diffusion_time, 1) ~= 1
+                error('Variable "Time" should be vector');
+            end
+            if size(W, 1) ~= size(W, 2)
+                error('Given LB matrix is not square');
+            end
+            if size(W, 2) ~= size(fct, 1)
+                error('Uncompatible size between function and operator');
+            end
+            if size(fct, 2) ~= 1
+                error('Variable "Function" should be a column vector');
+            end
+            
+            diffusion_time = sort(diffusion_time);    % Time must be increasing.
+            n = size(W, 2);
+            k = size(diffusion_time, 2);
+            
+            smoothed_fct       = zeros(n, k);
+            smoothed_fct(:,1)  = (speye(n, n) + (diffusion_time(1) * W )) \ fct;
+            for i = 2:k
+                smoothed_fct(:,i) = ( speye(n, n) + (diffusion_time(i) - diffusion_time(i-1) ) * W ) \ smoothed_fct(:, i-1) ;
+            end
+        end
+        
 
-        % INPUTS
-        %  evecs:  ith each column in this matrix is the ith eigenfunction of the Laplace-Beltrami operator
-        %  evals:  ith element in this vector is the ith eigenvalue of the Laplace-Beltrami operator
-        %  A:      ith element in this vector is the area associated with the ith vertex
-        %  scale:  if scale = true, output the scaled hks
-        %          o.w. ouput the hks that is not scaled
+        function [signature] = D2_shape_distribution(inmesh, pairs, num_bins, true_geodesic)
+            % Computes the global shape descriptor "D2" which concicely describes the histogram of pairiwse geodesic
+            % distances between points that live on the mesh. This signature characterizes the whole mesh at once
+            % and is not suitable for vertex-wise feature extraction.
+            %
+            % Input:    
+            %           inmesh         -  (Mesh) Input mesh.
+            % 
+            %           pairs          - (int) Number of pairs to be sampled
+            %                                           
+            %           true_geodesic  -  (binary) TODO-P
+            %
+            % Output:   
+            %           signatures     - (num_bins x 1) vector representing the histogram of the D2 distances.
+            %
+            % Notes:
+            % "Shape Distributions of R. Osada, T. Funkhouser, B. Chazelle, and D. Dobkin, Princeton University"
+            %
+            % TODO: Sample points on the shape instead of vertices, to make methods insensitive to tessalations.
+            
+            pairs = sample_random_pairs(pairs, inmesh.num_vertices, 0, 0);  % A list of unique pairs of vertices.
+            dists = comp_geodesics_pairs(inmesh.vertices(:,1), inmesh.vertices(:,2), inmesh.vertices(:,3), inmesh.triangles', pairs, 1);            
+            xcenters   = linspace(max(dists)/num_bins, max(dists), num_bins);
+            signature = hist(dists, xcenters);
+            signature = signature / sum(signature);                      % Converting histogram into a pmf.            
+        end
+        
 
-        % OUTPUTS
-        %  hks: ith row in this matrix is the heat kernel signature of the ith vertex
+        function [signatures] = hist_of_euclidean_distance(inmesh, num_bins)        
+        % Input:
+        %           num_bins    -  (int) Number of bins the D2 histogram will have.
+                
+            hyper_diameter = norm(max(inmesh.vertices)- min(inmesh.vertices));                                                              
+            xcenters       = linspace(hyper_diameter/num_bins, hyper_diameter, num_bins);            
+            v_num          = inmesh.num_vertices;           
+            
+            signatures = zeros(v_num, num_bins);
+            for i = 1:v_num
+                distlist = sum((repmat(inmesh.vertices(i,:), [v_num-1, 1]) - inmesh.vertices([1:i-1 i+1:end],:)).^2, 2);  % TODO-P check if pdist2 is faster.
+                signatures(i,:) = hist(distlist, xcenters)/(v_num - 1);
+            end    
+        end
 
+        function [geo_dist] = geodesic_distance_to_set(inmesh, laplace_beltrami, indicator_fct)
+        % Computes an approximation the geodesic distance of all vertices to a set.
+        % This approximation comes from an heat diffusion process.
+        %
+        % Input:    inmesh            -  (Mesh) Input mesh with inmesh.num_vertices 
+        %                                vertices.
+        %                                
+        %           laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the
+        %                                inmesh.
+        %           indicator_fct     -  (num_vertices x 1) Vector with values 1 when 
+        %                                the vertex belongs to the set and 0 when ouside.            
+        %
+        % Output:   geo_dist         -  (num_vertices x 1) Geodesic distance between the 
+        %                               i-th vertex and the set defined by indicator_fct.
+        %
+        % Notes:
+        %       K. CRANE, C. WEISCHEDEL, M. WARDETZKY
+        %       "Geodesics in Heat: A New Approach to Computing Distance
+        %       Based on Heat Flow.", 2013
+        %
 
-           %area = sum(A);
-           %A = (1/area) * A;
-           %evals = area * evals;
-           %evecs = sqrt(area) * evecs;
+        if isprop(inmesh, 'triangle_normals')
+            N = inmesh.triangle_normals;                
+        else
+            N = Mesh.normals_of_triangles(inmesh.vertices, inmesh.triangles, 1);
+        end
 
-           tmin = abs(4*log(10) / evals(end));
-           tmax = abs(4*log(10) / evals(2));
-           nstep = 100;
+        if isprop(inmesh, 'barycentric_v_area')
+            area_vertices = inmesh.barycentric_v_area;
+        else           
+            area_vertices = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
+        end
 
-           stepsize = (log(tmax) - log(tmin)) / nstep;
-           logts = log(tmin):stepsize:log(tmax);
-           ts = exp(logts);
+        if isprop(inmesh, 'triangle_areas')
+            area_triangles = inmesh.triangle_areas;
+        else           
+            area_triangles = Mesh.area_of_triangles(inmesh.vertices, inmesh.triangles);
+        end
 
-           if scale == true, 
-              hks = abs( evecs(:, 2:end) ).^2 * exp( ( abs(evals(2)) - abs(evals(2:end)) )  * ts);
-              Am = sparse([1:length(A)], [1:length(A)], A);
-              colsum = sum(Am*hks);
-              scale = 1.0./ colsum; 
-              scalem = sparse([1:length(scale)], [1:length(scale)], scale);
-              hks = hks * scalem;
-           else
-              hks = abs( evecs(:, 2:end) ).^2 * exp( - abs(evals(2:end)) * ts);
+        if isprop(inmesh, 'edge_lengths')
+            L = inmesh.edge_lengths;
+        else           
+            L = Mesh.edge_length_of_triangles(inmesh.vertices, inmesh.triangles);
+        end
 
-           end
-      end
+        t              = mean(L(:))^2;
+        heat_diff      = ( sparse(1:inmesh.num_vertices, 1:inmesh.num_vertices, area_vertices) + t * laplace_beltrami.W ) \ indicator_fct;
+        grad_heat_diff = Mesh.gradient_of_function(heat_diff, inmesh.vertices, inmesh.triangles, N, area_triangles);
+        grad_heat_diff = - grad_heat_diff ./ repmat(l2_norm(grad_heat_diff), [1, 3]);
 
-  end    
+        div_vf   = Mesh.divergence_of_vector_field(grad_heat_diff, inmesh.vertices, inmesh.triangles, N, area_vertices);
+        geo_dist = full( laplace_beltrami.W \ ( area_vertices .* div_vf ) );
+        geo_dist = geo_dist - min(geo_dist);
+        end
+        
+        function [F] = default_mesh_feautures(inmesh, laplace_beltrami, neigs, wks_samples, hks_samples, mc_samples, gc_samples)                       
+            % Computes the wks, hks, mean_curvature and gaussian curvature with default parameter values.
+            % Input:
 
+            evals = laplace_beltrami.evals(neigs);
+            evecs = laplace_beltrami.evecs(neigs);                
+            if wks_samples > 1
+                [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
+                wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);                
+            else
+                wks_sig            = [];
+            end
+            if hks_samples > 1
+                heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
+                hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
+            else
+                hks_sig            = [];
+            end            
+            if mc_samples > 1
+                heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), mc_samples-1);
+                mc_sig            = Mesh_Features.mean_curvature(inmesh, laplace_beltrami, heat_time);                    
+            else
+                mc_sig            = [];
+            end
+            if gc_samples > 1
+                heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), gc_samples-1);
+                gc_sig            = Mesh_Features.gaussian_curvature(inmesh, laplace_beltrami, heat_time);
+            else
+                gc_sig            = [];
+            end
+            
+            F                 = [hks_sig wks_sig mc_sig gc_sig];
+        end
+    
+    end    
+
+    methods (Static, Access = private)
+        % Functions used only internally from other functions of this class.
+        
+        function obj = index_features(obj, varargin)            
+            nvargs = length(varargin);
+            if round(nvargs/2) ~= nvargs/2
+                error('Expecting feature_name/nsamples pairs.')
+            end
+            pos = 0;            
+            for pair = reshape(varargin, 2, [])  % Pair is a cell {propName;propValue}.
+                feat_name = lower(pair{1});      % Make case insensitive.
+                if pair{2} < 1
+                    obj.index.(feat_name) = [];  % Feautures of this type were not calculated.
+                else                
+                    obj.index.(feat_name) = [pos+1, pos+pair{2}];
+                    pos = pos + pair{2};
+                end
+            end
+        end
+        
+    end
 end
 
 
