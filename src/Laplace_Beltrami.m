@@ -9,12 +9,17 @@ classdef Laplace_Beltrami < dynamicprops
         spectra;         % A struct carrying the eigenvalues and eigenvectors of the LB.
     end
     
-    methods    
+    methods            
         function obj = Laplace_Beltrami(in_mesh, vertex_areas)
             % Class constructor.
-            % Input:
-            %           in_mesh -  (Mesh)
-            %           vertex_areas (num_vertices x 1)
+            % Input:            
+            %           in_mesh         -  (Mesh) A triangular Mesh for which the Laplace Beltrami will be constructed.
+            %
+            %           vertex_areas    -  (optional, in_mesh.num_vertices x 1) A vector carrying the areas associated                         
+            %                              with the vertices. If not provided the Mesh is assumed to carry a set of 
+            %                              default vertex areas.          
+            % Output:
+            %           obj             -  (Laplace_Beltrami) object.
             
             if nargin == 0                                               
                 obj.M = Mesh();          
@@ -22,7 +27,7 @@ classdef Laplace_Beltrami < dynamicprops
                 obj.A = [];
                 obj.spectra = struct();                                
             else
-                obj.M       = in_mesh;                
+                obj.M       = in_mesh;
                 
                 if isprop(in_mesh, 'angles')
                     obj.W  = Laplace_Beltrami.cotangent_laplacian(in_mesh.vertices, in_mesh.triangles, in_mesh.angles);
@@ -36,15 +41,13 @@ classdef Laplace_Beltrami < dynamicprops
             
                 if any(vertex_areas <= 0 )
                     error ('The areas of the vertices provided are not strictly positive.');
-                end
-                if obj.M.num_vertices ~= length(vertex_areas)
-                     error ('The number of vertex areas provided is not identical to the number of the mesh vertices.');
+                elseif obj.M.num_vertices ~= length(vertex_areas)
+                    error ('The number of vertex areas provided is not identical to the number of the mesh vertices.');
                 end
                 
                 obj.A = spdiags(vertex_areas, 0, length(vertex_areas), length(vertex_areas)); 
                 obj.spectra.evals = 0; obj.spectra.evecs = [];
             end
-             
         end
                 
         function [evals, evecs] = get_spectra(obj, eigs_num)

@@ -3,7 +3,7 @@ classdef Functional_Map < dynamicprops
     % The implemenation provides a variety of ways for constructing and optimizing such maps.
     % Alongside it implements a series of related utilities such as: 
     % Shape difference operators, Genearation of functional maps given point-to-point correspondences, 
-    % Geodesic evaluation of maps.
+    % Quality evaluation of maps.
 
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.

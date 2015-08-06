@@ -1,12 +1,17 @@
 clr;
 gitdir;
 cd 'FmapLib/src';
+
 %% Draft
+
 meshfile       = '../data/input/tosca/cat0.off';
-mesh1          = Mesh(meshfile, 'cat0');  
-mesh1.set_default_vertex_areas('barycentric');
+mesh_name      = 'cat0';
+mesh1          = Mesh(meshfile, mesh_name);
+mesh1.set_default_vertex_areas('barycentric');              % Associate an are with each vertex via the 'barycentric' rule.
+
 LB1            = Laplace_Beltrami(mesh1);
 feats1         = Mesh_Features(mesh1, LB1);
+
 hks_samples    = 30; 
 wks_samples    = 30; 
 mc_samples     = 30; 
