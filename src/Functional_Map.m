@@ -1,6 +1,10 @@
 classdef Functional_Map < dynamicprops
-    % A class implementing a variety of utilities related to the Functional Maps framework.
-    
+    % A class representing a functional map, i.e., a map between functions of two spaces.
+    % The implemenation provides a variety of ways for constructing and optimizing such maps.
+    % Alongside it implements a series of related utilities such as: 
+    % Shape difference operators, Genearation of functional maps given point-to-point correspondences, 
+    % Geodesic evaluation of maps.
+
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.
         source_basis    = [];        
@@ -291,7 +295,7 @@ classdef Functional_Map < dynamicprops
         
                    
         function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
-            %TODO-P input should be an LB.
+             %TODO-P input should be an LB.
 %             nodes_from = size(basis_from, 1);
 %             nodes_to   = size(basis_to, 1);              
 %             non_zero   = length(correspondences_from_to(:, 2));

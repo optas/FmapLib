@@ -38,7 +38,10 @@ classdef Mesh_Features < dynamicprops
             end           
         end
         
+                
         function obj = compute_default_feautures(obj, neigs, wks_samples, hks_samples, mc_samples, gc_samples)
+            % 'Convenience' function for computing all the potential features of nodes of a mesh.            
+            % TODO-P add property F here. add .num_of_features
             if strcmp(neigs, 'all')
                 neigs = length(obj.LB.spectra.evals);
             end
@@ -49,8 +52,7 @@ classdef Mesh_Features < dynamicprops
     end
     
     
-    
-    
+
     methods (Static)
    
         function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
