@@ -1,9 +1,11 @@
 classdef Functional_Map < dynamicprops
     % A class representing a functional map, i.e., a map between functions of two spaces.
     % The implemenation provides a variety of ways for constructing and optimizing such maps.
-    % Alongside it implements a series of related utilities such as: 
-    % Shape difference operators, Genearation of functional maps given point-to-point correspondences, 
-    % Quality evaluation of maps.
+    %
+    % Alongside it implements a series of related utilities such as:         
+    %       Shape difference operators, 
+    %       Genearation of functional maps given point-to-point correspondences, 
+    %       Quality evaluation of maps.
 
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.
@@ -82,6 +84,8 @@ classdef Functional_Map < dynamicprops
                     [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, 0);
                 case 'frobenius_square'
                     [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                case 'frobenius'
+                    [F] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
                 otherwise
                     error('Non existing method for creating a functional map was requested.')
             end

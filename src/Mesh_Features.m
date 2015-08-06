@@ -5,7 +5,7 @@ classdef Mesh_Features < dynamicprops
         M;                   % (Mesh) Mesh over which the feautures are computed.  %TODO-P keep only if we create feats independent of an LB.
         LB;                  % (Laplace_Beltrami) Associated LB operator.                             
         F;                   % (Matrix) carrying the computed feautures.
-        index;               % Strucutre holding the positions of each type of computed features stored at F.
+        index;               % Strucutre holding the positions of each type of features stored at F (e.g., knows where is wks, hks etc.)
     end
         
     methods (Access = public)
@@ -37,10 +37,12 @@ classdef Mesh_Features < dynamicprops
                 obj.(p{i}) = this.(p{i});
             end           
         end
-        
-                
+                        
         function obj = compute_default_feautures(obj, neigs, wks_samples, hks_samples, mc_samples, gc_samples)
-            % 'Convenience' function for computing all the potential features of nodes of a mesh.            
+            % 'Convenience' function. 
+            %  Computes any of the the implemented mesh features with default parameters. If x_samples is zero, the
+            %  the feauture type x is not computed.
+            
             % TODO-P add property F here. add .num_of_features
             if strcmp(neigs, 'all')
                 neigs = length(obj.LB.spectra.evals);
@@ -397,21 +399,20 @@ classdef Mesh_Features < dynamicprops
         
         function [F] = default_mesh_feautures(inmesh, laplace_beltrami, neigs, wks_samples, hks_samples, mc_samples, gc_samples)                       
             % Computes the wks, hks, mean_curvature and gaussian curvature with default parameter values.
-            % Input:
-
+            
             evals = laplace_beltrami.evals(neigs);
             evecs = laplace_beltrami.evecs(neigs);                
             if wks_samples > 1
                 [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
                 wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);                
             else
-                wks_sig            = [];
+                wks_sig           = [];
             end
             if hks_samples > 1
                 heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
                 hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
             else
-                hks_sig            = [];
+                hks_sig           = [];
             end            
             if mc_samples > 1
                 heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), mc_samples-1);
@@ -426,7 +427,7 @@ classdef Mesh_Features < dynamicprops
                 gc_sig            = [];
             end
             
-            F                 = [hks_sig wks_sig mc_sig gc_sig];
+            F                     = [hks_sig wks_sig mc_sig gc_sig];
         end
     
     end    
