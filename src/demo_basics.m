@@ -3,6 +3,49 @@
     gitdir;
     cd FmapLib/src
 
+%% Mini exposition draft.
+%  Input mesh 1.
+meshfile       = '../data/input/tosca/cat0.off';
+mesh_name      = 'cat0';
+mesh1          = Mesh(meshfile, mesh_name);
+mesh1.set_default_vertex_areas('barycentric');              % Associate an area with each vertex via the 'barycentric' rule.
+
+LB1            = Laplace_Beltrami(mesh1);                   % Create a cotangent scheme mesh laplacian.
+feats1         = Mesh_Features(mesh1, LB1);                 % Mesh node features.
+
+hks_samples    = 30;                                        % Feature dimensions.
+wks_samples    = 30; 
+mc_samples     = 0; 
+gc_samples     = 0;
+neigs          = 32;                                        % LB eigenvecs to be used.
+
+feats1.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+
+%  Input mesh 2.
+meshfile       = '../data/input/tosca/cat1.off';
+mesh2          = Mesh(meshfile, 'cat1');  
+mesh2.set_default_vertex_areas('barycentric');
+
+LB2            = Laplace_Beltrami(mesh2);
+feats2         = Mesh_Features(mesh2, LB2);
+feats2.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+
+% Make a functional map.
+fmap = Functional_Map(LB1, LB2);
+fmap.compute_f_map('frobenius_square', neigs, neigs, feats1, feats2, 'lambda', 0);
+fmap.plot();
+
+fmap.compute_f_map('frobenius_square', neigs, neigs, feats1, feats2, 'lambda', 20);
+figure; fmap.plot();
+
+fmap.compute_f_map('frobenius', neigs, neigs, feats1, feats2, 'lambda', 20);
+figure; fmap.plot();
+    
+    
+    
+    
+    
+    
 %% Load two Meshes and initialize their Feauture/LB classes.
     meshfile       = '../data/input/kid_rodola/0001.isometry.1.off';
     mesh1          = Mesh(meshfile, 'rodola_1_1');        

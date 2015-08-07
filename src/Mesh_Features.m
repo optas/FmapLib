@@ -50,11 +50,13 @@ classdef Mesh_Features < dynamicprops
             obj.F = Mesh_Features.default_mesh_feautures(obj.M, obj.LB, neigs, wks_samples, hks_samples, mc_samples, gc_samples);            
             Mesh_Features.index_features(obj, 'wks', wks_samples, 'hks', hks_samples, 'mc', mc_samples, 'gc', gc_samples);
         end
+        
+        function obj = normalize_features(obj)
+            obj.F = divide_columns(obj.F, sqrt(sum(obj.F.^2))); % Normalize each feature to unit-euclidean-length.            
+        end
     
     end
     
-    
-
     methods (Static)
    
         function [mean_curv] = mean_curvature(inmesh, laplace_beltrami, smoothing_time)                                        
@@ -260,8 +262,8 @@ classdef Mesh_Features < dynamicprops
 
                
         function [smoothed_fct] = heat_diffusion_smoothing(W, fct, diffusion_time) 
-            % Computes the heat diffusion of a function for a given time using an implicit Euler scheme.
-            % As a result the function will appear smoother.
+            % Computes the heat diffusion of a function at a given time using an implicit Euler scheme.
+            % The resulting function will be smoother.
             %
             % Input:  W                  -  (n x n) Matrix approximating the Laplace-Beltrami
             %                               operator
@@ -433,9 +435,8 @@ classdef Mesh_Features < dynamicprops
     end    
 
     methods (Static, Access = private)
-        % Functions used only internally from other functions of this class.
-        
-        function obj = index_features(obj, varargin)            
+        % Functions used only internally from other functions of this class.        
+        function obj = index_features(obj, varargin)                        
             nvargs = length(varargin);
             if round(nvargs/2) ~= nvargs/2
                 error('Expecting feature_name/nsamples pairs.')

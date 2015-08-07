@@ -11,17 +11,15 @@ classdef Functional_Map < dynamicprops
         % Basic properties that every instance of the Functional_Map class has.
         source_basis    = [];        
         source_neigs    = 0;
-        source_features = [];        
-        
+        source_features = [];                
         target_basis    = [];                        
         target_neigs    = 0;
-        target_features = [];
-        
+        target_features = [];        
         fmap            = [];              
     end
     
     methods (Access = public)
-        % Class Constructor.        
+        % Class Constructor.       
         function obj = Functional_Map(varargin)     
             if nargin == 0                
                 % Construct an empty Mesh.            
@@ -68,7 +66,7 @@ classdef Functional_Map < dynamicprops
 
             if options.normalize == 1 
                 source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));
-                target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));
+                target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));                
             end            
 
             if options.lambda ~= 0
@@ -319,15 +317,29 @@ classdef Functional_Map < dynamicprops
         
         
         function [X] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
-            % This code uses plain least squares techniques to 
-            % solve the objective function using Frobenius norm squared
-            % terms.
-            % We aim to minimize ||X*D1-D2||^2 + lambda*||X*L1-L2*X||^2. 
-            % This is done by computing the gradient wrt X, which is given
-            % by (X*D1-D2)*D1' for term 1, and by 
-            % (((lambda1_i-lambda2_j)^2)*X_{ij})_{ij} for term 2. This is
-            % solved using linear techniques as given below.
+            % Computes the functional map X that minimizes the following objective: 
+            %
+            %       norm(X*D1-D2, 'fro')^2   +  lambda * norm(X*diag(L1) - diag(L2)*X, 'fro')^2.
+            %
+            % Both Frobenius norms are squared, which allows for a least-squares type of solution. (see Details)
+            %
+            % Input: 
+            %           D1 - (n1 x m) matrix storing source probe functions in its columns.
+            %           D2 - (n2 x m) matrix storing target probe functions in its columns.
+            %           L1 - (n1 x 1) eigenvalues of source projection basis.
+            %           L2 - (n2 x 1) eigenvalues of target projection basis.
+            % Output:
+            %           X  - (n2 x n1) functional map that solves objective defined above.
+            % 
+            % Details : 
+            % The code computes the gradient wrt. X, which is given by (X*D1-D2)*D1' for the first summand of objective
+            % and by (((lambda1_i-lambda2_j)^2)*X_{ij})_{ij} for the second one. The gradient is set to zero, and since            
+            % this is a convex problem, the global optimum is acquired.
             
+            if size(D1, 2) ~= size(D2, 2)
+                error ('Same number of probe functions must be used for source and target spaces.' )
+            end %TODO-P add more checks.
+                
             N1 = size(D1, 1);
             N2 = size(D2, 1);
             
@@ -343,6 +355,7 @@ classdef Functional_Map < dynamicprops
                     X(i, :) = A \ B(:, i);
                 end
             end
+            assert(all(size(X) == [N2 N1]))
         end
           
         function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
