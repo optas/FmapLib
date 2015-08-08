@@ -1,18 +1,25 @@
 classdef Functional_Map < dynamicprops
-    % A class implementing a variety of utilities related to the Functional
-    % Maps framework.
+    % A class representing a functional map, i.e., a map between functions of two spaces.
+    % The implemenation provides a variety of ways for constructing and optimizing such maps.
+    %
+    % Alongside it implements a series of related utilities such as:         
+    %       Shape difference operators, 
+    %       Genearation of functional maps given point-to-point correspondences, 
+    %       Quality evaluation of maps.
 
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.
-        source_basis = [];        
-        target_basis = [];                        
-        fmap         = [];
-        source_neigs = 0;
-        target_neigs = 0;
+        source_basis    = [];        
+        source_neigs    = 0;
+        source_features = [];                
+        target_basis    = [];                        
+        target_neigs    = 0;
+        target_features = [];        
+        fmap            = [];              
     end
     
     methods (Access = public)
-        % Class Constructor.        
+        % Class Constructor.       
         function obj = Functional_Map(varargin)     
             if nargin == 0                
                 % Construct an empty Mesh.            
@@ -20,53 +27,77 @@ classdef Functional_Map < dynamicprops
                 obj.target_basis = [];                               
             else 
                 obj.source_basis = varargin{1};
-                obj.target_basis = varargin{2};
+                obj.target_basis = varargin{2};                                
             end
             obj.fmap = [];
             obj.source_neigs = 0;
             obj.target_neigs = 0;
         end
         
-        function [F] = compute_f_map(obj, method ,neigs_source, neigs_target, source_feat, target_feat, varargin)
+        function obj = copy(this)
+            % Define what is copied when a deep copy is performed.            
+            obj = feval(class(this));           % Instantiate new object of the same class.
+                        
+            % Copy all non-hidden properties (including dynamic ones)
+            p = properties(this);
+            for i = 1:length(p)
+                if ~isprop(obj, p{i})           % Adds all the dynamic properties.
+                    obj.addprop(p{i});
+                end                
+                obj.(p{i}) = this.(p{i});
+            end           
+        end
+        
+        function [F] = compute_f_map(obj, method, neigs_source, neigs_target, source_feat, target_feat, varargin)
             ns = obj.source_basis.M.num_vertices;  % Number of vertices on source.
             nt = obj.target_basis.M.num_vertices;  % Number of vertices on target.
-            if size(source_feat, 1) ~= ns || size(target_feat, 1) ~= nt
-                error('The feature functions are supposed to be given as vectors and their dimensions should equal the number of corresponding mesh vertices.')
+            if size(source_feat.F, 1) ~= ns || size(target_feat.F, 1) ~= nt
+                error('The feature functions must be vectors and their dimensions should equal the number of corresponding mesh vertices.')
             end
-            
-            options = struct('normalize', 1, 'area_normalize', 0);
-            option_names = fieldnames(options); % Read the acceptable names.
-            nvargs = length(varargin);
-            if round(nvargs/2) ~= nvargs/2
-                error('Expecting property_name/property_value pairs.')
+
+            options = struct('normalize', 1, 'lambda', 0);
+            options = load_key_value_input_pairs(options, varargin{:});
+
+            obj.source_features = source_feat;  % Store the raw features used.
+            obj.target_features = target_feat;
+
+            source_feat = obj.source_basis.project_functions(neigs_source, source_feat.F);
+            target_feat = obj.target_basis.project_functions(neigs_target, target_feat.F);                                        
+
+            if options.normalize == 1 
+                source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));
+                target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));                
+            end            
+
+            if options.lambda ~= 0
+                source_reg = obj.source_basis.evals(neigs_source);      % This includes the zeroth eigenvalue of LB.
+                target_reg = obj.target_basis.evals(neigs_target);
+            else
+                source_reg = [];
+                target_reg = [];
             end
-            for pair = reshape(varargin, 2, []) % Pair is {propName;propValue}.
-                inp_name = lower(pair{1}); % Make case insensitive.
-                if any(strcmp(inp_name, option_names))
-                    options.(inp_name) = pair{2};
-                else
-                    error('%s is not a recognized parameter name.',inp_name)
-                end
-            end
-            
-            switch method
+
+            switch method                
                 case 'functions_only'                    
-                    source_feat = obj.source_basis.project_functions(neigs_source, source_feat);
-                    target_feat = obj.target_basis.project_functions(neigs_target, target_feat);                                        
-                    
-                    if options.normalize == 1 
-                        source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));%normc(source_feat);
-                        target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));%normc(target_feat);                        
-                    end
-                    
-                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, [], [], 0);
+                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, 0);
+                case 'frobenius_square'
+                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                case 'frobenius'
+                    [F] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                otherwise
+                    error('Non existing method for creating a functional map was requested.')
             end
             obj.fmap         = F;
             obj.source_neigs = neigs_source;
             obj.target_neigs = neigs_target;
         end
+
+        function plot(obj)
+            imagesc(obj.fmap);
+            colorbar;
+        end
         
-        function set_fmap(obj, new_map)
+        function obj = set_fmap(obj, new_map)
             obj.fmap = new_map;
             obj.source_neigs = size(new_map, 2);
             obj.target_neigs = size(new_map, 1);
@@ -118,48 +149,22 @@ classdef Functional_Map < dynamicprops
             
             D = pinv(diag(source_evals)) * ( obj.fmap' * diag(target_evals) * obj.fmap ); 
         end
-        
-        
-        function [dists, indices] = pairwise_distortion(obj, groundtruth, varargin)
+                
+        function [dists, indices] = pairwise_distortion(obj, groundtruth, varargin)                                    
             [dists, indices] = Functional_Map.pairwise_distortion_of_map(obj.fmap, obj.source_basis, obj.target_basis, groundtruth, varargin{:});
         end
         
-        
-%         function [F] = groundtruth_fmap(obj)
-%             F = Functional_Map(obj.source_basis, obj.target_basis)
-%             
-%             F.fmap = Functional_Map.groundtruth_functional_map(source_basis.evecs, basis_to, gt_from_to, to_areas)                        
-%             
-%             
-%             function [X] = 
-%             
-%         end
-        
     end
-    
-    methods (Static)                
-        
+      
+    methods (Static)                        
         function [dists, indices] = pairwise_distortion_of_map(inmap, source_basis, target_basis, groundtruth, varargin)
             %% Document.            
             % inmap - matrix corresponding to a functional map
             % source_basis - LB basis of source
             % target_basis - LB basis of source
-            % groundtruth  - 
-            
-            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);        
-            option_names = fieldnames(options); % Read the acceptable names.
-            nvargs = length(varargin);
-            if round(nvargs/2) ~= nvargs/2
-                error('Expecting property_name/property_value pairs.')
-            end
-            for pair = reshape(varargin, 2, []) % Pair is {propName;propValue}.
-                inp_name = lower(pair{1});      % Make case insensitive.
-                if any(strcmp(inp_name, option_names))
-                    options.(inp_name) = pair{2};
-                else
-                    error('%s is not a recognized parameter name.',inp_name)
-                end
-            end
+            % groundtruth  -             
+            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);                                
+            options = load_key_value_input_pairs(options, varargin{:});
 
             if ~isempty (options.indices)  % TODO-P add type_checking.
                 [deltas, ~]       = Functional_Map.random_delta_functions(diag(source_basis.A), 0, options.indices);
@@ -187,9 +192,12 @@ classdef Functional_Map < dynamicprops
 
             if ~ isempty(options.symmetries)
                 for i=1:size(options.symmetries, 2)
-                    sym = options.symmetries(indices, i);
-                    idx = find(sym);
-                    sym(sym == 0) = idx;
+                    
+                    sym = options.symmetries(groundtruth(indices), i);
+                    
+%                     idx = find(sym);          TODO-E why?                    
+%                     sym(sym == 0) = idx     %TODO-P fix for nodes with not known symmetries.
+%                       sym(sym == 0) = ids(()
                     
                     pairs = [ids, sym]';                                                           
                     dists = min(comp_geos(pairs), dists);
@@ -287,9 +295,9 @@ classdef Functional_Map < dynamicprops
             S       = sparse(indices, 1:nsamples, areas, num_vertices, nsamples);
         end
         
-        
-        
+                   
         function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
+             %TODO-P input should be an LB.
 %             nodes_from = size(basis_from, 1);
 %             nodes_to   = size(basis_to, 1);              
 %             non_zero   = length(correspondences_from_to(:, 2));
@@ -297,23 +305,41 @@ classdef Functional_Map < dynamicprops
 %             X          = basis_to' * P * basis_from;
             
             basis_from = basis_from(gt_from_to ~= 0, :) ;              % Remove dimensions for which you do not know the groundtruth (i.e., map -ith- vertex to 0).
+            
+%             gt_from_to ~= 0; TODO-P cumsum()
+            
             basis_from = basis_from(gt_from_to(gt_from_to ~= 0), :);   % Permute the basis to reflect the corresponding ground_truth.            
-            A          = spdiags(to_areas, 0, length(to_areas), length(to_areas));      %TODO-P: we added the areas to have the real pinv of LB1.            
+           
+            A = spdiags(to_areas, 0, length(to_areas), length(to_areas)); 
             X          = basis_to' * A * basis_from;                       
-%             X          = basis_to' * A * basis_from * A_to;  %TODO-E,P                       
+
         end
         
         
-        function X = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
-            % This code uses plain least squares techniques to 
-            % solve the objective function using Frobenius norm squared
-            % terms.
-            % We aim to minimize ||X*D1-D2||^2 + lambda*||X*L1-L2*X||^2. 
-            % This is done by computing the gradient wrt X, which is given
-            % by (X*D1-D2)*D1' for term 1, and by 
-            % (((lambda1_i-lambda2_j)^2)*X_{ij})_{ij} for term 2. This is
-            % solved using linear techniques as given below.
+        function [X] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
+            % Computes the functional map X that minimizes the following objective: 
+            %
+            %       norm(X*D1-D2, 'fro')^2   +  lambda * norm(X*diag(L1) - diag(L2)*X, 'fro')^2.
+            %
+            % Both Frobenius norms are squared, which allows for a least-squares type of solution. (see Details)
+            %
+            % Input: 
+            %           D1 - (n1 x m) matrix storing source probe functions in its columns.
+            %           D2 - (n2 x m) matrix storing target probe functions in its columns.
+            %           L1 - (n1 x 1) eigenvalues of source projection basis.
+            %           L2 - (n2 x 1) eigenvalues of target projection basis.
+            % Output:
+            %           X  - (n2 x n1) functional map that solves objective defined above.
+            % 
+            % Details : 
+            % The code computes the gradient wrt. X, which is given by (X*D1-D2)*D1' for the first summand of objective
+            % and by (((lambda1_i-lambda2_j)^2)*X_{ij})_{ij} for the second one. The gradient is set to zero, and since            
+            % this is a convex problem, the global optimum is acquired.
             
+            if size(D1, 2) ~= size(D2, 2)
+                error ('Same number of probe functions must be used for source and target spaces.' )
+            end %TODO-P add more checks.
+                
             N1 = size(D1, 1);
             N2 = size(D2, 1);
             
@@ -329,6 +355,7 @@ classdef Functional_Map < dynamicprops
                     X(i, :) = A \ B(:, i);
                 end
             end
+            assert(all(size(X) == [N2 N1]))
         end
           
         function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
@@ -421,14 +448,14 @@ classdef Functional_Map < dynamicprops
         end
     
     
-        function [maps_new, X_all] = low_rank_filtering(maps, W)
-            % Panos figuring this out:
+        function [maps_new, X_all] = low_rank_filtering(maps, W)            
+            % Works if all fmaps are m x m matrices.
 
-            % maps      -   mn x mn matrix with all initial pairwise maps (m x m)
+            % maps      -   n x n cell_array with all initial pairwise maps (m x m)
             %               between n objects.
 
             % W         -   n x n: global similarity between each pair of objects. When
-            %               two objects are very similar, being inconcsisten will be
+            %               two objects are very similar, being inconcsistent will be
             %               penalized more.
 
             % X_all     -   must be the collection of the sequential mn x mn matrices that correspond
