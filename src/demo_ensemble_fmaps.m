@@ -13,11 +13,11 @@
     mesh1          = Mesh(meshfile, 'rodola_1_1');        
     mesh1.set_default_vertex_areas('barycentric');    
 %     LB1            = Laplace_Beltrami(mesh1);
-%     [evals, evecs] = LB1.get_spectra(num_eigs);
+%     [evals, evecs] = LB1.get_spectra(num_eigs);    
 %     save('../data/output/ensembles/LB1', 'LB1');              
     load('../data/output/ensembles/LB1');    
     [evals, evecs] = LB1.get_spectra(num_eigs);
-    
+    %%
     [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
     wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
     heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
