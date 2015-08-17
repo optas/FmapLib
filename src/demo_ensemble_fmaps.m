@@ -7,22 +7,6 @@
     meshfile       = '../data/input/tosca/michael11.off';
     mesh1          = Mesh(meshfile, 'mike11');
     mesh1.set_default_vertex_areas('barycentric');    
-<<<<<<< HEAD
-%     LB1            = Laplace_Beltrami(mesh1);
-%     [evals, evecs] = LB1.get_spectra(num_eigs);    
-%     save('../data/output/ensembles/LB1', 'LB1');              
-    load('../data/output/ensembles/LB1');    
-    [evals, evecs] = LB1.get_spectra(num_eigs);
-    %%
-    [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
-    wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
-    heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
-    hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
-    heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), curvature_samples-1);
-    mc_sig            = Mesh_Features.mean_curvature(mesh1, LB1, heat_time);    
-    gc_sig            = Mesh_Features.gaussian_curvature(mesh1, LB1, heat_time);
-    source_probes     = [hks_sig wks_sig mc_sig gc_sig];    
-=======
     LB1            = Laplace_Beltrami(mesh1);       
     feats1         = Mesh_Features(mesh1, LB1);
     
@@ -31,7 +15,6 @@
     mesh2.set_default_vertex_areas('barycentric');
     LB2            = Laplace_Beltrami(mesh2);
     feats2         = Mesh_Features(mesh2, LB2);
->>>>>>> origin/Develop
 
 %%  Compute some Mesh features that will be used to produce Fmaps.
     neigs          = 100;       % Eigenvectors that will be used in computing wks/hks.
