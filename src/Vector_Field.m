@@ -1,6 +1,8 @@
 classdef Vector_Field
     % A Class representing a Vector Field defined on a Mesh object.
-
+    % Note: 
+    %       This is stub class with most functionality expected to be added by September 2015.
+    
     properties
         M = Mesh();     % Presumably we will keep a pointer to corresponding Mesh.
         spectra = [];   % Presumably we will keep a harmonic basis for it.

@@ -1,29 +1,37 @@
+clr;
+gitdir;
+cd 'FmapLib/src';
+
 %% Load the collection of Meshes and their semantic attributes (i.e., class of each represented mesh).
-gitdir
-cd 'FmapLib/src'
-
 collection_name = 'Tosca';
-collection_file = '../data/input/tosca';
+collection_dir  = '../data/input/tosca_small';
 semantics       = '../data/input/TOSCA_class_attributes';
-Tosca           = Mesh_Collection(collection_name, collection_file, semantics);
+Tosca           = Mesh_Collection(collection_name, collection_dir, semantics);
 
-%% Compute Laplacian Basis and Mesh Features
-neigs     = 128; 
+%% Compute Laplacian Basis and Mesh Features.
+neigs     = 64; 
 area_type = 'barycentric';
 Tosca.compute_laplace_beltrami_basis(neigs, area_type);
-Tosca.compute_default_feautures();                      % Computes hks, wks, mean/gauss curvature for each mesh.
+
+%% Compute Features.
+hks_samples = 100; wks_samples = 100; mc_samples = 50; gc_samples = 50;
+Tosca.compute_default_feautures(hks_samples, wks_samples, mc_samples, gc_samples);  % Computes hks, wks, mean/gauss curvature for each mesh.
 
 %% Save - Load
-% save('../data/output/tosca_collection', 'Tosca', '-v7.3')
+% save('../data/output/mike_vica_collection', 'Tosca', '-v7.3')
 % load('../data/output/tosca_collection');              
-
+% loas('../data/output/mike_vica_collection');
 
 %% Split dataset into training/testing samples according to their classes.
-cats   = Tosca.meshes_with_semantic_condition('Class_2', 'Cat');    % See semantics file.
+cats   = Tosca.meshes_with_semantic_condition('Class_2', 'Cat');                % See semantics file.
 dogs   = Tosca.meshes_with_semantic_condition('Class_2', 'Dog');
 humans = Tosca.meshes_with_semantic_condition('Class_1', 'Human');
-[train_data, test_data, train_labels, test_labels] = Learning.sample_class_observations(0.2, cats, dogs, humans);
+mikes  = Tosca.meshes_with_semantic_condition('Class_3', 'Michael');
+vicas  = Tosca.meshes_with_semantic_condition('Class_2', 'Female');
 
+%%
+% [train_data, test_data, train_labels, test_labels] = Learning.sample_class_observations(0.2, cats, dogs, humans);
+[train_data, test_data, train_labels, test_labels] = Learning.sample_class_observations(0.2, mikes, vicas);
 
 %% Compute Functional Maps
 % All pairs between training and testing are used (expensive - improve by parfor + sampling).
@@ -36,25 +44,22 @@ for i=test_data
         p = p + 2;
     end
 end
-
 all_maps = Tosca.compute_fmaps(pairs, Tosca.raw_features, 'frobenius_square', 'lambda', 20);
 
+%% 1. Naive Learning
+scores = Learning.fmap_classify_naively(test_data, train_data, train_labels, all_maps);
+%%
 
-
-%% Learning
-Learning.fmap_classify_naively(test_data, train_data, train_labels, all_maps);
-
-
-
-
+class_id      = 1;
+inter_pairs   = Learning.inter_class_pairs(train_labels, train_data, class_id);
+init_maps     = Tosca.compute_fmaps(inter_pairs, Tosca.raw_features, 'frobenius_square', 'lambda', 20);
 
 
 %%
-offs = [];
-mi   = [];
-for i=1:2:length(all_maps)
-    A = all_maps{i}.fmap * all_maps{i+1}.fmap;    
-    offs(end+1) = sum(sum(abs(A))) - sum(abs(diag(A)));
-    mi(end+1)   = norm(A-eye(size(A,1)));
-end
-
+weights1      = Learning.feature_weights_of_class(init_maps);
+%%
+low_rank_maps = Learning.low_rank_filtering_of_fmaps(init_maps);
+%%
+weights2      = Learning.feature_weights_of_class(low_rank_maps);
+%%
+scores2       = Learning.fmap_classify_with_trained_weights(test_data, train_data, train_labels, weights);

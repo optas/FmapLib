@@ -6,3 +6,6 @@ data/output/
 
 # Ignore binary (mex) files, so that each user can compile/use them independently.
 src/External_Code/Geodesics/*.mex*
+
+# Ignore some demos
+src/demo_ensemble_fmaps.m

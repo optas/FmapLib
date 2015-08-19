@@ -59,16 +59,12 @@ classdef Mesh_Collection < dynamicprops
                 end                
                 obj.name = collection_name;                                
             end
-           
-            
-            
+                     
             function [mesh_name] = extract_mesh_name(full_path)                
                 path_substrings = strsplit(full_path, '/');   % TODO: use separator of current system.
                 last_word = path_substrings{end};
                 mesh_name = last_word(1:end-4);               % Relying on the fact that length('.off') == length('.obj') == 4.                                                               
-            end
-
-                                 
+            end                                 
         end
         
         function compute_laplace_beltrami_basis(obj, num_eigs, area_type, mesh_list)
@@ -99,11 +95,16 @@ classdef Mesh_Collection < dynamicprops
         end
         
         function [fmaps] = compute_fmaps(obj, pairs, features, method, varargin)
+            
+            % features  - containers.map (String to Mesh_Features), String corresponds to the name of a mesh.
+            
+            options = struct('eigs', 'all', 'lambda', 0);
+            options = load_key_value_input_pairs(options, varargin{:});
+            
             num_pairs = size(pairs, 1);
-%             fmaps     = cell(length(pairs), 1);
-            fmaps = containers.Map;
+            fmaps     = containers.Map;
            
-            for i = 1:num_pairs               
+            for i = 1:num_pairs
                 src_name = pairs{i,1}; 
                 trg_name = pairs{i,2};                
                 lb_src   = obj.lb_basis(src_name);
@@ -114,60 +115,51 @@ classdef Mesh_Collection < dynamicprops
                 end                
                 fmap_src_dic           = fmaps(src_name);                                            
                 fmap_src_dic(trg_name) = Functional_Map(lb_src, lb_tar);                                
-                                
-                neigs_source = length(lb_src.spectra.evals);        % By default we use all the computed eigenvalues.
-                neigs_target = length(lb_tar.spectra.evals);        % TODO-P, we re-project the raw features.
-                fmap_src_dic(trg_name).compute_f_map(method, neigs_source, neigs_target, features(src_name), features(trg_name), varargin{:});                            
+                if strcmp(options.eigs, 'all') 
+                    neigs_source = length(lb_src.spectra.evals);        
+                    neigs_target = length(lb_tar.spectra.evals);        % TODO-P, we re-project the raw features.
+                else
+                    neigs_source = options.eigs;
+                    neigs_target = options.eigs;
+                end
+                fmap_src_dic(trg_name).compute_f_map(method, neigs_source, neigs_target, features(src_name), features(trg_name), 'lambda', options.lambda);
             end
         end
         
-        
-        
+
         function [bool] = contains(obj, mesh_name)
             % Returns true iff the collection contains a mesh with the given mesh_name.
             bool = obj.meshes.isKey(mesh_name);
         end
-        
-                
-       
-        %         function B = subsref(obj, S)
-        %             if strcmp(S(1).type, '()')                
-        %                 B = obj.meshes(S.subs{:});
-        %             end
-        %         end
-        
+
         function [C] = get_property_of_meshes(obj, property_name, mesh_list)                
                 if ~ isprop(obj, property_name)                    
                     error('Property requested does not exist.');
                 end
-                
+
                 C = cell(length(mesh_list), 1);
-                
+
                 for i = 1:length(mesh_list)
                     meshname = mesh_list{i};
                     C{i} = obj.(property_name)(meshname);
                 end
-       end
-                
-        
-                
-        function compute_default_feautures(obj)                        
+        end
+                   
+        function compute_default_feautures(obj, wks_samples, hks_samples, mc_samples, gc_samples)                        
             if ~ isprop(obj, 'raw_features')
                 obj.addprop('raw_features');
                 obj.raw_features = containers.Map;            
             end
-                                             
+            neigs = 'all';
             for key = obj.meshes.keys               
-                meshname = key{:};               
-                m     = obj.meshes(meshname);
-                lb    = obj.lb_basis(meshname);
-                neigs = length(lb.spectra.evals);                
-                F     = Mesh_Features.default_mesh_feautures(m, lb, neigs);
-                obj.raw_features(meshname) = F;
+                meshname = key{:};                                               
+                feats = Mesh_Features(obj.meshes(meshname), obj.lb_basis(meshname));                                            
+                feats.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+                obj.raw_features(meshname) = feats;
                 disp(['Computing Default raw Features for: ', meshname, ' done.']);
             end
         end
-                
+                    
         function [C] = project_features(obj, mesh_list, eigs_num, features)
                 C = cell(length(mesh_list), 1);
                 
@@ -184,9 +176,7 @@ classdef Mesh_Collection < dynamicprops
                         C{i} = divide_columns(C{i}, l2_norm(C{i}'));
                     end
                 end
-        end
-        
-        
+        end               
 
         function [fmaps] = compute_ground_truth_fmaps(obj, pairs, groundtruth)                        
             num_pairs = size(pairs, 1);
@@ -202,8 +192,7 @@ classdef Mesh_Collection < dynamicprops
                 fmaps{i} = Functional_Map.groundtruth_functional_map(lb_src.spectra.evecs, lb_tar.spectra.evecs, groundtruth{i}, lb_tar.A);  
             end
         end
-        
-       
+               
         function [mesh_names] = meshes_with_semantic_condition(obj, semantic_var, condition)            
             D = obj.mesh_semantics;
             if ischar(condition) % This imples that the semantic is a categorical variable.
@@ -213,8 +202,7 @@ classdef Mesh_Collection < dynamicprops
             end
             mesh_names = D.Properties.ObsNames(index);
         end
-                
-        
+                        
         function [D] = set_semantics_of_meshes(obj, semantics_file)
             % TODO-P Deal with missing data
             fid = fopen(semantics_file);
