@@ -1,3 +1,5 @@
 *
 !.gitignore
 !kid_rodola/*
+!tosca_small/*
+!tosca_symmetries/*
