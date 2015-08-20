@@ -1,36 +1,41 @@
 %%  A Script researching Ensemble Procedures for Functional Maps.
     clr;
     gitdir;
-    cd FmapLib/src
-        
+    cd FmapLib/src        
 %% Load two Meshes and compute their LBs.
     meshfile       = '../data/input/tosca/michael11.off';
     mesh1          = Mesh(meshfile, 'mike11');
     mesh1.set_default_vertex_areas('barycentric');    
     LB1            = Laplace_Beltrami(mesh1);       
-    feats1         = Mesh_Features(mesh1, LB1);
+    feats1         = Mesh_Features(mesh1, LB1);    
     
     meshfile       = '../data/input/tosca/michael12.off';
     mesh2          = Mesh(meshfile, 'mike12');
     mesh2.set_default_vertex_areas('barycentric');
     LB2            = Laplace_Beltrami(mesh2);
     feats2         = Mesh_Features(mesh2, LB2);
-
-%%  Compute some Mesh features that will be used to produce Fmaps.
-    neigs          = 100;       % Eigenvectors that will be used in computing wks/hks.
+%%  Compute Mesh features that will be used to produce Fmaps.
+    neigs          = 100;                           % Eigenvectors that will be used in computing wks/hks.
     wks_samples    = 100;
     hks_samples    = 100;    
     mc_samples     = 100; 
     gc_samples     = 100;
     feats1.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
 	feats2.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+%% Compute (whp.) erroneous features.
+
+
+
+
+
+
+
 
     
 %     save('../data/output/ensembles/demo_ensemble', 'mesh1', 'mesh2', 'LB1', 'LB2', 'feats1', 'feats2');              
 %     load('../data/output/ensembles/demo_ensemble');    
 
 %% Ensembling.    
-
     num_of_maps = 30;
     lambda      = 20;                                        % Regulizer meta-parameter.
     ensembles   = cell(num_of_maps, 1);

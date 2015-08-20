@@ -1,4 +1,10 @@
 classdef Mesh_Features < dynamicprops
+    % A class for creating and manipulating features on triangular Meshes. Usually, such features correspond to
+    % functions defined on the vertices of a mesh. Examples include:
+    %     the Wave Kernel Signature
+    %     the Heat Kernel Signature
+    %     the Multiscale Gaussian Curvature
+    %     the Multiscale Mean Curvature
     
     properties (GetAccess = public, SetAccess = private)
         % Each Mesh_Feature object has at least the following properties.
@@ -40,8 +46,8 @@ classdef Mesh_Features < dynamicprops
                         
         function obj = compute_default_feautures(obj, neigs, wks_samples, hks_samples, mc_samples, gc_samples)
             % 'Convenience' function. 
-            %  Computes any of the the implemented mesh features with default parameters. If x_samples is zero, the
-            %  the feauture type x is not computed.
+            %  Computes any of the the implemented mesh features with default parameters. 
+            %  If X_samples is zero, the the feauture type X is not computed.
             
             % TODO-P add property F here. add .num_of_features
             if strcmp(neigs, 'all')

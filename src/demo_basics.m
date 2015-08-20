@@ -44,8 +44,6 @@ figure; fmap.plot();
     
     
     
-    
-    
 %% Load two Meshes and initialize their Feauture/LB classes.
     meshfile       = '../data/input/kid_rodola/0001.isometry.1.off';
     mesh1          = Mesh(meshfile, 'rodola_1_1');        

@@ -1,7 +1,8 @@
 %%  A Script researching Learning Weights of probe functions of Functional Maps.
     clr;
-    gitdir;
+    gitdir;    
     cd FmapLib/src
+%%
     Cats = Mesh_Collection('tosca_cats', '../data/input/tosca_cats/');    
     num_eigs =50; area_type = 'barycentric';
     
@@ -21,7 +22,7 @@
     groundtruth{3} = (1:Cats.meshes('cat0').num_vertices)';
     [gt_fmaps]     = Cats.compute_ground_truth_fmaps(pairs, groundtruth);
         
-    %%
+%%
     raw_feats   = Cats.get_property_of_meshes(cat_names, 'raw_features');    
     proj_feats  = Cats.project_features(cat_names, 'all', raw_feats);       %TODO-P, take of 'all' in a smoother way.
     
