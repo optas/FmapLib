@@ -264,7 +264,7 @@ classdef Functional_Map < dynamicprops
             % vertex -i- is a vector which has a single non-zero entry at its i-th dimension. The actual value at
             % the i-th dimension is equal to 1/sqrt(area_of_vertex(i)). This value is chosen to sasisfy the equation:
             %             delta_function(i)' * diag(Vertex_Areas) * delta_function(i) = 1. 
-            % I.e., it makes a delta function to have a unit of mass wrt. the area inner product of a mesh.
+            % I.e., it chosen so that a delta function has a unit of mass wrt. the Area Inner Product of a mesh.
             % The total number of dimensions of a delta function/vector is equal to the number of vertices of the given 
             % mesh. Finally, the sampling of the vertices is done done without replacement.
             % 

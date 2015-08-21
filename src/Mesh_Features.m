@@ -53,9 +53,50 @@ classdef Mesh_Features < dynamicprops
             if strcmp(neigs, 'all')
                 neigs = length(obj.LB.spectra.evals);
             end
-            obj.F = Mesh_Features.default_mesh_feautures(obj.M, obj.LB, neigs, wks_samples, hks_samples, mc_samples, gc_samples);            
-            Mesh_Features.index_features(obj, 'wks', wks_samples, 'hks', hks_samples, 'mc', mc_samples, 'gc', gc_samples);
+            
+            obj.F = Mesh_Features.default_mesh_feautures(obj.M, obj.LB, neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+           
+            feature_names = {'wks', 'hks', 'mc', 'gc'};
+            features_per_categ = [wks_samples, hks_samples, mc_samples, gc_samples];
+            Mesh_Features.index_features(obj, feature_names, features_per_categ);
+        
+            
         end
+        
+        function newobj = keep_only(obj, features)
+            newobj = obj.copy();            
+            if iscell(features)         % Cell of strings like {'wks', 'hks'}                
+                new_feats = [];
+                feat_per_category = zeros(length(features), 1);
+                pos       = 0;
+                
+                for i = 1:length(features)
+                    ind          = obj.index.(features{i});
+                    lb           = ind(1);
+                    rb           = ind(2);
+                    f_i          = rb - lb + 1;
+                    new_feats(:, pos+1:pos+f_i) = obj.F(:, lb:rb);
+                    pos = pos + f_i;
+                    feat_per_category(i) = f_i;
+                end
+                newobj.set_features(new_feats, features, feat_per_category);                
+            end  
+        end
+        
+
+        function set_features(obj, new_feats, feature_names, feat_per_category)
+            if sum(feat_per_category) ~= size(new_feats,2)
+                error('Mismatch in size of new features and sum of features per category.')
+            end
+            
+            obj.F = new_feats; % Todo add dimension checking.
+            obj.index = [];    % Reset index.
+            Mesh_Features.index_features(obj, feature_names, feat_per_category);
+                            
+        end
+        
+        
+        
         
         function obj = normalize_features(obj)
             obj.F = divide_columns(obj.F, sqrt(sum(obj.F.^2))); % Normalize each feature to unit-euclidean-length.            
@@ -442,19 +483,22 @@ classdef Mesh_Features < dynamicprops
 
     methods (Static, Access = private)
         % Functions used only internally from other functions of this class.        
-        function obj = index_features(obj, varargin)                        
-            nvargs = length(varargin);
-            if round(nvargs/2) ~= nvargs/2
-                error('Expecting feature_name/nsamples pairs.')
+        function obj = index_features(obj, feature_types, feature_samples)                        
+            
+            total = length(feature_types);
+            if (total ~= max(size(feature_samples)))
+                error('Mismatch in size of feature types and computed feature samples.')
             end
+                        
             pos = 0;            
-            for pair = reshape(varargin, 2, [])  % Pair is a cell {propName;propValue}.
-                feat_name = lower(pair{1});      % Make case insensitive.
-                if pair{2} < 1
-                    obj.index.(feat_name) = [];  % Feautures of this type were not calculated.
+            for i = 1:total
+                feat_name = lower(feature_types{i});      % Make case insensitive.
+                feat_samples = feature_samples(i);
+                if feat_samples < 1
+                    continue                              % Feautures of this type were not calculated.
                 else                
-                    obj.index.(feat_name) = [pos+1, pos+pair{2}];
-                    pos = pos + pair{2};
+                    obj.index.(feat_name) = [pos+1, pos+feat_samples];
+                    pos = pos + feat_samples;
                 end
             end
         end

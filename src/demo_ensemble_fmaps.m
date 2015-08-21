@@ -15,21 +15,33 @@
     LB2            = Laplace_Beltrami(mesh2);
     feats2         = Mesh_Features(mesh2, LB2);
 %%  Compute Mesh features that will be used to produce Fmaps.
-    neigs          = 100;                           % Eigenvectors that will be used in computing wks/hks.
-    wks_samples    = 100;
-    hks_samples    = 100;    
-    mc_samples     = 100; 
-    gc_samples     = 100;
+    neigs          = 20;                           % Eigenvectors that will be used in computing wks/hks.
+    wks_samples    = 20;
+    hks_samples    = 20;    
+    mc_samples     = 0; 
+    gc_samples     = 10;
     feats1.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
 	feats2.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+
+%%
+
+    fnew = feats1.keep_only({'wks', 'gc'});
+    
+
+    
 %% Compute (whp.) erroneous features.
+    random_samples = 150;
+    deltas1        = Functional_Map.random_delta_functions(mesh1.barycentric_v_area, random_samples);
+    proj_deltas1   = LB1.project_functions(neigs, deltas1);
+    rnd_feats_1    = Mesh_Features(mesh1, LB1);
+    
+    
+    deltas2        = Functional_Map.random_delta_functions(mesh2.barycentric_v_area, random_samples);
+    proj_deltas2   = LB1.project_functions(neigs, deltas2);
+    
 
-
-
-
-
-
-
+    
+    
 
     
 %     save('../data/output/ensembles/demo_ensemble', 'mesh1', 'mesh2', 'LB1', 'LB2', 'feats1', 'feats2');              
@@ -122,8 +134,13 @@
     
     % Make groundtuth correspondence (for tosca, within same class i node matched i).
     groundtruth = (1:mesh1.num_vertices)';      
-        
-    [dists_m, indices]       = Fmean.pairwise_distortion(groundtruth, 'nsamples', 400,    'symmetries', symmetries);            
+      
+    
+    %%
+    [dists_m, indices]       = Fmean.pairwise_distortion(groundtruth, 'nsamples', 400, 'symmetries', symmetries);            
+    
+    %%
+    
     [dists_l, ~]             = Flin.pairwise_distortion(groundtruth,  'indices', indices, 'symmetries', symmetries);                    
     [dists_l2, ~]            = Flin2.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);        
     
