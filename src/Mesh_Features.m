@@ -64,8 +64,16 @@ classdef Mesh_Features < dynamicprops
         end
         
         function newobj = keep_only(obj, features)
+            % Computes a new Mesh_Features object that contains a subset of the current features.
+            % Input:
+            %        option1. features - (cell array of strings) contains the names of the feature types to be
+            %                            kept. E.g., features = {'wks', 'mc'}.
+            %             
+            %        option2. features - (n x 1) vector containing integers. The integers correspond to the
+            %                            columns (features) of obj.F that will be kept.
+                        
             newobj = obj.copy();            
-            if iscell(features)         % Cell of strings like {'wks', 'hks'}                
+            if iscell(features)         % e.g., {'wks', 'hks'}                
                 new_feats = [];
                 feat_per_category = zeros(length(features), 1);
                 pos       = 0;
@@ -80,8 +88,29 @@ classdef Mesh_Features < dynamicprops
                     feat_per_category(i) = f_i;
                 end
                 newobj.set_features(new_feats, features, feat_per_category);                
-            end  
+            else
+                feat_cols  = sort(features);                 % Todo-P: add check on integers - handle double entries.
+                feat_names = fieldnames(obj.index);
+                new_feat_names    = cell(1);
+                feat_per_category = [];
+                
+                count = 1;
+                for i=1:length(feat_names)
+                    ind = obj.index.(feat_names{i});                    
+                    feat_type_i = sum(  bitand(feat_cols >= ind(1), feat_cols <= ind(2)) );
+                    if feat_type_i > 0
+                        new_feat_names{count}    = feat_names{i};
+                        feat_per_category(count) = feat_type_i;
+                        count = count + 1;
+                    end                    
+                end
+                new_feats = obj.F(:, feat_cols);
+                newobj.set_features(new_feats, new_feat_names, feat_per_category);                
+            end
+              
         end
+        
+        
         
 
         function set_features(obj, new_feats, feature_names, feat_per_category)

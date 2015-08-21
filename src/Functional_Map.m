@@ -58,7 +58,7 @@ classdef Functional_Map < dynamicprops
             options = struct('normalize', 1, 'lambda', 0);
             options = load_key_value_input_pairs(options, varargin{:});
 
-            obj.source_features = source_feat;  % Store the raw features used.
+            obj.source_features = source_feat;     % Store the raw features used.
             obj.target_features = target_feat;
 
             source_feat = obj.source_basis.project_functions(neigs_source, source_feat.F);
@@ -102,6 +102,33 @@ classdef Functional_Map < dynamicprops
             obj.source_neigs = size(new_map, 2);
             obj.target_neigs = size(new_map, 1);
         end
+        
+        function [proj_feats] = projected_source_features(obj, normalized)            
+            % Returns the feature functions of the source, projected on the basis that was used to derive this 
+            % functional map. 
+            % Input:
+            %           normalized (optional, int) if omitted or is equal to 1, the 2-norm of each feature will be
+            %           equal to 1.
+            proj_feats = obj.source_basis.project_functions(obj.source_neigs, obj.source_features.F);
+            
+            if ~exist('normalized', 'var') || normalized == 1            
+                proj_feats = divide_columns(proj_feats, sqrt(sum(proj_feats.^2)));
+            end
+        end            
+            
+        function [proj_feats] = projected_target_features(obj, normalized)            
+            % Returns the feature functions of the target, projected on the basis that was used to derive this 
+            % functional map. 
+            % Input:
+            %           normalized (optional, int) if omitted or is equal to 1, the 2-norm of each feature will be
+            %           equal to 1.
+            proj_feats = obj.target_basis.project_functions(obj.target_neigs, obj.target_features.F);
+            
+            if ~exist('normalized', 'var') || normalized == 1            
+                proj_feats = divide_columns(proj_feats, sqrt(sum(proj_feats.^2)));
+            end
+        end            
+        
         
         function [D] = area_difference(obj)
             if isempty(obj.fmap)
@@ -163,7 +190,7 @@ classdef Functional_Map < dynamicprops
             % source_basis - LB basis of source
             % target_basis - LB basis of source
             % groundtruth  -             
-            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);                                
+            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);
             options = load_key_value_input_pairs(options, varargin{:});
 
             if ~isempty (options.indices)  % TODO-P add type_checking.
