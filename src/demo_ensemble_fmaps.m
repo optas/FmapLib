@@ -17,11 +17,11 @@
     feats2         = Mesh_Features(mesh2, LB2);
 
 %%  Compute Mesh features that will be used to produce Fmaps.
-    neigs          = 10;                           % Eigenvectors that will be used in computing wks/hks.
-    wks_samples    = 10;
-    hks_samples    = 10;    
-    mc_samples     = 10; 
-    gc_samples     = 10;
+    neigs          = 100;                           % Eigenvectors that will be used in computing wks/hks.
+    wks_samples    = 100;
+    hks_samples    = 100;    
+    mc_samples     = 0; 
+    gc_samples     = 0;
     feats1.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
 	feats2.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);    
     
@@ -38,24 +38,33 @@
 %%  Compute some Fmaps.
     fmap_method    = 'frobenius';
     lambda         = 20;                                                    
-    all_map        = Functional_Map(LB1, LB2);    
-    all_map.compute_f_map(fmap_method, neigs, neigs, feats1, feats2, 'lambda', lambda);  
-    
-    err_map        = Functional_Map(LB1, LB2);    
-    err_map.compute_f_map(fmap_method, neigs, neigs, rnd_feats_1, rnd_feats_2, 'lambda', lambda);      
-
+    all_map        = Functional_Map(LB1, LB2);
+    all_map.compute_f_map(fmap_method, neigs, neigs, feats1, feats2, 'lambda', lambda);
+%     all_map.plot_transferred_xyz();    
+    err_map        = Functional_Map(LB1, LB2);
+    err_map.compute_f_map(fmap_method, neigs, neigs, rnd_feats_1, rnd_feats_2, 'lambda', lambda);
+        
+%% NEW    
+    tic
+    fmap_method    = 'frobenius_with_covariance';
+    lambda         = 20;                                                    
+    cov_map        = Functional_Map(LB1, LB2);    
+    cov_map.compute_f_map(fmap_method, neigs, neigs, feats1, feats2, 'lambda', lambda);  
+    toc
+        
 %% Looking on mis-alignment error.
 %  Observe that the optimized map on noise, has smaller misalignment on the trained noise than a orthodox map.
     Fs = all_map.projected_source_features();
     Ft = all_map.projected_target_features();
     misalignment = sum(sum(abs((all_map.fmap * Fs) - Ft), 1)) ./ size(Fs, 2) % Average alignment error (L1 dist) of probe functions.       
-
+    
     Fs = err_map.projected_source_features();
     Ft = err_map.projected_target_features();
     
-    misalignment = sum(sum(abs((all_map.fmap * Fs) - Ft), 1)) ./ size(Fs, 2) % Average alignment error (L1 dist) of probe functions.      
-    
+    misalignment = sum(sum(abs((all_map.fmap * Fs) - Ft), 1)) ./ size(Fs, 2) % Average alignment error (L1 dist) of probe functions.          
     misalignment = sum(sum(abs((err_map.fmap * Fs) - Ft), 1)) ./ size(Fs, 2) % Average alignment error (L1 dist) of probe functions.
+    
+    err_map.plot_transferred_xyz();
     
 %%  Evaluate F-maps.
     fid = fopen('../data/input/tosca_symmetries/michael.sym'); % TODO-P add to IO.read_symmetries(); 
@@ -65,10 +74,12 @@
     groundtruth = (1:mesh1.num_vertices)';          % Groundtruth node-correspondence (Tosca: within same class, i node matches i).
 
     [dists_a, indices] = all_map.pairwise_distortion(groundtruth, 'nsamples', 500,     'symmetries', symmetries);                
-    [dists_e,  ~]      = err_map.pairwise_distortion(groundtruth, 'indices',  indices, 'symmetries', symmetries);
+    [dists_c, ~]       = cov_map.pairwise_distortion(groundtruth, 'indices',  indices, 'symmetries', symmetries);
+%     [dists_e,  ~]      = err_map.pairwise_distortion(groundtruth, 'indices',  indices, 'symmetries', symmetries);
     
     mean(dists_a)
-    mean(dists_e)
+    mean(dists_c)
+%     mean(dists_e)
     
 %% Ensembling.    
     num_of_maps = 30;

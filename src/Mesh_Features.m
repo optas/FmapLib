@@ -3,15 +3,15 @@ classdef Mesh_Features < dynamicprops
     % functions defined on the vertices of a mesh. Examples include:
     %     the Wave Kernel Signature
     %     the Heat Kernel Signature
-    %     the Multiscale Gaussian Curvature
-    %     the Multiscale Mean Curvature
+    %     the Multi-scale Gaussian Curvature
+    %     the Multi-scale Mean Curvature
     
     properties (GetAccess = public, SetAccess = private)
         % Each Mesh_Feature object has at least the following properties.
-        M;                   % (Mesh) Mesh over which the feautures are computed.  %TODO-P keep only if we create feats independent of an LB.
+        M;                   % (Mesh) Mesh over which the feautures are computed.
         LB;                  % (Laplace_Beltrami) Associated LB operator.                             
-        F;                   % (Matrix) carrying the computed feautures.
-        index;               % Strucutre holding the positions of each type of features stored at F (e.g., knows where is wks, hks etc.)
+        F;                   % (Matrix) carrying the computed feautures as column vectors.
+        index;               % Strucutre holding the type of feature stored at each column of F (e.g., F(:,10) is 'wks').
     end
         
     methods (Access = public)
@@ -43,26 +43,7 @@ classdef Mesh_Features < dynamicprops
                 obj.(p{i}) = this.(p{i});
             end           
         end
-                        
-        function obj = compute_default_feautures(obj, neigs, wks_samples, hks_samples, mc_samples, gc_samples)
-            % 'Convenience' function. 
-            %  Computes any of the the implemented mesh features with default parameters. 
-            %  If X_samples is zero, the the feauture type X is not computed.
-            
-            % TODO-P add property F here. add .num_of_features
-            if strcmp(neigs, 'all')
-                neigs = length(obj.LB.spectra.evals);
-            end
-            
-            obj.F = Mesh_Features.default_mesh_feautures(obj.M, obj.LB, neigs, wks_samples, hks_samples, mc_samples, gc_samples);
-           
-            feature_names = {'wks', 'hks', 'mc', 'gc'};
-            features_per_categ = [wks_samples, hks_samples, mc_samples, gc_samples];
-            Mesh_Features.index_features(obj, feature_names, features_per_categ);
-        
-            
-        end
-        
+
         function newobj = keep_only(obj, features)
             % Computes a new Mesh_Features object that contains a subset of the current features.
             % Input:
@@ -110,28 +91,68 @@ classdef Mesh_Features < dynamicprops
               
         end
         
-        
-        
-
-        function set_features(obj, new_feats, feature_names, feat_per_category)
+        function [] = set_features(obj, new_feats, feature_names, feat_per_category)
             if sum(feat_per_category) ~= size(new_feats,2)
                 error('Mismatch in size of new features and sum of features per category.')
             end
             
             obj.F = new_feats; % Todo add dimension checking.
             obj.index = [];    % Reset index.
-            Mesh_Features.index_features(obj, feature_names, feat_per_category);
-                            
+            Mesh_Features.index_features(obj, feature_names, feat_per_category);                            
         end
         
-        
-        
-        
-        function obj = normalize_features(obj)
-            obj.F = divide_columns(obj.F, sqrt(sum(obj.F.^2))); % Normalize each feature to unit-euclidean-length.            
+        function [F] = project_features(obj, basis, elems, varargin)
+            % Projects the features into the given basis and returns the resulting coeffients.
+            % TODO-D Add info.
+            %
+            % Example:   project_features(Laplace_Beltrami, 10, 'normalize', 1, 'store', 0)
+            options = struct('normalize', 1, 'store', 1);
+            options = load_key_value_input_pairs(options, varargin{:});
+            
+            if options.normalize == 1                 
+                F = basis.project_functions(elems, obj.F);
+                F = divide_columns(F, sqrt(sum(F.^2)));
+            else
+                F = basis.project_functions(elems, obj.F);
+            end
+            
+            % Storing the coefficients.
+            prop_name = 'projected';
+            if options.store == 1 && isprop(obj, prop_name)
+                obj.projected = F;
+            elseif options.store == 1 
+                obj.addprop(prop_name);
+                obj.projected = F;    
+            end            
         end
-    
-    end
+        
+        function [C] = covariance_matrix(obj, feats)
+            if nargin < 2
+                feats = obj.projected;               
+            end
+                       
+            feats = feats - repmat(mean(feats, 2), 1, size(feats,2)) ;  % Center data.            
+            C     = feats * feats';
+        end
+        
+        function obj = compute_default_feautures(obj, neigs, wks_samples, hks_samples, mc_samples, gc_samples)
+            % 'Convenience' function. 
+            %  Computes any of the the implemented mesh features with default parameters. 
+            %  If X_samples is zero, the the feauture type X is not computed.
+            
+            % TODO-P add property F here. add .num_of_features
+            if strcmp(neigs, 'all')
+                neigs = length(obj.LB.spectra.evals);
+            end
+            
+            obj.F = Mesh_Features.default_mesh_feautures(obj.M, obj.LB, neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+           
+            feature_names = {'wks', 'hks', 'mc', 'gc'};
+            features_per_categ = [wks_samples, hks_samples, mc_samples, gc_samples];
+            Mesh_Features.index_features(obj, feature_names, features_per_categ);
+        end    
+        
+    end % Object's methods.
     
     methods (Static)
    
