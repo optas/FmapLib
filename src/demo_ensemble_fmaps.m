@@ -4,20 +4,20 @@
     cd FmapLib/src        
 
 %% Load two Meshes and compute their LBs.
-    meshfile       = '../data/input/tosca/michael11.off';
+    meshfile       = '../data/input/tosca_small/michael11.off';
     mesh1          = Mesh(meshfile, 'mike11');
     mesh1.set_default_vertex_areas('barycentric');    
     LB1            = Laplace_Beltrami(mesh1);       
     feats1         = Mesh_Features(mesh1, LB1);    
     
-    meshfile       = '../data/input/tosca/michael12.off';
+    meshfile       = '../data/input/tosca_small/michael12.off';
     mesh2          = Mesh(meshfile, 'mike12');
     mesh2.set_default_vertex_areas('barycentric');
     LB2            = Laplace_Beltrami(mesh2);
     feats2         = Mesh_Features(mesh2, LB2);
 
 %%  Compute Mesh features that will be used to produce Fmaps.
-    neigs          = 100;                           % Eigenvectors that will be used in computing wks/hks.
+    neigs          = 10;                           % Eigenvectors that will be used in computing wks/hks.
     wks_samples    = 100;
     hks_samples    = 100;    
     mc_samples     = 0; 
@@ -40,7 +40,9 @@
     lambda         = 20;                                                    
     all_map        = Functional_Map(LB1, LB2);
     all_map.compute_f_map(fmap_method, neigs, neigs, feats1, feats2, 'lambda', lambda);
-%     all_map.plot_transferred_xyz();    
+    
+    all_map.plot_transferred_xyz();    
+    
     err_map        = Functional_Map(LB1, LB2);
     err_map.compute_f_map(fmap_method, neigs, neigs, rnd_feats_1, rnd_feats_2, 'lambda', lambda);
         

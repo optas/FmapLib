@@ -7,8 +7,7 @@ function y = cummax(x)
     %
     % Output:   y      -  (n x 1) Vector such that y(i) = max(x(1:i))
     %                          
-    % Note: In versions of MATLAB15a and onwards this function is natively implemented.
-
+    % Note: In versions of MATLAB15a and onwards this function is natively implemented.    
     y = x;
     for i = 2:length(x)
         y(i) = max(y(i), y(i-1));
