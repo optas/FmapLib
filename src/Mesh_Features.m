@@ -1,11 +1,17 @@
 classdef Mesh_Features < dynamicprops
+    % A class for creating and manipulating features on triangular Meshes. Usually, such features correspond to
+    % functions defined on the vertices of a mesh. Examples include:
+    %     the Wave Kernel Signature,
+    %     the Heat Kernel Signature,
+    %     the Multi-scale Gaussian Curvature,
+    %     the Multi-scale Mean Curvature.
     
     properties (GetAccess = public, SetAccess = private)
         % Each Mesh_Feature object has at least the following properties.
-        M;                   % (Mesh) Mesh over which the feautures are computed.  %TODO-P keep only if we create feats independent of an LB.
+        M;                   % (Mesh) Mesh over which the feautures are computed.
         LB;                  % (Laplace_Beltrami) Associated LB operator.                             
-        F;                   % (Matrix) carrying the computed feautures.
-        index;               % Strucutre holding the positions of each type of features stored at F (e.g., knows where is wks, hks etc.)
+        F;                   % (Matrix) carrying the computed feautures as column vectors.
+        index;               % Strucutre holding the type of feature stored at each column of F (e.g., F(:,10) is 'wks').
     end
         
     methods (Access = public)
@@ -37,25 +43,121 @@ classdef Mesh_Features < dynamicprops
                 obj.(p{i}) = this.(p{i});
             end           
         end
+
+        function newobj = keep_only(obj, features)
+            % Generates a new Mesh_Features object that contains only a subset of the current features.
+            % Input:
+            %        option1. features - (cell array of strings) contains the names of the feature types to be
+            %                            kept. E.g., features = {'wks', 'mc'}.
+            %             
+            %        option2. features - (n x 1) vector containing integers. The integers correspond to the
+            %                            columns (features) of obj.F that will be kept.
                         
+            newobj = obj.copy();            
+            if iscell(features)         % e.g., {'wks', 'hks'}                
+                new_feats = [];
+                feat_per_category = zeros(length(features), 1);
+                pos       = 0;
+                
+                for i = 1:length(features)
+                    ind          = obj.index.(features{i});
+                    lb           = ind(1);
+                    rb           = ind(2);
+                    f_i          = rb - lb + 1;
+                    new_feats(:, pos+1:pos+f_i) = obj.F(:, lb:rb);
+                    pos = pos + f_i;
+                    feat_per_category(i) = f_i;
+                end
+                newobj.set_features(new_feats, features, feat_per_category);                
+            else
+                feat_cols  = sort(features);                 % Todo-P: add check on integers - handle double entries.
+                feat_names = fieldnames(obj.index);
+                new_feat_names    = cell(1);
+                feat_per_category = [];
+                
+                count = 1;
+                for i=1:length(feat_names)
+                    ind = obj.index.(feat_names{i});                    
+                    feat_type_i = sum(  bitand(feat_cols >= ind(1), feat_cols <= ind(2)) );
+                    if feat_type_i > 0
+                        new_feat_names{count}    = feat_names{i};
+                        feat_per_category(count) = feat_type_i;
+                        count = count + 1;
+                    end                    
+                end
+                new_feats = obj.F(:, feat_cols);
+                newobj.set_features(new_feats, new_feat_names, feat_per_category);                
+            end
+              
+        end
+        
+        function [] = set_features(obj, new_feats, feature_names, feat_per_category)
+            if sum(feat_per_category) ~= size(new_feats,2)
+                error('Mismatch in size of new features and sum of features per category.')
+            end
+            
+            obj.F = new_feats; % Todo add dimension checking.
+            obj.index = [];    % Reset index.
+            Mesh_Features.index_features(obj, feature_names, feat_per_category);                            
+        end
+        
+        function [nf] = size(obj)
+            % Returns the number of features stored by the current object.
+            nf = size(obj.F, 2);
+        end
+        
+        function [F] = project_features(obj, basis, elems, varargin)
+            % Projects the features into the given basis and returns the resulting coeffients.
+            % TODO-D Add info.
+            %
+            % Example:   project_features(Laplace_Beltrami, 10, 'normalize', 1, 'store', 0)
+            options = struct('normalize', 1, 'store', 1);
+            options = load_key_value_input_pairs(options, varargin{:});
+            
+            if options.normalize == 1                 
+                F = basis.project_functions(elems, obj.F);
+                F = divide_columns(F, sqrt(sum(F.^2)));
+            else
+                F = basis.project_functions(elems, obj.F);
+            end
+            
+            % Storing the coefficients.
+            prop_name = 'projected';
+            if options.store == 1 && isprop(obj, prop_name)
+                obj.projected = F;
+            elseif options.store == 1 
+                obj.addprop(prop_name);
+                obj.projected = F;    
+            end            
+        end
+        
+        function [C] = covariance_matrix(obj, feats)
+            if nargin < 2
+                feats = obj.projected;               
+            end
+                       
+            feats = feats - repmat(mean(feats, 2), 1, size(feats,2)) ;  % Center data.            
+            C     = feats * feats';
+        end
+        
         function obj = compute_default_feautures(obj, neigs, wks_samples, hks_samples, mc_samples, gc_samples)
             % 'Convenience' function. 
-            %  Computes any of the the implemented mesh features with default parameters. If x_samples is zero, the
-            %  the feauture type x is not computed.
-            
-            % TODO-P add property F here. add .num_of_features
+            %  Computes any of the the implemented mesh features with default parameters. 
+            %  If X_samples is zero, the the feauture type X is not computed.
+
             if strcmp(neigs, 'all')
                 neigs = length(obj.LB.spectra.evals);
             end
-            obj.F = Mesh_Features.default_mesh_feautures(obj.M, obj.LB, neigs, wks_samples, hks_samples, mc_samples, gc_samples);            
-            Mesh_Features.index_features(obj, 'wks', wks_samples, 'hks', hks_samples, 'mc', mc_samples, 'gc', gc_samples);
-        end
+            
+            obj.F = Mesh_Features.default_mesh_feautures(obj.M, obj.LB, neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+           
+            feature_names = {'wks', 'hks', 'mc', 'gc'};
+            features_per_categ = [wks_samples, hks_samples, mc_samples, gc_samples];
+            Mesh_Features.index_features(obj, feature_names, features_per_categ);
+            assert(obj.size() == sum(features_per_categ));            
+        end    
         
-        function obj = normalize_features(obj)
-            obj.F = divide_columns(obj.F, sqrt(sum(obj.F.^2))); % Normalize each feature to unit-euclidean-length.            
-        end
-    
-    end
+    end % Object's methods.
     
     methods (Static)
    
@@ -436,19 +538,22 @@ classdef Mesh_Features < dynamicprops
 
     methods (Static, Access = private)
         % Functions used only internally from other functions of this class.        
-        function obj = index_features(obj, varargin)                        
-            nvargs = length(varargin);
-            if round(nvargs/2) ~= nvargs/2
-                error('Expecting feature_name/nsamples pairs.')
+        function obj = index_features(obj, feature_types, feature_samples)                        
+            
+            total = length(feature_types);
+            if (total ~= max(size(feature_samples)))
+                error('Mismatch in size of feature types and computed feature samples.')
             end
+                        
             pos = 0;            
-            for pair = reshape(varargin, 2, [])  % Pair is a cell {propName;propValue}.
-                feat_name = lower(pair{1});      % Make case insensitive.
-                if pair{2} < 1
-                    obj.index.(feat_name) = [];  % Feautures of this type were not calculated.
+            for i = 1:total
+                feat_name = lower(feature_types{i});      % Make case insensitive.
+                feat_samples = feature_samples(i);
+                if feat_samples < 1
+                    continue                              % Feautures of this type were not calculated.
                 else                
-                    obj.index.(feat_name) = [pos+1, pos+pair{2}];
-                    pos = pos + pair{2};
+                    obj.index.(feat_name) = [pos+1, pos+feat_samples];
+                    pos = pos + feat_samples;
                 end
             end
         end
