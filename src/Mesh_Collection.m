@@ -159,9 +159,7 @@ classdef Mesh_Collection < dynamicprops
                 disp(['Computing Default raw Features for: ', meshname, ' done.']);
             end
         end
-        
-%         function  compute_projected_features(obj, neigs, )
-            
+                    
         function [C] = project_features(obj, mesh_list, eigs_num, features)
                 C = cell(length(mesh_list), 1);
                 

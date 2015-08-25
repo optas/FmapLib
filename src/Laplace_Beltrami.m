@@ -9,12 +9,17 @@ classdef Laplace_Beltrami < dynamicprops
         spectra;         % A struct carrying the eigenvalues and eigenvectors of the LB.
     end
     
-    methods    
+    methods            
         function obj = Laplace_Beltrami(in_mesh, vertex_areas)
             % Class constructor.
-            % Input:
-            %           in_mesh -  (Mesh)
-            %           vertex_areas (num_vertices x 1)
+            % Input:            
+            %           in_mesh         -  (Mesh) A triangular Mesh for which the Laplace Beltrami will be constructed.
+            %
+            %           vertex_areas    -  (optional, in_mesh.num_vertices x 1) A vector carrying the areas associated                         
+            %                              with the vertices. If not provided the Mesh is assumed to carry a set of 
+            %                              default vertex areas.          
+            % Output:
+            %           obj             -  (Laplace_Beltrami) object.
             
             if nargin == 0                                               
                 obj.M = Mesh();          
@@ -22,7 +27,7 @@ classdef Laplace_Beltrami < dynamicprops
                 obj.A = [];
                 obj.spectra = struct();                                
             else
-                obj.M       = in_mesh;                
+                obj.M       = in_mesh;
                 
                 if isprop(in_mesh, 'angles')
                     obj.W  = Laplace_Beltrami.cotangent_laplacian(in_mesh.vertices, in_mesh.triangles, in_mesh.angles);
@@ -36,19 +41,27 @@ classdef Laplace_Beltrami < dynamicprops
             
                 if any(vertex_areas <= 0 )
                     error ('The areas of the vertices provided are not strictly positive.');
-                end
-                if obj.M.num_vertices ~= length(vertex_areas)
-                     error ('The number of vertex areas provided is not identical to the number of the mesh vertices.');
+                elseif obj.M.num_vertices ~= length(vertex_areas)
+                    error ('The number of vertex areas provided is not identical to the number of the mesh vertices.');
                 end
                 
                 obj.A = spdiags(vertex_areas, 0, length(vertex_areas), length(vertex_areas)); 
                 obj.spectra.evals = 0; obj.spectra.evecs = [];
             end
-             
         end
                 
         function [evals, evecs] = get_spectra(obj, eigs_num)
-            % Computes, or reuses previously computed eigenvectors and eigenvalues of the LB object.            
+            % Computes the eigenvectors corresponding to the smallest eigenvalues of the Laplace Beltremi operator. 
+            % It stores the results in the spectra property of the LB object (obj.spectra). It also, automatically reuses 
+            % the previously computed ones when this is doable, instead of computing them from the scratch.
+            %
+            % Input:
+            %           eigs_num    -   (int) number of eigenvector-eigenvalue pairs to be computed. This must be
+            %                           smaller than the number of vertices of the associated Mesh.
+            %
+            % Output:
+            %           evals       -   ()
+            %           evecs       -   ()
             
             % The requested number of eigenvalues is larger than what has been previously calculated.
             if length(obj.spectra.evals) < eigs_num      
@@ -64,39 +77,34 @@ classdef Laplace_Beltrami < dynamicprops
         end
         
         function [E] = evecs(obj, eigs_num)
+            % 'Convenience function'.
+            %  Returns only the eigenvectors of the LB. (see get_spectra()).
             [~, E] = obj.get_spectra(eigs_num);
         end
         
         function [E] = evals(obj, eigs_num)
+            % 'Convenience function'.
+            %  Returns only the eigenvectors of the LB. (see get_spectra()).
             [E, ~] = obj.get_spectra(eigs_num);
         end
                 
         function [Proj] = project_functions(obj, eigs_num, varargin)
-            %   Projects a set of given functions on the corresponding
-            %   eigenfunctions of the Laplace Beltrami operator. Each LB
-            %   eigenfunction has num_vertices dimensions. I.e., as many as the
+            %   Projects a set of given functions on the corresponding eigenfunctions of the Laplace Beltrami
+            %   operator. Each LB eigenfunction has num_vertices dimensions. I.e., as many as the
             %   vertices of its corresponding Mesh.
             %
             %   Input:
-            %           eigs_num    -  (int) number of LB basis functions to be
-            %                          used in the projection.
-            %           
-            %           varargin{i} -  (num_vertices, k{i}) A matrix
-            %                          capturing k{i} functions that will be
-            %                          projected on the LB. Each function
-            %                          is a column this matrix.
-            %
+            %           eigs_num    -  (int) number of LB basis functions to be used in the projection.
+            %                                      
+            %           varargin{i} -  (num_vertices, k{i}) A matrix capturing k{i} functions that will be
+            %                          projected on the LB. Each function is a column this matrix.
+            %                          
             %   Output: 
-            %          Proj         - [sum(k{i}), eigs_num] Matrix carrying
-            %                         the projections of all the functions
-            %                         given in matrices in the varargin
-            %                         (thus sum(k{i}) where
-            %                         i=1:num_varargin ) such functions
-            %                         will be outputted. Each one has
-            %                         eigs_num dimensions.
-            %             
-            % 
-            n_varargin = nargin -2; % Number of arguments passed through varargin.            
+            %           Proj        - [sum(k{i}), eigs_num] Matrix carrying the projections of all the functions
+            %                         given in matrices in the varargin (thus sum(k{i}) where i=1:num_varargin ) such 
+            %                         functions will be outputted. Each one has eigs_num dimensions.
+            
+            n_varargin = nargin -2; % Number of arguments passed through varargin.
             if n_varargin < 1
                 error ('Please provide some functions to be projected on the LB basis.');
             end
@@ -115,27 +123,28 @@ classdef Laplace_Beltrami < dynamicprops
                             
             % Project feauture vectors into reduced LB basis.            
             Proj = zeros(eigs_num, functions_total);            % Pre-allocate space.
-            right = 0;         
-            projector = evecs(:, 1:eigs_num)' * obj.A;
+            right = 0;                     
+            projector = evecs' * obj.A;
+            
             for i = 1:n_varargin
                 left  = right + 1;
                 right = right + size(varargin{i}, 2);                                
-%                 Proj(:, left:right)  = evecs(:, 1:eigs_num) \ varargin{i};                
+%                 Proj(:, left:right)  = evecs \ varargin{i};                
                   Proj(:, left:right)  = projector * varargin{i};                            
-            end                        
+            end            
         end
         
-        
-
-    end
+    end % object defined methods.
     
     methods (Static)
         
         function [W] = cotangent_laplacian(V, T, varargin)
-                % Computes teh cotangent laplacian weights.
-                % W is symmetric.
-                % optional third argument is the angles of the triangles of
-                % the mesh, if not provided it will be calculated.
+                % Computes the cotangent laplacian weight matrix. Also known as the stiffness matrix.
+                % Input: 
+                %                 varargin  - (optional) Angles of the mesh triangles.                
+                % Output: 
+                %                 W is symmetric. 
+                                
                 I = [T(:,1); T(:,2); T(:,3)];
                 J = [T(:,2); T(:,3); T(:,1)];        
                               
@@ -188,4 +197,3 @@ classdef Laplace_Beltrami < dynamicprops
     end
     
 end
-

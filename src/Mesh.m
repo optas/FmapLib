@@ -78,8 +78,6 @@ classdef Mesh < dynamicprops
 %             hold on
         end
         
-
-
        
         function [M] = normal_expanding_mesh(obj, normal_dist, normal_dirs)
             if any(size(normal_dirs) ~= [obj.num_vertices, 3])

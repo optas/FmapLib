@@ -1,3 +1,6 @@
 *
 !.gitignore
 !kid_rodola/*
+!tosca_small/*
+!tosca_symmetries/*
+!tosca_class_attributes

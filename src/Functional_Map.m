@@ -1,21 +1,25 @@
 classdef Functional_Map < dynamicprops
-    % A class implementing a variety of utilities related to the Functional Maps framework.
-    
+    % A class representing a functional map, i.e., a map between functions of two spaces.
+    % The implemenation provides a variety of ways for constructing and optimizing such maps.
+    %
+    % Alongside it implements a series of related utilities such as:         
+    %       Shape difference operators, 
+    %       Genearation of functional maps given point-to-point correspondences, 
+    %       Quality evaluation of maps.
+
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.
         source_basis    = [];        
         source_neigs    = 0;
-        source_features = [];        
-        
+        source_features = [];                
         target_basis    = [];                        
         target_neigs    = 0;
-        target_features = [];
-        
+        target_features = [];        
         fmap            = [];              
     end
     
     methods (Access = public)
-        % Class Constructor.        
+        % Class Constructor.       
         function obj = Functional_Map(varargin)     
             if nargin == 0                
                 % Construct an empty Mesh.            
@@ -54,7 +58,7 @@ classdef Functional_Map < dynamicprops
             options = struct('normalize', 1, 'lambda', 0);
             options = load_key_value_input_pairs(options, varargin{:});
 
-            obj.source_features = source_feat;  % Store the raw features used.
+            obj.source_features = source_feat;     % Store the raw features used.
             obj.target_features = target_feat;
 
             source_feat = obj.source_basis.project_functions(neigs_source, source_feat.F);
@@ -62,7 +66,7 @@ classdef Functional_Map < dynamicprops
 
             if options.normalize == 1 
                 source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));
-                target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));
+                target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));                
             end            
 
             if options.lambda ~= 0
@@ -78,6 +82,20 @@ classdef Functional_Map < dynamicprops
                     [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, 0);
                 case 'frobenius_square'
                     [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                case 'frobenius'
+%                     [F] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                      [F] = Functional_Map.sum_of_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                case 'frobenius_with_covariance'
+                    obj.source_features.project_features(obj.source_basis, neigs_source);
+                    C1 = obj.source_features.covariance_matrix();
+                    
+                    obj.target_features.project_features(obj.target_basis, neigs_target);
+                    C2 = obj.target_features.covariance_matrix();    
+                    
+%                     [F] = Functional_Map.frobenius_with_covariance(source_feat, target_feat, C2, source_reg, target_reg, options.lambda);
+                    source_feat = [source_feat C1];                    
+                    target_feat = [target_feat C2];
+                    [F] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda); 
                 otherwise
                     error('Non existing method for creating a functional map was requested.')
             end
@@ -91,11 +109,76 @@ classdef Functional_Map < dynamicprops
             colorbar;
         end
         
+        function [F] = plot_transferred_xyz(obj) %TODO-P movo-merge under a general 'plot' function
+            F = figure; 
+            
+            V = obj.source_basis.M.vertices;             
+            T = obj.source_basis.M.triangles;
+            nv = obj.source_basis.M.num_vertices;  
+            col1 = V - repmat(mean(V), nv, 1);                  % what is this color? TODO-E
+            col1 = col1 ./ repmat(max(col1), nv, 1);            
+            h1 = subplot(1,2,1); title('Source mesh.');
+            patch('Faces',T, 'Vertices', V, 'FaceColor', 'interp', 'FaceVertexCData', col1, 'EdgeColor', 'none');       
+            axis equal; axis tight; axis off; cameratoolbar;  
+            
+            
+            
+            V = obj.target_basis.M.vertices;             
+            T = obj.target_basis.M.triangles;
+            nv = obj.target_basis.M.num_vertices;                                     
+            h2 = subplot(1,2,2); title('Target mesh.');
+            
+            col2 = obj.transfer_function(col1);
+            
+            patch('Faces',T, 'Vertices', V, 'FaceColor', 'interp', 'FaceVertexCData', col2, 'EdgeColor', 'none');       
+            axis equal; axis tight; axis off; cameratoolbar;  
+            
+            set(F,'WindowStyle','docked');    
+            %col2 = transferFunction(col1, basis1, basis2, fmap);
+%             colorbar;
+        end
+        
+        function trg_function = transfer_function(obj, src_function)
+            
+            src_coeffs   = obj.source_basis.project_functions(obj.source_neigs, src_function);
+            out_coeffs   = obj.fmap * src_coeffs;
+            trg_function = obj.target_basis.evecs(obj.target_neigs) * out_coeffs;  % Wrap this operation to LB.
+        end
+        
+        
+        
         function obj = set_fmap(obj, new_map)
             obj.fmap = new_map;
             obj.source_neigs = size(new_map, 2);
             obj.target_neigs = size(new_map, 1);
         end
+        
+        function [proj_feats] = projected_source_features(obj, normalized)            
+            % Returns the feature functions of the source, projected on the basis that was used to derive this 
+            % functional map. 
+            % Input:
+            %           normalized (optional, int) if omitted or is equal to 1, the 2-norm of each feature will be
+            %           equal to 1.
+            proj_feats = obj.source_basis.project_functions(obj.source_neigs, obj.source_features.F);
+            
+            if ~exist('normalized', 'var') || normalized == 1            
+                proj_feats = divide_columns(proj_feats, sqrt(sum(proj_feats.^2)));
+            end
+        end            
+            
+        function [proj_feats] = projected_target_features(obj, normalized)            
+            % Returns the feature functions of the target, projected on the basis that was used to derive this 
+            % functional map. 
+            % Input:
+            %           normalized (optional, int) if omitted or is equal to 1, the 2-norm of each feature will be
+            %           equal to 1.
+            proj_feats = obj.target_basis.project_functions(obj.target_neigs, obj.target_features.F);
+            
+            if ~exist('normalized', 'var') || normalized == 1            
+                proj_feats = divide_columns(proj_feats, sqrt(sum(proj_feats.^2)));
+            end
+        end            
+        
         
         function [D] = area_difference(obj)
             if isempty(obj.fmap)
@@ -157,7 +240,7 @@ classdef Functional_Map < dynamicprops
             % source_basis - LB basis of source
             % target_basis - LB basis of source
             % groundtruth  -             
-            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);                                
+            options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);
             options = load_key_value_input_pairs(options, varargin{:});
 
             if ~isempty (options.indices)  % TODO-P add type_checking.
@@ -258,7 +341,7 @@ classdef Functional_Map < dynamicprops
             % vertex -i- is a vector which has a single non-zero entry at its i-th dimension. The actual value at
             % the i-th dimension is equal to 1/sqrt(area_of_vertex(i)). This value is chosen to sasisfy the equation:
             %             delta_function(i)' * diag(Vertex_Areas) * delta_function(i) = 1. 
-            % I.e., it makes a delta function to have a unit of mass wrt. the area inner product of a mesh.
+            % I.e., it chosen so that a delta function has a unit of mass wrt. the Area Inner Product of a mesh.
             % The total number of dimensions of a delta function/vector is equal to the number of vertices of the given 
             % mesh. Finally, the sampling of the vertices is done done without replacement.
             % 
@@ -291,7 +374,7 @@ classdef Functional_Map < dynamicprops
         
                    
         function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
-            %TODO-P input should be an LB.
+             %TODO-P input should be an LB.
 %             nodes_from = size(basis_from, 1);
 %             nodes_to   = size(basis_to, 1);              
 %             non_zero   = length(correspondences_from_to(:, 2));
@@ -311,15 +394,29 @@ classdef Functional_Map < dynamicprops
         
         
         function [X] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
-            % This code uses plain least squares techniques to 
-            % solve the objective function using Frobenius norm squared
-            % terms.
-            % We aim to minimize ||X*D1-D2||^2 + lambda*||X*L1-L2*X||^2. 
-            % This is done by computing the gradient wrt X, which is given
-            % by (X*D1-D2)*D1' for term 1, and by 
-            % (((lambda1_i-lambda2_j)^2)*X_{ij})_{ij} for term 2. This is
-            % solved using linear techniques as given below.
+            % Computes the functional map X that minimizes the following objective: 
+            %
+            %       norm(X*D1-D2, 'fro')^2   +  lambda * norm(X*diag(L1) - diag(L2)*X, 'fro')^2.
+            %
+            % Both Frobenius norms are squared, which allows for a least-squares type of solution. (see Details)
+            %
+            % Input: 
+            %           D1 - (n1 x m) matrix storing source probe functions in its columns.
+            %           D2 - (n2 x m) matrix storing target probe functions in its columns.
+            %           L1 - (n1 x 1) eigenvalues of source projection basis.
+            %           L2 - (n2 x 1) eigenvalues of target projection basis.
+            % Output:
+            %           X  - (n2 x n1) functional map that solves objective defined above.
+            % 
+            % Details : 
+            % The code computes the gradient wrt. X, which is given by (X*D1-D2)*D1' for the first summand of objective
+            % and by (((lambda1_i-lambda2_j)^2)*X_{ij})_{ij} for the second one. The gradient is set to zero, and since            
+            % this is a convex problem, the global optimum is acquired.
             
+            if size(D1, 2) ~= size(D2, 2)
+                error ('Same number of probe functions must be used for source and target spaces.' )
+            end %TODO-P add more checks.
+                
             N1 = size(D1, 1);
             N2 = size(D2, 1);
             
@@ -335,6 +432,7 @@ classdef Functional_Map < dynamicprops
                     X(i, :) = A \ B(:, i);
                 end
             end
+            assert(all(size(X) == [N2 N1]))
         end
           
         function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
@@ -349,9 +447,9 @@ classdef Functional_Map < dynamicprops
             N1 = size(D1, 1);
             N2 = size(D2, 1);
             N1N2 = N1 * N2;
-            % cvx_setspath('sedumi');
+            
             z = sparse(N1N2, 1);
-                       
+%             cvx_setspath('sedumi'); 
             dim = numel(D2);
             K.q = [1 + dim];
             b   = [z; -1];
@@ -476,6 +574,44 @@ classdef Functional_Map < dynamicprops
                 end
             end
         end
+        
+        function [X, val] = sum_of_frobenius_norms_cvx(src_functions, trg_functions, src_spectra, trg_spectra, lambda)
+        % Solving the fmap by minimizing the frobenius norm with cvx        
+            [src_size, fs_n]  = size(src_functions);
+            [trg_size, ft_n]  = size(trg_functions);
+            if fs_n ~= ft_n
+                error('Same number of functions characterizing the two spaces must be provided.')
+            end
+            
+%             cvx_solver gurobi
 
+            cvx_begin        
+                variables X(trg_size, src_size)
+                minimize norm(X*src_functions - trg_functions, 'fro') + lambda * norm(diag(trg_spectra)*X - X*diag(src_spectra), 'fro')
+            cvx_end      
+            val = cvx_optval;   
+            
+        end
+                
+        function [X, val] = frobenius_with_covariance(src_functions, trg_functions, trg_cov, src_spectra, trg_spectra, lambda)
+        % Solving the fmap by minimizing the frobenius norm with cvx        
+            [src_size, fs_n]  = size(src_functions);
+            [trg_size, ft_n]  = size(trg_functions);
+            
+            if fs_n ~= ft_n
+                error('Same number of functions characterizing the two spaces must be provided.')
+            elseif ~all(size(trg_cov) == [fs_n, fs_n])
+                error('Covariance matrix does not have correct size.')
+                
+            end                        
+            cvx_solver gurobi
+            cvx_begin        
+                variable X(trg_size, src_size) semidefinite
+                minimize norm(X*src_functions - trg_functions, 'fro') +  norm( src_functions'*X'*X*src_functions  - trg_cov, 'fro')... 
+                    + lambda * norm(diag(trg_spectra)*X - X*diag(src_spectra), 'fro')
+            cvx_end      
+            val = cvx_optval;   
+        end
+                
     end % Static.
 end % ClassDef.
