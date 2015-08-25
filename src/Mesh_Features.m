@@ -1,10 +1,10 @@
 classdef Mesh_Features < dynamicprops
     % A class for creating and manipulating features on triangular Meshes. Usually, such features correspond to
     % functions defined on the vertices of a mesh. Examples include:
-    %     the Wave Kernel Signature
-    %     the Heat Kernel Signature
-    %     the Multi-scale Gaussian Curvature
-    %     the Multi-scale Mean Curvature
+    %     the Wave Kernel Signature,
+    %     the Heat Kernel Signature,
+    %     the Multi-scale Gaussian Curvature,
+    %     the Multi-scale Mean Curvature.
     
     properties (GetAccess = public, SetAccess = private)
         % Each Mesh_Feature object has at least the following properties.
@@ -45,7 +45,7 @@ classdef Mesh_Features < dynamicprops
         end
 
         function newobj = keep_only(obj, features)
-            % Computes a new Mesh_Features object that contains a subset of the current features.
+            % Generates a new Mesh_Features object that contains only a subset of the current features.
             % Input:
             %        option1. features - (cell array of strings) contains the names of the feature types to be
             %                            kept. E.g., features = {'wks', 'mc'}.
@@ -101,6 +101,11 @@ classdef Mesh_Features < dynamicprops
             Mesh_Features.index_features(obj, feature_names, feat_per_category);                            
         end
         
+        function [nf] = size(obj)
+            % Returns the number of features stored by the current object.
+            nf = size(obj.F, 2);
+        end
+        
         function [F] = project_features(obj, basis, elems, varargin)
             % Projects the features into the given basis and returns the resulting coeffients.
             % TODO-D Add info.
@@ -139,8 +144,7 @@ classdef Mesh_Features < dynamicprops
             % 'Convenience' function. 
             %  Computes any of the the implemented mesh features with default parameters. 
             %  If X_samples is zero, the the feauture type X is not computed.
-            
-            % TODO-P add property F here. add .num_of_features
+
             if strcmp(neigs, 'all')
                 neigs = length(obj.LB.spectra.evals);
             end
@@ -150,6 +154,7 @@ classdef Mesh_Features < dynamicprops
             feature_names = {'wks', 'hks', 'mc', 'gc'};
             features_per_categ = [wks_samples, hks_samples, mc_samples, gc_samples];
             Mesh_Features.index_features(obj, feature_names, features_per_categ);
+            assert(obj.size() == sum(features_per_categ));            
         end    
         
     end % Object's methods.

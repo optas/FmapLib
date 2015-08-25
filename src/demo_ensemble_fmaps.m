@@ -17,11 +17,11 @@
     feats2         = Mesh_Features(mesh2, LB2);
 
 %%  Compute Mesh features that will be used to produce Fmaps.
-    neigs          = 10;                           % Eigenvectors that will be used in computing wks/hks.
+    neigs          = 100;                           % Eigenvectors that will be used in computing wks/hks.
     wks_samples    = 100;
     hks_samples    = 100;    
-    mc_samples     = 0; 
-    gc_samples     = 0;
+    mc_samples     = 50; 
+    gc_samples     = 50;
     feats1.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
 	feats2.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);    
     

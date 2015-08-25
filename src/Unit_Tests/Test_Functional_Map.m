@@ -40,3 +40,39 @@
 %                 obj.verifyTrue(isequal(phi, evecs(:,1:k)),  'Retrieving precomputed eigenvectors.');
 %             end
 %         end
+
+
+
+% %%  Add to unit-test    
+%     gt_map            = (1:mesh1.num_vertices)';   % Ground truth correspondences from Source_Mesh to Target_Mesh.    
+%     [~, source_basis] = LB1.get_spectra(neigs);
+%     [~, target_basis] = LB2.get_spectra(neigs);  
+%     X_opt             = Functional_Map.groundtruth_functional_map(source_basis, target_basis, gt_map, mesh2.get_vertex_areas('barycentric'));  %TODO-P, Ugly.
+%     % Evaluate the X_opt
+%     eval_points = 200;
+%     [dists,  random_points]  = Functional_Map.pairwise_distortion_of_map(X_opt, LB1, LB2, gt_map, 'nsamples', eval_points, 'symmetries', symmetries);
+%     mean(dists)
+%     hist(dists)
+%     
+% 
+% %     [dists2, random_points2] = Functional_Map.pairwise_distortion_of_map(X_opt, LB1, LB2, gt_map, 'indices', random_points);
+% %     assert(length(dists) == eval_points);
+% %     assert(all(dists==dists2) && all(random_points == random_points2));
+% %     length(unique(random_points)) == length(random_points)
+%     %%
+%     % Use symmetries.    
+%     C = textread('../data/input/kid_rodola/sym.txt', '%s', 'delimiter', ' ');  % Read symmetries:
+%     C = cell2mat(C); sym = str2num(C);            
+%        
+%     %%
+%     [dists3, random_points3] = Functional_Map.pairwise_distortion_of_map(X_opt, mesh1, mesh2, source_basis, target_basis, gt_map, 'indices', random_points, 'symmetries', sym);
+%     assert(all(dists3 <= dists2));
+% 
+%     %% Use a small number of eigenvectors to do the Fmap.
+%     [~, source_basis] = LB1.get_spectra(10, 'barycentric');
+%     [~, target_basis] = LB2.get_spectra(10, 'barycentric');    
+%     X_opt_small       = Functional_Map.groundtruth_functional_map(source_basis, target_basis, gt_map, mesh2.get_vertex_areas('barycentric'));
+%     [dists2, random_points2] = Functional_Map.pairwise_distortion_of_map(X_opt_small, mesh1, mesh2, source_basis, target_basis, gt_map, 'indices', random_points, 'fast');
+%     assert(mean(dists2) > mean(dists)) % TODO-P Change to something more reasonable.
+%     
+%     
