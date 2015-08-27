@@ -9,3 +9,4 @@ src/External_Code/Geodesics/*.mex*
 
 # Ignore some demos
 src/demo_ensemble_fmaps.m
+*.asv

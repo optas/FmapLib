@@ -31,7 +31,7 @@ classdef Mesh_Collection < dynamicprops
                 error('Wrong input arguements.')
             elseif nargin == 2 || nargin == 3                
                 % Find all potential mesh files (.off, .obj files).
-                all_subfiles = rdir([top_directory, '/**/'], 'regexp(name, ''\.obj$|\.off$'')');                                                
+                all_subfiles = rdir([top_directory, '\**\'], 'regexp(name, ''\.obj$|\.off$'')');    %all_subfiles = rdir([top_directory, '/**/'], 'regexp(name, ''\.obj$|\.off$'')');                                                
                 num_meshes   = length(all_subfiles);
                 if num_meshes == 0
                     warning(['The given top directory does not contain any .off or .obj files' ...

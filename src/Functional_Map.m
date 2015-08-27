@@ -114,9 +114,12 @@ classdef Functional_Map < dynamicprops
             
             V = obj.source_basis.M.vertices;             
             T = obj.source_basis.M.triangles;
-            nv = obj.source_basis.M.num_vertices;  
-            col1 = V - repmat(mean(V), nv, 1);                  % what is this color? TODO-E
-            col1 = col1 ./ repmat(max(col1), nv, 1);            
+            nv = obj.source_basis.M.num_vertices; 
+            
+            center = repmat(min(V), [nv, 1]);
+            col1 = (V - center)./repmat(max(V - center), [nv, 1]);
+%             col1 = V - repmat(mean(V), nv, 1);                  % what is this color? TODO-E
+%             col1 = col1 ./ repmat(max(col1), nv, 1);            
             h1 = subplot(1,2,1); title('Source mesh.');
             patch('Faces',T, 'Vertices', V, 'FaceColor', 'interp', 'FaceVertexCData', col1, 'EdgeColor', 'none');       
             axis equal; axis tight; axis off; cameratoolbar;  
