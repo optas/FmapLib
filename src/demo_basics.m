@@ -6,11 +6,11 @@ close all; clear all; clc;
 %% Mini exposition of the FmapLib.
 %  Load mesh 1.
 
-meshfile       = '../data/input/tosca_small/gorilla1.off';
-mesh_name      = 'gorilla1';
+% meshfile       = '../data/input/tosca_small/gorilla1.off';
+% mesh_name      = 'gorilla1';
 
-% meshfile       = '../data/input/tosca_small/victoria0.off';
-% mesh_name      = 'vica0';
+meshfile       = '../data/input/tosca_small/victoria0.off';
+mesh_name      = 'vica0';
 
 mesh1          = Mesh(meshfile, mesh_name);
 mesh1.set_default_vertex_areas('barycentric');              % Associate an area with each vertex via the 'barycentric' rule.
