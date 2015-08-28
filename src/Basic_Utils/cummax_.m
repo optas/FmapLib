@@ -1,4 +1,4 @@
-function y = cummax(x)
+function y = cummax_(x)
     % Computes the cummulative maximum element at every dimnension of
     % a vector.
     %
