@@ -110,6 +110,8 @@ classdef Functional_Map < dynamicprops
         end
         
         function [U, S, V] = plot_area_distortion_without_shape_difference(obj)
+            % Do we need to sort eigenvalues after subtracting from them 1?
+                        
             [U, S, V]    = svd(obj.fmap);
             max_src_dist = obj.source_basis.synthesize_functions(U(:,1));   % U for source (TODO-E verify)
             max_trg_dist = obj.target_basis.synthesize_functions(V(:,1));   % V for target 
