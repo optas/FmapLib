@@ -36,7 +36,7 @@
     rnd_feats_2.set_features(deltas2, {'rand_deltas'}, random_samples);  
 
 %%  Compute some Fmaps.
-    fmap_method    = 'frobenius';
+    fmap_method    = 'frobenius_square';
     lambda         = 20;                                                    
     all_map        = Functional_Map(LB1, LB2);
     all_map.compute_f_map(fmap_method, neigs, neigs, feats1, feats2, 'lambda', lambda);
