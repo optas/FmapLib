@@ -533,6 +533,30 @@ classdef Mesh_Features < dynamicprops
             
             F                     = [hks_sig wks_sig mc_sig gc_sig];
         end
+        
+        function [F] = extract_subleveled_feautures(features, levels)
+            % Given as input a set of features and a set of levels representing percentiles, it extracts a new set of
+            % features that is non zero only for values that are within the presribed percentiles. 
+            % Note: This is a non-linear transformation of the features.
+            % Input:
+            % Output:
+            % Example:
+            
+            if ~all(all(levels >= 0) && all(levels <= 100))
+                error('Levels must be a vectors with values in [0,100] interval.');
+            end
+
+            [basis_size, num_feats] = size(features);            
+            F = zeros(basis_size, num_feats * length(levels));                        
+            pertile_per_feature = prctile(features, levels);
+            bound =  0;           
+            for i = 1:length(levels)
+                pf = pertile_per_feature(i,:);
+                mask = (features >= repmat(pf, basis_size, 1));
+                F(:, bound+1:bound+num_feats) = features .* mask;   % At each iteration num_features features are created.
+                bound = bound + num_feats;
+            end
+        end
     
     end    
 

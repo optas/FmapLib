@@ -205,8 +205,7 @@ classdef Functional_Map < dynamicprops
                 proj_feats = divide_columns(proj_feats, sqrt(sum(proj_feats.^2)));
             end
         end            
-        
-        
+                
         function [D] = area_difference(obj)
             if isempty(obj.fmap)
                 error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
