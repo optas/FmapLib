@@ -230,10 +230,14 @@ classdef Functional_Map < dynamicprops
                 error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
             end
             
-            source_evals = obj.source_basis.evals(obj.source_neigs);
-            target_evals = obj.target_basis.evals(obj.target_neigs);
+            if isa(obj.source_basis, 'Laplace_Beltrami') && isa(obj.target_basis, 'Laplace_Beltrami') % Special easy case.                
+                source_evals = -1 * obj.source_basis.evals(obj.source_neigs);
+                target_evals = -1 * obj.target_basis.evals(obj.target_neigs);               
+                D = pinv(diag(source_evals)) * ( obj.fmap' * diag(target_evals) * obj.fmap );     
+            else                                                                                      % Generic case for any basis.
+                error('Not implemented yet');                
+            end
             
-            D = pinv(diag(source_evals)) * ( obj.fmap' * diag(target_evals) * obj.fmap );     
 
 %             target_evecs = obj.target_basis.evecs(obj.target_neigs);
 %             target_inner_prod = target_evecs' * laplace_beltrami.W * target_evecs;  
