@@ -101,6 +101,16 @@ classdef Mesh_Features < dynamicprops
             Mesh_Features.index_features(obj, feature_names, feat_per_category);                            
         end
         
+        function [] = append_features(obj, new_feats, feature_names, feat_per_category)
+            if sum(feat_per_category) ~= size(new_feats,2)
+                error('Mismatch in size of new features and sum of features per category.')
+            end            
+            obj.F = [obj.F new_feats];
+%             obj.index = [];    % Reset index.
+%             Mesh_Features.index_features(obj, feature_names, feat_per_category);                            
+        end
+        
+        
         function [nf] = size(obj)
             % Returns the number of features stored by the current object.
             nf = size(obj.F, 2);

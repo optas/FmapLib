@@ -642,6 +642,18 @@ classdef Functional_Map < dynamicprops
             cvx_end      
             val = cvx_optval;   
         end
+        
+        function X = l2_regularized_map(F, G, lambda)
+            % Computes a map matrix by solving:
+            %   X = argmin ||XF-G||_2^2 + lambda^2 * ||X||_fro^2
+
+            % Again, XF = G <--> F'X' = G'.  We augment with lambda * identity to get Tikhonov regularization.
+            % Panos obsersvation: huge ammount of memory is required.
+            lhs = [ F'; lambda * speye(size(F', 2)) ];
+            rhs = [ G'; sparse(size(F', 2), size(G', 2)) ];
+            X   = (lhs\rhs)';
+        end
+        
                 
     end % Static.
 end % ClassDef.

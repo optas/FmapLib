@@ -44,8 +44,9 @@ figure; plot(feats1.F(:,302))                   % etc.
 
 %% Make some functional maps.
 % 1.
-fmap_method   = 'frobenius';
+fmap_method   = 'frobenius_square';
 lambda        = 20;
+neigs         = 64;
 map1          = Functional_Map(LB1, LB2);
 map1.compute_f_map(fmap_method, neigs, neigs, feats1, feats2, 'lambda', lambda);
 map1.plot_transferred_xyz();
@@ -53,17 +54,35 @@ map1.plot_area_distortion();
 map1.plot_conformal_distortion();
 
 % 2.
-gt_map = Functional_Map.groundtruth_functional_map(LB1, LB2, (1:mesh1.num_vertices)', neigs, neigs);
-gt_map.plot_transferred_xyz();
-gt_map.plot_area_distortion();
-gt_map.plot_conformal_distortion();
+% gt_map = Functional_Map.groundtruth_functional_map(LB1, LB2, (1:mesh1.num_vertices)', neigs, neigs);
+% gt_map.plot_transferred_xyz();
+% gt_map.plot_area_distortion();
+% gt_map.plot_conformal_distortion();
+
+% 3. 
+% sub_feats_1 = feats1.copy();
+sub_feats_1.F = [feats1.F Mesh_Features.extract_subleveled_feautures(feats1.F, [10,30,50,70,90])];
+% sub_feats_2 = feats2.copy();
+sub_feats_2.F = [feats2.F Mesh_Features.extract_subleveled_feautures(feats2.F, [10,30,50,70,90])];
+map2          = Functional_Map(LB1, LB2);
+map2.compute_f_map(fmap_method, neigs, neigs, sub_feats_1 , sub_feats_2, 'lambda', lambda);
+
+%%
+map3          = Functional_Map(LB1, LB2);
+map3.set_fmap(Functional_Map.l2_regularized_map(sub_feats_1.F, sub_feats_2.F, lambda))
 
 
-%% Further Evaluate maps.   
+
+%% Further Evaluate maps with geodesic criteria.
 fid = fopen('../data/input/tosca_symmetries/michael.sym'); % TODO-P add to IO.read_symmetries(); 
 C   = textscan(fid, '%s', 'delimiter', '\n');   % Read symmetries
 fclose(fid);
 symmetries  = str2double(C{:});    
 groundtruth = (1:mesh1.num_vertices)';          % Groundtruth node to node correspondences.
-[dists_a, indices] = map1.pairwise_distortion(groundtruth, 'nsamples', 500, 'symmetries', symmetries);                    
-mean(dists_a)    
+[dists_1, indices] = map1.pairwise_distortion(groundtruth, 'nsamples', 500, 'symmetries', symmetries);                    
+mean(dists_1)    
+
+[dists_2, ~] = map2.pairwise_distortion(groundtruth, 'indices', indices, 'symmetries', symmetries);                    
+mean(dists_2)    
+
+
