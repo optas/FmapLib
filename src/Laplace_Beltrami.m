@@ -134,6 +134,12 @@ classdef Laplace_Beltrami < dynamicprops
             end            
         end
         
+        function [R] = synthesize_functions(obj, coeffs)
+            eigs_num = size(coeffs, 1);            
+            R = obj.evecs(eigs_num) * coeffs;            
+        end
+        
+        
     end % object defined methods.
     
     methods (Static)

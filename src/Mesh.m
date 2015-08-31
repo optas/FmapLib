@@ -67,12 +67,14 @@ classdef Mesh < dynamicprops
             if ~exist('vertex_function', 'var')                
                 trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3));                
             else                
-                trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function);                                
-                shading interp;
+                trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function, 'EdgeColor', 'none');                                                
+
+%                 vertex_function - mean(vertex_function)
+%                 patch('Faces', this.triangles, 'Vertices', this.vertices, 'FaceColor', 'interp', 'FaceVertexCData', vertex_function, 'EdgeColor', 'none');                               
             end
             axis equal;
             
-%             patch('faces', this.triangles, 'vertices', this.vertices, 'FaceColor', 'w', 'EdgeColor', 'k');
+
 %             axis equal; 
 %             cameratoolbar; cameratoolbar('SetCoordSys','none');
 %             hold on
