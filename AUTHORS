@@ -1,0 +1,24 @@
+Authors:
+    Panos Achlioptas <optas@stanford.edu>        -  Main coordinator and developer.
+    Etienne Corman   <etienne.corman@gmail.com>  -  Developer, focused on Meshes and Fmaps.
+    Leo Guibas       <guibas@cs.stanford.edu>>   -  Theory advisor.
+
+
+Contributors:
+    Qi-xing Huang    <huangqx@ttic.edu>>         - Fmaps + Optimization.
+    Fan Wang         <>                          - Fmaps + Images.
+    Zimo Li          <zimoli@uchicago.edu>       - Various.
+    Maks Ovsjanikov  <>                          - Theory advisor, #2.
+
+
+Papers Referenced:
+
+"Unsupervised Multi-Class Joint Image Segmentation", by F. Wang, Q. Huang, M. Ovsjanikov, and L. J. Guibas,
+in The IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2014.
+
+"Functional Map Networks for Analyzing and Exploring Large Shape Collections", by Q. Huang, F. Wang, and L. Guibas,
+in ACM Trans. Graph., vol. 33, no. 4, pp. 36:1–36:11, Jul. 2014.
+
+"Image Co-segmentation via Consistent Functional Maps", by F. Wang, Q. Huang, and L. J. Guibas,
+in Computer Vision (ICCV), 2013 IEEE International Conference on, 2013, pp. 849–856.
+
