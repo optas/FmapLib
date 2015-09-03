@@ -2,6 +2,8 @@ classdef Mesh < dynamicprops
     % This class represents a triangular Mesh of a 3D surface. It is equipped with a variety of related functions 
     % mostly of geometric nature.
     
+    % (c) Panos Achlioptas 2015  -  http://www.stanford.edu/~optas/FmapLib
+    
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Mesh class has.        
         num_vertices    %   (int)                -    Number of mesh vertices.
@@ -9,7 +11,7 @@ classdef Mesh < dynamicprops
         vertices        %   (num_vertices  x 3)  -    Array containing the 3D coordinates of each vertex of the mesh.
         triangles       %   (num_triangles x 3)  -    Array containing for each triangle the index of its 3 vertices.
                         %                             The indices refer to positions in the array 'vertices'.
-        name = ''       %   (string)             -    (default = '') A string identifying the mesh, e.g., 'Happy_Dragon'.
+        name            %   (string)             -    (default = '') A string identifying the mesh, e.g., 'Happy_Dragon'.
     end
     
     methods (Access = public)
