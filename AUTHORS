@@ -3,23 +3,37 @@ Authors:
     Etienne Corman   <etienne.corman@gmail.com>  -  Developer, focused on Meshes and Fmaps.
     Leo Guibas       <guibas@cs.stanford.edu>>   -  Theory advisor.
 
-
 Contributors:
+    Maks Ovsjanikov               <>                        - Advisor.
     Vignesh Ganapathi-Subramanian <vigansub@stanford.edu>   - Fmaps + Optimization.
     Fan Wang                      <fanw@stanford.edu>       - Fmaps + Images.
-    Qi-xing Huang                 <huangqx@ttic.edu>>       - Fmaps + Optimization.
-    Maks Ovsjanikov               <>                        - Advisor.
+    Qi-xing Huang                 <huangqx@ttic.edu>>       - Fmaps + Optimization.    
     Zimo Li                       <zimoli@uchicago.edu>     - Various.
 
 
 Papers Referenced:
 
-"Unsupervised Multi-Class Joint Image Segmentation", by F. Wang, Q. Huang, M. Ovsjanikov, and L. J. Guibas,
+------------------------------
+--- Functional Map Centric ---
+------------------------------
+"Functional Maps: A Flexible Representation of Maps Between Shapes", by M. Ovsjanikov, M. Ben-Chen, J. Solomon 
+A Butscher and Leonidas Guibas, in (SIGGRAPH), 2012.
+
+"Unsupervised Multi-Class Joint Image Segmentation", by F. Wang, Q. Huang, M. Ovsjanikov and L. J. Guibas,
 in The IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2014.
 
-"Functional Map Networks for Analyzing and Exploring Large Shape Collections", by Q. Huang, F. Wang, and L. Guibas,
-in ACM Trans. Graph., vol. 33, no. 4, pp. 36:1–36:11, Jul. 2014.
+"Functional Map Networks for Analyzing and Exploring Large Shape Collections", by Q. Huang, F. Wang and L. Guibas,
+in ACM Trans. Graph. (TOG), 2014.
 
 "Image Co-segmentation via Consistent Functional Maps", by F. Wang, Q. Huang, and L. J. Guibas,
-in Computer Vision (ICCV), 2013 IEEE International Conference on, 2013, pp. 849–856.
+in Computer Vision (ICCV), 2013 IEEE International Conference on, 2013.
+
+------------------------------
+--- Mesh Feature Centric ---
+------------------------------
+"The Wave Kernel Signature: A Quantum Mechanical Approach To Shape Analysis", by M. Aubry, U. Schlickewei and D. Cremers
+in add_content
+"A Concise and Provably Informative Multi-Scale Signature-Based on Heat Diffusion", by J. Sun, M. Ovsjanikov and L. Guibas 
+add_content, 2009.
+            
 
