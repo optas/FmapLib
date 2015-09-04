@@ -149,7 +149,7 @@ classdef Mesh_Features < dynamicprops
             feats = feats - repmat(mean(feats, 2), 1, size(feats,2)) ;  % Center data.            
             C     = feats * feats';
         end
-        
+
         function obj = compute_default_feautures(obj, neigs, wks_samples, hks_samples, mc_samples, gc_samples)
             % 'Convenience' function. 
             %  Computes any of the the implemented mesh features with default parameters. 
@@ -166,6 +166,10 @@ classdef Mesh_Features < dynamicprops
             Mesh_Features.index_features(obj, feature_names, features_per_categ);
             assert(obj.size() == sum(features_per_categ));            
         end    
+        
+        function h = plot(obj)
+            h = imagesc(obj.F);
+        end
         
     end % Object's methods.
     
