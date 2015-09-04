@@ -74,7 +74,7 @@ map3.set_fmap(Functional_Map.l2_regularized_map(sub_feats_1.F, sub_feats_2.F, la
 
 
 %% Further Evaluate maps with geodesic criteria.
-fid = fopen('../data/input/tosca_symmetries/michael.sym'); % TODO-P add to IO.read_symmetries(); 
+fid = fopen('../../data/input/tosca_symmetries/michael.sym'); % TODO-P add to IO.read_symmetries(); 
 C   = textscan(fid, '%s', 'delimiter', '\n');   % Read symmetries
 fclose(fid);
 symmetries  = str2double(C{:});    
