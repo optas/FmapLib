@@ -479,9 +479,7 @@ classdef Mesh_Features < dynamicprops
         %
         % Notes:
         %       K. CRANE, C. WEISCHEDEL, M. WARDETZKY
-        %       "Geodesics in Heat: A New Approach to Computing Distance
-        %       Based on Heat Flow.", 2013
-        %
+        %       "Geodesics in Heat: A New Approach to Computing Distance Based on Heat Flow.", 2013        
 
         if isprop(inmesh, 'triangle_normals')
             N = inmesh.triangle_normals;                

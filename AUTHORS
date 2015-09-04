@@ -4,13 +4,11 @@ Authors:
     Leo Guibas       <guibas@cs.stanford.edu>>   -  Theory advisor.
 
 Contributors:
-    Maks Ovsjanikov               <>                        - Advisor.
+    Maks Ovsjanikov               <add_content>             - Advisor.
     Vignesh Ganapathi-Subramanian <vigansub@stanford.edu>   - Fmaps + Optimization.
     Fan Wang                      <fanw@stanford.edu>       - Fmaps + Images.
     Qi-xing Huang                 <huangqx@ttic.edu>>       - Fmaps + Optimization.    
-    Zimo Li                       <zimoli@uchicago.edu>     - Various.
-
-
+   
 Papers Referenced:
 
 ------------------------------
@@ -33,7 +31,10 @@ in Computer Vision (ICCV), 2013 IEEE International Conference on, 2013.
 ------------------------------
 "The Wave Kernel Signature: A Quantum Mechanical Approach To Shape Analysis", by M. Aubry, U. Schlickewei and D. Cremers
 in add_content
+
 "A Concise and Provably Informative Multi-Scale Signature-Based on Heat Diffusion", by J. Sun, M. Ovsjanikov and L. Guibas 
 add_content, 2009.
-            
+
+"Shape Distributions", by R. Osada, T. Funkhouser, B. Chazelle, and D. Dobkin, add_content
+ Princeton University
 
