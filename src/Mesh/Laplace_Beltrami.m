@@ -2,7 +2,7 @@ classdef Laplace_Beltrami < Basis
     % A class representing the cotangent discretization of the Laplace Beltrami operator, associated with a given
     % object of the class Mesh.
     %
-    % (c) Panos Achlioptas 2015  -  http://www.stanford.edu/~optas/FmapLib
+    % (c) Achlioptas, Corman, Guibas - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
         M;               % (Mesh) Associated Mesh of LB.        

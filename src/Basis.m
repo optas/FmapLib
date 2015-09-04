@@ -1,8 +1,9 @@
 classdef Basis < dynamicprops
-    % Provides the common set of functions that every class that implements (inherits) the Basis class must
-    % provide. Known classes that inherit the Basis class are the Laplacian and the Laplace_Beltrami.
-    % Notice: This class is acting more like an Abstract class found in languages such Java.
-    % (c) Panos Achlioptas 2015  -  http://www.stanford.edu/~optas/FmapLib
+    % Provides a common set of functions that every class that inherits the Basis class, must implement.
+    % Furthemore, it implements some of these functions and allows them to be used its subclasses. Known
+    % subclasses of the Basis class include the Laplacian and the Laplace_Beltrami.    
+    %
+    % (c) Achlioptas, Corman, Guibas - 2015  -  http://www.fmaplib.org
     
     properties (SetAccess = private)               
         spectra;    % A struct carrying the eigenvalues and eigenvectors of the basis.

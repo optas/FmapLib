@@ -3,7 +3,7 @@ classdef Graph < dynamicprops
     % implemented here.
         
     % TODO-P: Extend to allow self-loops.
-    % (c) Panos Achlioptas 2015  -  http://www.stanford.edu/~optas/FmapLib
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Graph class has.        

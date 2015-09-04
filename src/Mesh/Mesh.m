@@ -1,8 +1,8 @@
 classdef Mesh < dynamicprops
     % This class represents a triangular Mesh of a 3D surface. It is equipped with a variety of related functions 
-    % mostly of geometric nature.
-    
-    % (c) Panos Achlioptas 2015  -  http://www.stanford.edu/~optas/FmapLib
+    % mostly of geometric nature.    
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Mesh class has.        

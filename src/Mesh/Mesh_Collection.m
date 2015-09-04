@@ -1,6 +1,8 @@
 classdef Mesh_Collection < dynamicprops
     % A class offering a variety of utilities for collecting, maintaining and experimenting with collections of 
     % Triangular Meshes.
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
         
     properties               % Each Mesh_Collection object has at least the following properties.        
         name                 % (String)            -   (default = '') A string identifying the collection i.e., 'Tosca'.    

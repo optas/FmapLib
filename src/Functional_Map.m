@@ -6,6 +6,8 @@ classdef Functional_Map < dynamicprops
     %       Shape difference operators, 
     %       Genearation of functional maps given point-to-point correspondences, 
     %       Quality evaluation of maps.
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
 
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.

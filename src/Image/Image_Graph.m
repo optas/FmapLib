@@ -1,6 +1,7 @@
-classdef Image_Graph < dynamicprops & Graph
+classdef Image_Graph < Graph
     % A class representing a Graph object associated with an Image object.
-    % (c) Panos Achlioptas 2015  -  http://www.stanford.edu/~optas/FmapLib
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
         I;          %  (Image) - Underlying Image object.                

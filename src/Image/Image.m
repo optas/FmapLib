@@ -1,7 +1,7 @@
 classdef Image < dynamicprops
     % A class representing an arbitrary (rectangular) Image. This class plays mostly an organisational role by allowing
     % the user to keep data related to an image in a compact way.    
-    % (c) Panos Achlioptas 2015  -  http://www.stanford.edu/~optas/FmapLib
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Image class has.                

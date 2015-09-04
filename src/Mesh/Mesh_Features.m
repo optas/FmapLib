@@ -5,6 +5,8 @@ classdef Mesh_Features < dynamicprops
     %     the Heat Kernel Signature,
     %     the Multi-scale Gaussian Curvature,
     %     the Multi-scale Mean Curvature.
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
         % Each Mesh_Feature object has at least the following properties.

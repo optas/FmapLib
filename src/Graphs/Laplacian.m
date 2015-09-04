@@ -1,6 +1,7 @@
 classdef Laplacian < Basis
     % All the goodies around the Laplacian of a graph.
-    % (c) Panos Achlioptas 2015  -  http://www.stanford.edu/~optas/FmapLib
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (SetAccess = private)       
         L;          % (n x n)  The Laplacian matrix.
