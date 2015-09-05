@@ -1,0 +1,330 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to FmapLib’s documentation! &mdash; FmapLib 0.1.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="FmapLib 0.1.1 documentation" href="#" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-fmaplib-s-documentation">
+<h1>Welcome to FmapLib&#8217;s documentation!<a class="headerlink" href="#welcome-to-fmaplib-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<span class="target" id="module-Graphs"></span><dl class="class">
+<dt id="Graphs.Graph">
+<em class="property">class </em><code class="descclassname">Graphs.</code><code class="descname">Graph</code><span class="sig-paren">(</span><em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#Graphs.Graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref mat mat-class docutils literal"><span class="pre">dynamicprops</span></code></p>
+<p>A class representing an arbitrary Graph (dyadic relation). A variety of graph related algorithms are 
+implemented here.</p>
+<dl class="attribute">
+<dt id="Graphs.Graph.A">
+<code class="descname">A</code><em class="property"> = None</em><a class="headerlink" href="#Graphs.Graph.A" title="Permalink to this definition">¶</a></dt>
+<dd><p>(num_vertices x num_vertices)    -    Adjacency matrix capturing the edge connectivity.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="Graphs.Graph.generate">
+<em class="property">static </em><code class="descname">generate</code><span class="sig-paren">(</span><em>graph_type</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#Graphs.Graph.generate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generator of various commonly used graphs.
+Input:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>graph_type  - (String) specyfing the type of graph model to be produced.</dt>
+<dd><dl class="first last docutils">
+<dt>Valid Strings:</dt>
+<dd><ul class="first last">
+<li><p class="first">&#8216;lattice&#8217;        -  a planar lattice graph.</p>
+</li>
+<li><dl class="first docutils">
+<dt>&#8216;checkerboard&#8217;   -  a lattice graph but with diagonal node </dt>
+<dd><p class="first last">edges included.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt>varargin    - Extra parameters specifying properties of each graph model.</dt>
+<dd><dl class="first last docutils">
+<dt>If graph_type is &#8216;lattice&#8217; or &#8216;checkerboard&#8217; then:</dt>
+<dd>varargin{1}   -  (int) Numer of horizontal nodes.
+varargin{2}   -  (int) Numer of vertical nodes.</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="docutils">
+<dt>Output:</dt>
+<dd>G           - (Graph) resuting graph model.</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Graphs.Graph.is_directed">
+<code class="descname">is_directed</code><em class="property"> = None</em><a class="headerlink" href="#Graphs.Graph.is_directed" title="Permalink to this definition">¶</a></dt>
+<dd><p>(logical)                        -    True iff the graph&#8217;s eges are directed.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Graphs.Graph.name">
+<code class="descname">name</code><em class="property"> = u&quot;''&quot;</em><a class="headerlink" href="#Graphs.Graph.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>(string)                         -    (default = &#8216;&#8217;) A string identifying the graph,</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Graphs.Graph.num_edges">
+<code class="descname">num_edges</code><em class="property"> = None</em><a class="headerlink" href="#Graphs.Graph.num_edges" title="Permalink to this definition">¶</a></dt>
+<dd><p>(int)                            -    Number of edges.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Graphs.Graph.num_vertices">
+<code class="descname">num_vertices</code><em class="property"> = None</em><a class="headerlink" href="#Graphs.Graph.num_vertices" title="Permalink to this definition">¶</a></dt>
+<dd><p>(int)                            -    Number of vertices.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="Graphs.Graph.read_adjacency">
+<em class="property">static </em><code class="descname">read_adjacency</code><span class="sig-paren">(</span><em>fname</em>, <em>format</em><span class="sig-paren">)</span><a class="headerlink" href="#Graphs.Graph.read_adjacency" title="Permalink to this definition">¶</a></dt>
+<dd><p>It reads and returns the adjacency matrix as it is encoded in a file with predefined format.</p>
+<dl class="docutils">
+<dt>Input:    </dt>
+<dd><p class="first">fname  - (String) The filename of the file holding the adjacency.</p>
+<p>format - (String - optional) The type of encoding.</p>
+<blockquote class="last">
+<div>Valid values:  &#8216;edge_list&#8217; - the simplest possible.</div></blockquote>
+</dd>
+<dt>Notes: &#8216;edjge_list&#8217; is almost identical to the &#8216;snap&#8217; graph format:</dt>
+<dd>Thus the 1st line is #nodes, the 2nd #edges, and an (a,b) in the next ones means a is connected 
+with b.</dd>
+</dl>
+<p>TODO-P: skip when see # (i.e., comments)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="Graphs.Laplacian">
+<em class="property">class </em><code class="descclassname">Graphs.</code><code class="descname">Laplacian</code><span class="sig-paren">(</span><em>in_graph</em>, <em>laplacian_type</em><span class="sig-paren">)</span><a class="headerlink" href="#Graphs.Laplacian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref mat mat-class docutils literal"><span class="pre">Users.optas.Documents.Git_Repos.FmapLib.src..Basis</span></code></p>
+<dl class="docutils">
+<dt>Input:</dt>
+<dd><p class="first">in_graph         - (Graph)  Graph over which the Laplacian is defined.</p>
+<dl class="last docutils">
+<dt>laplacian_type   - (String) Describes the desired type of laplacian.</dt>
+<dd><dl class="first last docutils">
+<dt>Valid values:   </dt>
+<dd>&#8216;comb&#8217; - Combinatorial (unormalized) Laplacian.
+&#8216;norm&#8217; - Symmetric Normalized Laplacian.
+&#8216;sign&#8217; - Signless Laplacian.</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>Output:</dt>
+<dd>obj             -  (Laplacian) object.</dd>
+</dl>
+<dl class="attribute">
+<dt id="Graphs.Laplacian.G">
+<code class="descname">G</code><em class="property"> = None</em><a class="headerlink" href="#Graphs.Laplacian.G" title="Permalink to this definition">¶</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Graphs.Laplacian.L">
+<code class="descname">L</code><em class="property"> = None</em><a class="headerlink" href="#Graphs.Laplacian.L" title="Permalink to this definition">¶</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Graphs.Laplacian.Laplacian">
+<code class="descname">Laplacian</code><span class="sig-paren">(</span><em>in_graph</em>, <em>laplacian_type</em><span class="sig-paren">)</span><a class="headerlink" href="#Graphs.Laplacian.Laplacian" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Input:</dt>
+<dd><p class="first">in_graph         - (Graph)  Graph over which the Laplacian is defined.</p>
+<dl class="last docutils">
+<dt>laplacian_type   - (String) Describes the desired type of laplacian.</dt>
+<dd><dl class="first last docutils">
+<dt>Valid values:   </dt>
+<dd>&#8216;comb&#8217; - Combinatorial (unormalized) Laplacian.
+&#8216;norm&#8217; - Symmetric Normalized Laplacian.
+&#8216;sign&#8217; - Signless Laplacian.</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>Output:</dt>
+<dd>obj             -  (Laplacian) object.</dd>
+</dl>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="Graphs.Laplacian.adjacency_to_laplacian">
+<em class="property">static </em><code class="descname">adjacency_to_laplacian</code><span class="sig-paren">(</span><em>A</em>, <em>laplacian_type</em><span class="sig-paren">)</span><a class="headerlink" href="#Graphs.Laplacian.adjacency_to_laplacian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the laplacian matrix for a graph described by its adjacency matrix.</p>
+<dl class="docutils">
+<dt>Input:    A                - (n x n) Adjacency matrix of a graph with n nodes.</dt>
+<dd><p class="first">laplacian_type   - (String, optional) Describes the desired type of laplacian.</p>
+<blockquote class="last">
+<div><dl class="docutils">
+<dt>Valid values:                           </dt>
+<dd>&#8216;comb&#8217; - Combinatorial (unormalized) laplacian (Default value).
+&#8216;norm&#8217; - Symmetric Normalized Laplacian.
+&#8216;sign&#8217; - Signless Laplacian.</dd>
+</dl>
+</div></blockquote>
+</dd>
+</dl>
+<p>Output:   L               - (n x n) sparse matrix of the corresponding laplacian.</p>
+<dl class="docutils">
+<dt>Notes:  </dt>
+<dd>DOI: &#8220;A Tutorial on Spectral Clustering, U von Luxburg&#8221;.</dd>
+</dl>
+<ol class="loweralpha simple" start="3">
+<li>Panos Achlioptas 2015  -  <a class="reference external" href="http://www.stanford.edu/~optas/FmapLib">http://www.stanford.edu/~optas/FmapLib</a></li>
+</ol>
+</dd></dl>
+
+<dl class="method">
+<dt id="Graphs.Laplacian.compute_spectra">
+<code class="descname">compute_spectra</code><span class="sig-paren">(</span><em>eigs_num</em><span class="sig-paren">)</span><a class="headerlink" href="#Graphs.Laplacian.compute_spectra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the smallest eigenvalues and their corresponding eigenvectors of the Laplacian matrix.
+The user should use the inherited Basis.get_spectra() function instead since that functions wrap around
+this one, and avoids unnessary computations.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="Graphs.Laplacian.project_functions">
+<code class="descname">project_functions</code><span class="sig-paren">(</span><em>eigs_num</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#Graphs.Laplacian.project_functions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Projects a set of given functions on the corresponding (small) eigenfunctions of the Laplacian.
+Each Laplacian eigenfunction has obj.G.num_vertices dimensions. I.e., as many as the vertices of its 
+corresponding Graph.</p>
+<dl class="docutils">
+<dt>Input:</dt>
+<dd><p class="first">eigs_num    -  (int) number of basis functions to be used in the projection.</p>
+<dl class="last docutils">
+<dt>varargin{i} -  (num_vertices, k{i}) A matrix capturing k{i} functions that will be projected </dt>
+<dd>on the LB. Each function is a column this matrix.</dd>
+</dl>
+</dd>
+<dt>Output: </dt>
+<dd><dl class="first last docutils">
+<dt>Proj        - [sum(k{i}), eigs_num] Matrix carrying the projections of all the functions</dt>
+<dd>given in matrices in the varargin (thus sum(k{i}) where i=1:num_varargin ) such 
+functions will be outputted. Each one has eigs_num dimensions.</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Graphs.Laplacian.type">
+<code class="descname">type</code><em class="property"> = None</em><a class="headerlink" href="#Graphs.Laplacian.type" title="Permalink to this definition">¶</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference internal" href="mat-modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to FmapLib&#8217;s documentation!</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2015, Achlioptas P., Corman E. and Guibas L..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.6</a>
+      
+      |
+      <a href="_sources/index.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

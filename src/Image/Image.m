@@ -4,10 +4,10 @@ classdef Image < dynamicprops
     % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
-        % Basic properties that every instance of the Image class has.                
+        % Basic properties that every instance of the Image class has.
         
         CData          %   (height x weight) or (height x weight x 3) matrix capturing the image's color data. This
-                       %   property plays identical role as the CData property of the 'matlab.graphics.primitive.Image'
+                       %   property has an identical role as the CData property of the 'matlab.graphics.primitive.Image'
                        %   class.
         height         %   (int)     -    Number of vertical pixels.
         weight         %   (int)     -    Number of horizontal pixels.
@@ -24,11 +24,11 @@ classdef Image < dynamicprops
                     error('Image constructor, stores image matrices and expects at least a 2D matrix as input.')
                 end
                 obj.CData = imread(varargin{1});
-            else % Directly provide the matrix of with the pixel conentent.
+            else % Directly provide the matrix with the pixel conntent.
                 obj.CData = varargin{1};                
             end
-            [obj.height, obj.weight, ~] = size(obj.CData);                        
-            if nargin > 1 && ischar(varargin{end})
+            [obj.height, obj.weight, ~] = size(obj.CData);
+            if nargin > 1 && ischar(varargin{end}) % Add potential name of picture.
                 obj.name = varargin{end};
             else
                 obj.name = '';

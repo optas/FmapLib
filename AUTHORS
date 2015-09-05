@@ -17,14 +17,20 @@ Papers Referenced:
 "Functional Maps: A Flexible Representation of Maps Between Shapes", by M. Ovsjanikov, M. Ben-Chen, J. Solomon 
 A Butscher and Leonidas Guibas, in (SIGGRAPH), 2012.
 
+"Analysis and Visualization of Maps Between Shapes",  by M. Ovsjanikov, M. Ben-Chen, F. Chazal and L. Guibas, 
+in Computer Graphics Forum, 2013.
+
+"Image Co-segmentation via Consistent Functional Maps", by F. Wang, Q. Huang, and L. J. Guibas,
+in Computer Vision (ICCV), 2013 IEEE International Conference on, 2013.
+
 "Unsupervised Multi-Class Joint Image Segmentation", by F. Wang, Q. Huang, M. Ovsjanikov and L. J. Guibas,
 in The IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2014.
 
 "Functional Map Networks for Analyzing and Exploring Large Shape Collections", by Q. Huang, F. Wang and L. Guibas,
 in ACM Trans. Graph. (TOG), 2014.
 
-"Image Co-segmentation via Consistent Functional Maps", by F. Wang, Q. Huang, and L. J. Guibas,
-in Computer Vision (ICCV), 2013 IEEE International Conference on, 2013.
+"Map-Based Exploration of Intrinsic Shape Differences and Variability" add_content
+R. M. Rustamov, M. Ovsjanikov, O. Azencot, M. Ben-Chen, F. Chazal and Leonidas Guibas
 
 ------------------------------
 --- Mesh Feature Centric ---
