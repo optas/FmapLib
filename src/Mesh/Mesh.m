@@ -91,6 +91,29 @@ classdef Mesh < dynamicprops
             expanded_vertices = obj.vertices + normal_dist * normal_dirs;
             M = Mesh(expanded_vertices, obj.triangles);
         end
+        
+        function [B] = bounding_box(obj)
+            % Returns the box (i.e., rectangular cuboid) that tangentially encloses the mesh.
+            % Output:   
+            %           B  -  (8 x 3) 3D coordinates of the 8 corners of the cuboid. 
+            %           TODO - P: explain orientation            
+            
+            mins = min(obj.vertices);
+            maxs = max(obj.vertices);
+            B = [mins; ...
+                 maxs(1), mins(2), mins(3);  maxs(1), maxs(2), mins(3);  mins(1), maxs(2), mins(3); ...                    
+                 mins(1), mins(2), maxs(3); ...
+                 maxs(1), mins(2), maxs(3);  maxs(1), maxs(2), maxs(3);  mins(1), maxs(2), maxs(3)]; 
+
+%             faces = [1,2,3,4; 1,2,5,6; 1,4,5,8; 2,3,6,7; 3,4,7,8; 5,6,7,8]'
+        end
+        
+        function d = max_euclidean_distance(obj)
+            % Returns the distance of the longest straight line connecting two vertices of the mesh.
+            B = obj.bounding_box();
+            d = max(pdist(B));
+        end
+        
 
     end
 
@@ -397,6 +420,9 @@ classdef Mesh < dynamicprops
         end
         
     end
+    
+    
+    
     
     methods (Static, Access = private)
         % Functions used only internally from other functions of this class.

@@ -366,7 +366,35 @@ classdef Mesh_Features < dynamicprops
             assert(length(E) == nsamples)
         end
         
+%         function [signatues] = mesh_saliency(vertices, mean_curvature, sigma)            
+%             
+%             params_.scale      = 0.003;
+%             epsilon            = params_.scale * sqrt(sum((min(Mesh.v)-max(Mesh.v)).^2));
+%             params_.windowSize = 0.33 * sqrt(sum((min(Mesh.v)-max(Mesh.v)).^2));
+%             
+%             all_pair_dist = pdist2(vertices, vertices);
+%             
+%             suppressedLevelSaliency = {};
+%             for level = 1:5
+%                 sigma = round((level+1) * epsilon, 6);
+%                 levelSaliency = centerSurround(Mesh, curvature, sigma);
+%                 suppressedLevelSaliency{level} = nonlinearSuppression(Mesh, levelSaliency, sigma);
+%             end
+% 
+%             meshSaliency = sum(cat(2,suppressedLevelSaliency{:}),2);
+%             
+%         end
         
+        function [F] = gaussian_weighted_average(vertex_function, distances, sigma, cut_off)
+            if nargin == 3
+                cut_off = 2 * sigma;
+            end
+            gauss_kernel = exp(-0.5 .* (distances./sigma).^2);
+            gauss_kernel(distances >= cut_off) = 0;                    
+            F = sum((repmat(vertex_function', [size(gauss_kernel, 1) 1]) .* gauss_kernel), 2) ./ sum(gauss_kernel, 2);            
+        end
+        
+
         function [signatures] = global_point_signature(evecs, evals)
             % Raif's embedding.
             % Requires a discrete approximation of area-weighted cotanget Laplacian . Not a graphical one.

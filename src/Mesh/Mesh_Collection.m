@@ -26,7 +26,7 @@ classdef Mesh_Collection < dynamicprops
             %
             % Notes: TODO-P describe format of attributes file
             
-            if nargin == 0                
+            if nargin == 0                 
                 % Construct an empty Mesh_Collection.
                 obj.name = '';
                 obj.meshes = containers.Map;                            

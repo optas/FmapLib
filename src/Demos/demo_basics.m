@@ -8,7 +8,7 @@ close all; clear all; clc;
 meshfile       = '../data/input/tosca_small/michael1.off';
 mesh1          = Mesh(meshfile, 'mike1');
 mesh1.set_default_vertex_areas('barycentric');              % Associate an area with each vertex via the 'barycentric' rule.
-                          
+
 %  Load mesh 2.
 meshfile       = '../data/input/tosca_small/michael2.off';
 mesh2          = Mesh(meshfile, 'mike2');  
