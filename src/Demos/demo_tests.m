@@ -1,5 +1,5 @@
 %%
-%%   Script for dirty tests (to be deleted).
+%%    Script for dirty tests (to be deleted).
 %%
  
 [dp, sp] = get_project_paths('FmapLib');
