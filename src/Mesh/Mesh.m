@@ -63,13 +63,12 @@ classdef Mesh < dynamicprops
             end           
         end
         
-        function [F] = plot(this, vertex_function)
-            F = figure; 
-            
+        function [h] = plot(this, vertex_function)
+            figure; hold;
             if ~exist('vertex_function', 'var')                
-                trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3));                
+                h = trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3));                
             else                
-                trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function, 'EdgeColor', 'none');                                                
+                h = trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function, 'EdgeColor', 'none');                                                
 
 %                 vertex_function - mean(vertex_function)
 %                 patch('Faces', this.triangles, 'Vertices', this.vertices, 'FaceColor', 'interp', 'FaceVertexCData', vertex_function, 'EdgeColor', 'none');                               
@@ -81,8 +80,7 @@ classdef Mesh < dynamicprops
 %             cameratoolbar; cameratoolbar('SetCoordSys','none');
 %             hold on
         end
-        
-       
+               
         function [M] = normal_expanding_mesh(obj, normal_dist, normal_dirs)
             if any(size(normal_dirs) ~= [obj.num_vertices, 3])
                 error('')
@@ -105,16 +103,19 @@ classdef Mesh < dynamicprops
                  mins(1), mins(2), maxs(3); ...
                  maxs(1), mins(2), maxs(3);  maxs(1), maxs(2), maxs(3);  mins(1), maxs(2), maxs(3)]; 
 
-%             faces = [1,2,3,4; 1,2,5,6; 1,4,5,8; 2,3,6,7; 3,4,7,8; 5,6,7,8]'
+            assert(max(pdist(B)) == obj.max_euclidean_distance())
+            
+            % TODO-E plot it.
+            %             faces = [1,2,3,4; 1,2,5,6; 1,4,5,8; 2,3,6,7; 3,4,7,8; 5,6,7,8]'
+        
         end
         
         function d = max_euclidean_distance(obj)
-            % Returns the distance of the longest straight line connecting two vertices of the mesh.
-            B = obj.bounding_box();
-            d = max(pdist(B));
+            % Returns the distance of the longest straight line connecting two vertices of the mesh.            
+            d = sqrt(sum((min(obj.vertices)-max(obj.vertices)).^2));
         end
         
-
+        
     end
 
     methods (Access = public)        
