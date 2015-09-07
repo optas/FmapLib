@@ -35,13 +35,20 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.pngmath',
     'sphinx.ext.ifconfig',
+    'sphinxcontrib.napoleon',
     'sphinxcontrib.matlab',
-    'sphinx.ext.autodoc',
-]
+    ]
+
+#'sphinx.ext.extlinks',
+# 'sphinx.ext.autosummary']
+
 # Matlab related directives
 matlab_src_dir = '/Users/optas/Documents/Git_Repos/FmapLib/src/'
 primary_domain = 'mat'
-autoclass_content = 'init'
+autoclass_content = 'both'
+autodoc_member_order = 'bysource'
+
+autosummary_generate = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['.templates']
