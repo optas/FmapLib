@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # FmapLib documentation build configuration file, created by
-# sphinx-quickstart on Sun Sep  6 20:41:41 2015.
+# sphinx-quickstart on Mon Sep  7 00:32:26 2015.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -33,10 +33,11 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
+    'sphinx.ext.pngmath',
+    'sphinx.ext.ifconfig',
+    'sphinx.ext.autosummary',
     'sphinxcontrib.matlab',
     'sphinxcontrib.napoleon',
-    'sphinx.ext.autosummary'
 ]
 
 # Matlab related directives
@@ -45,6 +46,7 @@ primary_domain = 'mat'
 autoclass_content = 'both'
 autodoc_member_order = 'bysource'
 #autosummary_generate = True
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['.templates']
