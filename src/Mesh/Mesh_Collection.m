@@ -64,7 +64,7 @@ classdef Mesh_Collection < dynamicprops
             end
                      
             function [mesh_name] = extract_mesh_name(full_path)                
-                path_substrings = strsplit(full_path, '/');   % TODO: use separator of current system.
+                path_substrings = strsplit(full_path, filesep); 
                 last_word = path_substrings{end};
                 mesh_name = last_word(1:end-4);               % Relying on the fact that length('.off') == length('.obj') == 4.                                                               
             end                                 

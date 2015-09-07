@@ -42,6 +42,19 @@ classdef Image < dynamicprops
         function [b] = is_rgb(obj)
             b = ndims(obj.CData) == 3;
         end        
+        
+        function [obj] = set_gt_segmentation(obj, segmentation)
+            % Adds dynamic property 'gt_segmentation' corresponding to a groundtruth segmentation of the image.
+            
+            propname = 'gt_segmentation';
+            if isprop(obj, propname)
+                obj.(propname) = segmentation;
+            else
+                obj.addprop(propname);
+                obj.(propname) = segmentation;
+            end
+        end
+        
     end
     
 end

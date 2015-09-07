@@ -1,34 +1,44 @@
 clr;
 gitdir;
 [dp, cp] = get_project_paths('ImageJointUnderstanding');
-
+               
 %% Load the image collection.
 
 image_folder = [dp 'Rubinstein_CVPR_13/Data/Airplane100/'];
+all_image_files = rdir([image_folder, [filesep '**' filesep]], 'regexp(name, ''\.jpg$'')');                
+images = cell(length(all_image_files), 1);
+for i=1:length(images)
+    full_path       = all_image_files(i).name;
+    path_substrings = strsplit(full_path, filesep); 
+    last_word       = path_substrings{end};
+    image_name      = last_word(1:end-4);               % Relying on the fact that length('.jpg') == length('.obj') == 4.                                                               
+    images{i}       = Image(full_path, image_name);    
+    gt              = [image_folder 'GroundTruth/' image_name '.png'];
+    images{i}.set_gt_segmentation(imread(gt));    
+end
+
+%% Create image graphs and their Laplacians
+image_graphs = containers.Map;
+for i = 1:length(images)
+    im_dims = sprintf('%d_%d',images{i}.height, images{i}.weight);
+    if ~ image_graphs.isKey(im_dims)                       
+        image_graphs(im_dims) = Laplacian(Image_Graph(images{i}, 'lattice'), 'norm');
+    end    
+end
+
+%%
+for im = image_graphs.values()
+    im{:}.get_spectra(2)
+end
 
 
+%%
 param.imageSize = [256 256];
 param.orientationsPerScale = [8 8 8 8];
 param.numberBlocks = 4;
 param.fc_prefilt = 4;
 
 LMgist(image_folder, '', param, image_folder)
-
-
-
-
-
-%%
-all_image_files = rdir([image_folder, [filesep '**' filesep]], 'regexp(name, ''\.jpg$'')');                
-images = cell(length(all_image_files), 1);
-for i=1:length(images)
-    images{i}       = Image(all_image_files(i).name);
-end
-
-
-%%
-gts_folder   = [image_folder 'GroundTruth/'];
-gts          = load_images(gts_folder  , 'png');
 
 
 %% Find gist-nearest neighbors per image.
