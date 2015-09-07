@@ -10,9 +10,9 @@ Contents:
 Basis Class
 ---------------
 
-.. automodule:: test_doc
+.. automodule:: doc_test
 
-.. autoclass:: Basis_test
+.. autoclass:: doc_testing
     :show-inheritance:
     :members:
 

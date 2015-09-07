@@ -3,6 +3,7 @@ classdef doc_testing < handle & my.super.Class
     %
     % Summary 
     % .. autosummary::
+    % get_x
     %
     % Contents
                                                                       
@@ -13,9 +14,12 @@ classdef doc_testing < handle & my.super.Class
     
     methods
         function h = doc_testing(x)
+            % lala
+            %
             h.x = x
         end
-        function x = get.x(obj)
+        
+        function x = get_x(obj)
         % how is this displayed?
             x = obj.x
         end
@@ -23,11 +27,14 @@ classdef doc_testing < handle & my.super.Class
     
     methods (Static)
         function w = my_static_function(z)
+
         % A static function in 
         %
-        % :param int z: input z
-        % :return: w
-        % :rtype: Laplace_Beltrami
+        % Args:
+        %       z (int): The path of the file to wrap        
+        %
+        % Returns:
+        %       w (Laplce_Beltrami): A buffered writable file descriptor
 
             w = z
         end
