@@ -18,10 +18,11 @@ function [data_path, code_path] = get_project_paths(project_name)
     if strcmp(name(1:end-1), 'optasMacPro')        
         if strcmp(project_name, 'FmapLib')
             data_path = '/Users/optas/Documents/Git_Repos/FmapLib/data/';
-            code_path = '/Users/optas/Documents/Git_Repos/FmapLib/src/Extrernal_Code';
+            code_path = '/Users/optas/Documents/Git_Repos/FmapLib/src/External_Code/';
+        
         elseif strcmp(project_name, 'ImageJointUnderstanding')
-            data_path = '/Users/optas/Dropbox/with_others/Zimo - Peter - Panos/Joint_Image_Understanding/Data/';
-            code_path = '/Users/optas/Dropbox/matlab_projects/External_Packages/';            
+            data_path = '/Users/optas/Dropbox/With_others/Zimo_Peter_Panos/Joint_Image_Understanding/Data/';
+            code_path = '/Users/optas/Dropbox/matlab_projects/External_Packages/';
         end
         
     elseif strcmp(name(1:end-1), 'Ettiene_pc_name')
@@ -33,7 +34,7 @@ function [data_path, code_path] = get_project_paths(project_name)
     end
         
     if isempty(data_path)
-        error('Unknown Project');
+        error('Unknown Project.');
     end
     
 end

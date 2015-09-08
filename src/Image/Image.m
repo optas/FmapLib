@@ -35,6 +35,10 @@ classdef Image < dynamicprops
             end                           
         end
         
+        function [s] = size(obj)
+            s = size(obj.CData);
+        end
+        
         function [h] = plot(obj)
             h = image(obj.CData);
         end

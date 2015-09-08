@@ -12,7 +12,7 @@ Basis Class
 
 .. automodule:: doc_test
 
-.. autoclass:: doc_testing
+.. autoclass:: doc_testing_etienne
     :show-inheritance:
     :members:
 
