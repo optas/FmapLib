@@ -1,15 +1,16 @@
-classdef Laplace_Beltrami < dynamicprops
+classdef Laplace_Beltrami < Basis
     % A class representing the cotangent discretization of the Laplace Beltrami operator, associated with a given
     % object of the class Mesh.
+    %
+    % (c) Achlioptas, Corman, Guibas - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
         M;               % (Mesh) Associated Mesh of LB.        
         W;               % (M.num_vertices x M.num_vertices) Sparse weight matrix of cotangent Laplacian.                
-        A;               % (M.num_vertices, 1) The areas associated with the vertices of the M.
-        spectra;         % A struct carrying the eigenvalues and eigenvectors of the LB.
+        A;               % (M.num_vertices, 1) The areas associated with the vertices of the M.        
     end
     
-    methods            
+    methods (Access = public)          
         function obj = Laplace_Beltrami(in_mesh, vertex_areas)
             % Class constructor.
             % Input:            
@@ -21,11 +22,11 @@ classdef Laplace_Beltrami < dynamicprops
             % Output:
             %           obj             -  (Laplace_Beltrami) object.
             
+            obj@Basis();
             if nargin == 0                                               
                 obj.M = Mesh();          
                 obj.W = [];
-                obj.A = [];
-                obj.spectra = struct();                                
+                obj.A = [];                
             else
                 obj.M       = in_mesh;
                 
@@ -43,50 +44,54 @@ classdef Laplace_Beltrami < dynamicprops
                     error ('The areas of the vertices provided are not strictly positive.');
                 elseif obj.M.num_vertices ~= length(vertex_areas)
                     error ('The number of vertex areas provided is not identical to the number of the mesh vertices.');
-                end
-                
-                obj.A = spdiags(vertex_areas, 0, length(vertex_areas), length(vertex_areas)); 
-                obj.spectra.evals = 0; obj.spectra.evecs = [];
-            end
-        end
-                
-        function [evals, evecs] = get_spectra(obj, eigs_num)
-            % Computes the eigenvectors corresponding to the smallest eigenvalues of the Laplace Beltremi operator. 
-            % It stores the results in the spectra property of the LB object (obj.spectra). It also, automatically reuses 
-            % the previously computed ones when this is doable, instead of computing them from the scratch.
-            %
-            % Input:
-            %           eigs_num    -   (int) number of eigenvector-eigenvalue pairs to be computed. This must be
-            %                           smaller than the number of vertices of the associated Mesh.
-            %
-            % Output:
-            %           evals       -   ()
-            %           evecs       -   ()
-            
-            % The requested number of eigenvalues is larger than what has been previously calculated.
-            if length(obj.spectra.evals) < eigs_num      
-                [evecs, evals] = Laplace_Beltrami.compute_spectra(obj.W, obj.A, eigs_num);                
-                obj.spectra = struct('evals', evals, 'evecs', evecs);  % Store new spectra.
-           
-            else                                         % Use previously computed spectra.
-                evals = obj.spectra.evals;
-                evals = evals(1:eigs_num);                
-                evecs = obj.spectra.evecs;
-                evecs = evecs(:, 1:eigs_num);
+                end                
+                obj.A = spdiags(vertex_areas, 0, length(vertex_areas), length(vertex_areas));                 
             end
         end
         
-        function [E] = evecs(obj, eigs_num)
-            % 'Convenience function'.
-            %  Returns only the eigenvectors of the LB. (see get_spectra()).
-            [~, E] = obj.get_spectra(eigs_num);
-        end
         
-        function [E] = evals(obj, eigs_num)
-            % 'Convenience function'.
-            %  Returns only the eigenvectors of the LB. (see get_spectra()).
-            [E, ~] = obj.get_spectra(eigs_num);
-        end
+%         function [evals, evecs] = get_spectra(obj, eigs_num)
+%             % Computes the eigenvectors corresponding to the smallest eigenvalues of the Laplace Beltremi operator. 
+%             % It stores the results in the spectra property of the LB object (obj.spectra). It also, automatically reuses 
+%             % the previously computed ones when this is doable, instead of computing them from the scratch.
+%             %
+%             % Input:
+%             %           eigs_num    -   (int) number of eigenvector-eigenvalue pairs to be computed. This must be
+%             %                           smaller than the number of vertices of the associated Mesh.
+%             %
+%             % Output:
+%             %           evals       -   ()
+%             %           evecs       -   ()
+%             
+%             % The requested number of eigenvalues is larger than what has been previously calculated.
+%             if length(obj.spectra.evals) < eigs_num      
+%                 [evecs, evals] = Laplace_Beltrami.compute_spectra(obj.W, obj.A, eigs_num);                
+%                 obj.spectra = struct('evals', evals, 'evecs', evecs);  % Store new spectra.
+%            
+%             else                                         % Use previously computed spectra.
+%                 evals = obj.spectra.evals;
+%                 evals = evals(1:eigs_num);                
+%                 evecs = obj.spectra.evecs;
+%                 evecs = evecs(:, 1:eigs_num);
+%             end
+%         end
+%         
+%         function [E] = evecs(obj, eigs_num)
+%             % 'Convenience function'.
+%             %  Returns only the eigenvectors of the LB. (see get_spectra()).
+%             [~, E] = obj.get_spectra(eigs_num);
+%         end
+%         
+%         function [E] = evals(obj, eigs_num)
+%             % 'Convenience function'.
+%             %  Returns only the eigenvectors of the LB. (see get_spectra()).
+%             [E, ~] = obj.get_spectra(eigs_num);
+%         end
+
+%         function [R] = synthesize_functions(obj, coeffs)
+%             eigs_num = size(coeffs, 1);            
+%             R = obj.evecs(eigs_num) * coeffs;            
+%         end
                 
         function [Proj] = project_functions(obj, eigs_num, varargin)
             %   Projects a set of given functions on the corresponding eigenfunctions of the Laplace Beltrami
@@ -134,13 +139,40 @@ classdef Laplace_Beltrami < dynamicprops
             end            
         end
         
-        function [R] = synthesize_functions(obj, coeffs)
-            eigs_num = size(coeffs, 1);            
-            R = obj.evecs(eigs_num) * coeffs;            
+    end % End of public object-tied functions.
+    
+    
+    methods (Access = public, Hidden = true)
+        
+        function [Phi, lambda] = compute_spectra(obj, eigs_num)
+            % Returns the eigenvalues and the eigenvectors associated with the mesh and its cotangent-LB scheme.
+
+            if eigs_num < 1 || eigs_num > size(obj.W, 1) - 1;
+                error('Eigenvalues must be in range of [1, num_of_vertices-1].');
+            end            
+                        
+            sigma = -1e-5; % TODO-V: sigma=0 or 'SM'?
+            [Phi, lambda] = eigs(obj.W, obj.A, eigs_num, sigma);
+            lambda        = diag(lambda);
+            
+            if ~isreal(Phi) || ~isreal(lambda)
+                error ('Input Mesh leads to an LB operator that has not real spectra.')
+            end            
+            if sum(lambda < 0) > 1                
+                warning ('More than one *negative* eigenvalue were produced. LB is PSD and only the 1st eigenvalue is expected to potentially be smaller than zero (instead of exactly zero).')
+            end            
+            atol = 1e-08; rtol = +Inf;            
+            if ~all_close(Phi' * obj.A * Phi, eye(eigs_num), atol, rtol) 
+                error ('The produced eigenvectors are not orthogonal wrt. the Inner Product defined by the vertex areas.')
+            end
+  
+            lambda        = abs(lambda);
+            [lambda, idx] = sort(lambda);
+            Phi           = Phi(:, idx);                        
         end
-        
-        
-    end % object defined methods.
+    end
+    
+    
     
     methods (Static)
         
@@ -172,34 +204,6 @@ classdef Laplace_Beltrami < dynamicprops
                 assert(isequal(W, W'))                
         end
         
-        function [Phi, lambda] = compute_spectra(W, vertex_areas, eigs_num)
-            % Returns the eigenvalues and the eigenvectors associated with a mesh and its W-vertex_ares. (TODO:P add explanations)            
-            % TODO-P if vertex_ares == ones(), solve the simpler eigenvalue problem directly.
-            
-            if eigs_num < 1 || eigs_num > size(W, 1)-1;
-                error('Eigenvalues must be in range of [1, num_of_vertices-1].');
-            end            
-                        
-            sigma = -1e-5; % TODO-V: sigma=0 or 'SM'?
-            [Phi, lambda] = eigs(W, vertex_areas, eigs_num, sigma);
-            lambda        = diag(lambda);
-            
-            if ~isreal(Phi) || ~isreal(lambda)
-                error ('Input Mesh leads to an LB operator that has not real spectra.')
-            end            
-            if sum(lambda < 0) > 1                
-                warning ('More than one *negative* eigenvalue were produced. LB is PSD and only the 1st eigenvalue is expected to potentially be smaller than zero (instead of exactly zero).')
-            end            
-            atol = 1e-08; rtol = +Inf;            
-            if ~all_close(Phi' * vertex_areas * Phi, eye(eigs_num), atol, rtol) 
-                error ('The produced eigenvectors are not orthogonal wrt. the Inner Product defined by the vertex areas.')
-            end
-  
-            lambda        = abs(lambda);
-            [lambda, idx] = sort(lambda);
-            Phi           = Phi(:,idx);                        
-        end
-            
     end
     
 end

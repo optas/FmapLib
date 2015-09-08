@@ -1,6 +1,8 @@
 classdef Mesh < dynamicprops
     % This class represents a triangular Mesh of a 3D surface. It is equipped with a variety of related functions 
-    % mostly of geometric nature.
+    % mostly of geometric nature.    
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Mesh class has.        
@@ -9,7 +11,7 @@ classdef Mesh < dynamicprops
         vertices        %   (num_vertices  x 3)  -    Array containing the 3D coordinates of each vertex of the mesh.
         triangles       %   (num_triangles x 3)  -    Array containing for each triangle the index of its 3 vertices.
                         %                             The indices refer to positions in the array 'vertices'.
-        name = ''       %   (string)             -    (default = '') A string identifying the mesh, e.g., 'Happy_Dragon'.
+        name            %   (string)             -    (default = '') A string identifying the mesh, e.g., 'Happy_Dragon'.
     end
     
     methods (Access = public)
@@ -61,13 +63,12 @@ classdef Mesh < dynamicprops
             end           
         end
         
-        function [F] = plot(this, vertex_function)
-            F = figure; 
-            
+        function [h] = plot(this, vertex_function)
+            figure; hold;
             if ~exist('vertex_function', 'var')                
-                trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3));                
+                h = trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3));                
             else                
-                trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function, 'EdgeColor', 'none');                                                
+                h = trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function, 'EdgeColor', 'none');                                                
 
 %                 vertex_function - mean(vertex_function)
 %                 patch('Faces', this.triangles, 'Vertices', this.vertices, 'FaceColor', 'interp', 'FaceVertexCData', vertex_function, 'EdgeColor', 'none');                               
@@ -79,8 +80,7 @@ classdef Mesh < dynamicprops
 %             cameratoolbar; cameratoolbar('SetCoordSys','none');
 %             hold on
         end
-        
-       
+               
         function [M] = normal_expanding_mesh(obj, normal_dist, normal_dirs)
             if any(size(normal_dirs) ~= [obj.num_vertices, 3])
                 error('')
@@ -89,7 +89,33 @@ classdef Mesh < dynamicprops
             expanded_vertices = obj.vertices + normal_dist * normal_dirs;
             M = Mesh(expanded_vertices, obj.triangles);
         end
+        
+        function [B] = bounding_box(obj)
+            % Returns the box (i.e., rectangular cuboid) that tangentially encloses the mesh.
+            % Output:   
+            %           B  -  (8 x 3) 3D coordinates of the 8 corners of the cuboid. 
+            %           TODO - P: explain orientation            
+            
+            mins = min(obj.vertices);
+            maxs = max(obj.vertices);
+            B = [mins; ...
+                 maxs(1), mins(2), mins(3);  maxs(1), maxs(2), mins(3);  mins(1), maxs(2), mins(3); ...                    
+                 mins(1), mins(2), maxs(3); ...
+                 maxs(1), mins(2), maxs(3);  maxs(1), maxs(2), maxs(3);  mins(1), maxs(2), maxs(3)]; 
 
+            assert(max(pdist(B)) == obj.max_euclidean_distance())
+            
+            % TODO-E plot it.
+            %             faces = [1,2,3,4; 1,2,5,6; 1,4,5,8; 2,3,6,7; 3,4,7,8; 5,6,7,8]'
+        
+        end
+        
+        function d = max_euclidean_distance(obj)
+            % Returns the distance of the longest straight line connecting two vertices of the mesh.            
+            d = sqrt(sum((min(obj.vertices)-max(obj.vertices)).^2));
+        end
+        
+        
     end
 
     methods (Access = public)        
@@ -395,6 +421,9 @@ classdef Mesh < dynamicprops
         end
         
     end
+    
+    
+    
     
     methods (Static, Access = private)
         % Functions used only internally from other functions of this class.

@@ -6,6 +6,8 @@ classdef Functional_Map < dynamicprops
     %       Shape difference operators, 
     %       Genearation of functional maps given point-to-point correspondences, 
     %       Quality evaluation of maps.
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
 
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.
@@ -205,8 +207,7 @@ classdef Functional_Map < dynamicprops
                 proj_feats = divide_columns(proj_feats, sqrt(sum(proj_feats.^2)));
             end
         end            
-        
-        
+                
         function [D] = area_difference(obj)
             if isempty(obj.fmap)
                 error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
@@ -230,10 +231,14 @@ classdef Functional_Map < dynamicprops
                 error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
             end
             
-            source_evals = obj.source_basis.evals(obj.source_neigs);
-            target_evals = obj.target_basis.evals(obj.target_neigs);
+            if isa(obj.source_basis, 'Laplace_Beltrami') && isa(obj.target_basis, 'Laplace_Beltrami') % Special easy case.                
+                source_evals = -1 * obj.source_basis.evals(obj.source_neigs);
+                target_evals = -1 * obj.target_basis.evals(obj.target_neigs);               
+                D = pinv(diag(source_evals)) * ( obj.fmap' * diag(target_evals) * obj.fmap );     
+            else                                                                                      % Generic case for any basis.
+                error('Not implemented yet');                
+            end
             
-            D = pinv(diag(source_evals)) * ( obj.fmap' * diag(target_evals) * obj.fmap );     
 
 %             target_evecs = obj.target_basis.evecs(obj.target_neigs);
 %             target_inner_prod = target_evecs' * laplace_beltrami.W * target_evecs;  
@@ -639,6 +644,18 @@ classdef Functional_Map < dynamicprops
             cvx_end      
             val = cvx_optval;   
         end
+        
+        function X = l2_regularized_map(F, G, lambda)
+            % Computes a map matrix by solving:
+            %   X = argmin ||XF-G||_2^2 + lambda^2 * ||X||_fro^2
+
+            % Again, XF = G <--> F'X' = G'.  We augment with lambda * identity to get Tikhonov regularization.
+            % Panos obsersvation: huge ammount of memory is required.
+            lhs = [ F'; lambda * speye(size(F', 2)) ];
+            rhs = [ G'; sparse(size(F', 2), size(G', 2)) ];
+            X   = (lhs\rhs)';
+        end
+        
                 
     end % Static.
 end % ClassDef.

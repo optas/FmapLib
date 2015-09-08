@@ -1,3 +1,68 @@
+%%
+%%    Script for dirty tests (to be deleted).
+%%
+ 
+[dp, sp] = get_project_paths('FmapLib');
+
+%  Load mesh 1.
+meshfile       = [dp '/input/tosca_small/michael1.off'];
+mesh1          = Mesh(meshfile, 'mike1');
+mesh1.set_default_vertex_areas('barycentric');              % Associate an area with each vertex via the 'barycentric' rule.
+
+% Compute a basis for functions defined on the mesh vertices (Laplace Beltrami).
+LB1            = Laplace_Beltrami(mesh1);                   % Uses the cotangent scheme for the laplacian discretisation.
+
+% Generate functions over the mesh vertices.
+feats1         = Mesh_Features(mesh1, LB1);                 % Mesh node features.
+
+% Parameters for the function generation.
+hks_samples    = 0;                                        % Feature dimensions.
+wks_samples    = 0; 
+mc_samples     = 2; 
+gc_samples     = 0;
+neigs          = 50;                                        % LB eigenvecs to be used.
+
+feats1.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
+
+%% Preparing mesh saliency
+top_k = 30;
+[ids, dists]     = knnsearch(mesh1.vertices, mesh1.vertices, 'K', top_k + 1);
+neighborhoods.distances = dists;
+neighborhoods.ids       = ids; 
+
+vertex_function = feats1.F(:,2);
+
+sigma = 2 * 0.003  * mesh1.max_euclidean_distance();
+cut_off = 2 * sigma;
+
+F1 = Mesh_Features.gaussian_weighted_average(vertex_function, neighborhoods, sigma, cut_off);
+
+sigma = 2 * sigma ; 
+cut_off = 2 * sigma;
+F2 = Mesh_Features.gaussian_weighted_average(vertex_function, neighborhoods, sigma, cut_off);
+%%
+
+F = abs(F1 - F2);
+mesh1.plot(vertex_function)
+mesh1.plot(F);
+mean(F-vertex_function)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 %% Load two Meshes and compute the F-map.
     num_eigs       = 15;
     wks_samples    = 15;

@@ -1,22 +1,23 @@
 FmapLib -- An efficient implementation of the Functional Map Framework
-=======================================================================
+===========================================================================
 
-FmapLib is an efficient Matlab implementation of the Functional Map 
-Framework, introduced initially in the seminal paper “Functional maps: a flexible representation of maps between shapes” by M. Ovsjanikov, M. Ben-Chen, J Solomon, A. Butscher & L. Guibas. SIGGRAPH 2012.
+FmapLib is an efficient Matlab implementation of the Functional Map Framework, which 
+was introduced in the seminal paper “Functional maps: a flexible representation
+of maps between shapes” by M. Ovsjanikov, et al. in SIGGRAPH 2012.
 
-The framework contains several classes _add_content. 
-For more information and documentation, please take a look at the website
-_add_website.
+The implementation follows the Object Oriented Programming paradigm and it provides a big arsenal of object representations. These include: Images, 3D Meshes, and Graphs along with Basis elements like those stemming from the graph Laplacian or the mesh's Laplace Beltrami operator.
 
-FmapLib is free software, you can redistribute it and/or modify it
-under the terms of the GNU General Public License, version 3 or
-above. See LICENSE for details.
+This way, one can infer and manipulate Functional Maps, among all the modalities that have currently been explored in the literature in a straightforward way.
 
-This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+For more information and documentation, please take a look at the website 
+                        www.fmaplib.org
+
+FmapLib is free software, you can redistribute it and/or modify it under the terms of
+the GNU General Public License, version 3 or above. See LICENSE for details.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 
 Reporting Bugs
 ==============
-Please contact optas@stanford.edu for any bugs or unexpected behavior you may eexperience. 
+Please contact optas@stanford.edu for any bugs or unexpected behavior you may experience. 

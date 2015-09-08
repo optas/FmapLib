@@ -1,6 +1,8 @@
 classdef Mesh_Collection < dynamicprops
     % A class offering a variety of utilities for collecting, maintaining and experimenting with collections of 
     % Triangular Meshes.
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
         
     properties               % Each Mesh_Collection object has at least the following properties.        
         name                 % (String)            -   (default = '') A string identifying the collection i.e., 'Tosca'.    
@@ -24,7 +26,7 @@ classdef Mesh_Collection < dynamicprops
             %
             % Notes: TODO-P describe format of attributes file
             
-            if nargin == 0                
+            if nargin == 0                 
                 % Construct an empty Mesh_Collection.
                 obj.name = '';
                 obj.meshes = containers.Map;                            
@@ -62,7 +64,7 @@ classdef Mesh_Collection < dynamicprops
             end
                      
             function [mesh_name] = extract_mesh_name(full_path)                
-                path_substrings = strsplit(full_path, '/');   % TODO: use separator of current system.
+                path_substrings = strsplit(full_path, filesep); 
                 last_word = path_substrings{end};
                 mesh_name = last_word(1:end-4);               % Relying on the fact that length('.off') == length('.obj') == 4.                                                               
             end                                 

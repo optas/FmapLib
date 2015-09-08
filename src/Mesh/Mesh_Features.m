@@ -5,6 +5,8 @@ classdef Mesh_Features < dynamicprops
     %     the Heat Kernel Signature,
     %     the Multi-scale Gaussian Curvature,
     %     the Multi-scale Mean Curvature.
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
         % Each Mesh_Feature object has at least the following properties.
@@ -101,6 +103,17 @@ classdef Mesh_Features < dynamicprops
             Mesh_Features.index_features(obj, feature_names, feat_per_category);                            
         end
         
+        function [] = append_features(obj, new_feats, feature_names, feat_per_category)
+        %   TODO - finish implementation
+            if sum(feat_per_category) ~= size(new_feats,2)
+                error('Mismatch in size of new features and sum of features per category.')
+            end            
+            obj.F = [obj.F new_feats];
+        %             obj.index = [];    % Reset index.
+        %             Mesh_Features.index_features(obj, feature_names, feat_per_category);                            
+        end
+        
+        
         function [nf] = size(obj)
             % Returns the number of features stored by the current object.
             nf = size(obj.F, 2);
@@ -139,7 +152,7 @@ classdef Mesh_Features < dynamicprops
             feats = feats - repmat(mean(feats, 2), 1, size(feats,2)) ;  % Center data.            
             C     = feats * feats';
         end
-        
+
         function obj = compute_default_feautures(obj, neigs, wks_samples, hks_samples, mc_samples, gc_samples)
             % 'Convenience' function. 
             %  Computes any of the the implemented mesh features with default parameters. 
@@ -156,6 +169,10 @@ classdef Mesh_Features < dynamicprops
             Mesh_Features.index_features(obj, feature_names, features_per_categ);
             assert(obj.size() == sum(features_per_categ));            
         end    
+        
+        function h = plot(obj)
+            h = imagesc(obj.F);
+        end
         
     end % Object's methods.
     
@@ -350,7 +367,52 @@ classdef Mesh_Features < dynamicprops
             assert(length(E) == nsamples)
         end
         
+%     function [signatues] = mesh_saliency(vertices, neighborhoods, mean_curvature)
+%     https://github.com/daeyun/saliency-for-3d-meshes
+%             params.scale       = 0.003;
+%             epsilon            = params.scale * sqrt(sum((min(vertices) - max(vertices)).^2));
+%             params.windowSize  = 0.33 * sqrt(sum((min(Mesh.v)-max(Mesh.v)).^2));
+%             suppressedLevelSaliency = {};
+%             for level = 1:5
+%                 sigma = round((level+1) * epsilon, 6);
+%                 F1 = gaussian_weighted_average(mean_curvature, neighborhoods, sigma, cut_off)            
+%                 F2 = gaussian_weighted_average(mean_curvature, neighborhoods, 2 * sigma, cut_off)            
+%                 levelSaliency = abs(F1-F2);
+%                 suppressedLevelSaliency{level} = nonlinearSuppression(Mesh, levelSaliency, sigma);            
+%                 signatures = sum(cat(2,suppressedLevelSaliency{:}),2);
+%             end                
+%         end
         
+%         function [suppressedLevelSaliency] = nonlinearSuppression(Mesh, levelSaliency, sigma)
+%             global cache_ params_;
+%             if ~isfield(cache_, 'D');
+%                 cache_.D = pdist2(Mesh.v, Mesh.v);
+%             end
+%             D = cache_.D;
+%             if ~isfield(cache_, 'avgDist');
+%                 D_ = D;
+%                 D_(D==0) = Inf;
+%                 cache_.avgMinDist = mean(min(D_,[],2));
+%             end
+%             avgMinDist = cache_.avgMinDist;
+% 
+%             levelSaliency = normalizeRange(levelSaliency);
+% 
+%             levelSaliencyMat = repmat(levelSaliency, [1 size(D, 1)]);
+%             levelSaliencyMat(D > params_.windowSize) = -Inf;
+% 
+%             [globalMax,globalMaxI] = max(levelSaliency);
+% 
+%             [~,maxI] = max(levelSaliencyMat,[],2);
+%             isLocalMax=(maxI==(1:size(levelSaliencyMat,1))');
+%             isLocalMax(globalMaxI)=0;
+% 
+%             meanLocMax = mean(levelSaliency(isLocalMax));
+% 
+%             suppressedLevelSaliency = levelSaliency*(globalMax-meanLocMax)^2;
+%         end
+        
+
         function [signatures] = global_point_signature(evecs, evals)
             % Raif's embedding.
             % Requires a discrete approximation of area-weighted cotanget Laplacian . Not a graphical one.
@@ -447,58 +509,56 @@ classdef Mesh_Features < dynamicprops
         end
 
         function [geo_dist] = geodesic_distance_to_set(inmesh, laplace_beltrami, indicator_fct)
-        % Computes an approximation the geodesic distance of all vertices to a set.
-        % This approximation comes from an heat diffusion process.
-        %
-        % Input:    inmesh            -  (Mesh) Input mesh with inmesh.num_vertices 
-        %                                vertices.
-        %                                
-        %           laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the
-        %                                inmesh.
-        %           indicator_fct     -  (num_vertices x 1) Vector with values 1 when 
-        %                                the vertex belongs to the set and 0 when ouside.            
-        %
-        % Output:   geo_dist         -  (num_vertices x 1) Geodesic distance between the 
-        %                               i-th vertex and the set defined by indicator_fct.
-        %
-        % Notes:
-        %       K. CRANE, C. WEISCHEDEL, M. WARDETZKY
-        %       "Geodesics in Heat: A New Approach to Computing Distance
-        %       Based on Heat Flow.", 2013
-        %
+            % Computes an approximation the geodesic distance of all vertices to a set.
+            % This approximation comes from an heat diffusion process.
+            %
+            % Input:    inmesh            -  (Mesh) Input mesh with inmesh.num_vertices 
+            %                                vertices.
+            %                                
+            %           laplace_beltrami  -  (Laplace_Beltrami)The corresponding LB of the
+            %                                inmesh.
+            %           indicator_fct     -  (num_vertices x 1) Vector with values 1 when 
+            %                                the vertex belongs to the set and 0 when ouside.            
+            %
+            % Output:   geo_dist         -  (num_vertices x 1) Geodesic distance between the 
+            %                               i-th vertex and the set defined by indicator_fct.
+            %
+            % Notes:
+            %       K. CRANE, C. WEISCHEDEL, M. WARDETZKY
+            %       "Geodesics in Heat: A New Approach to Computing Distance Based on Heat Flow.", 2013        
 
-        if isprop(inmesh, 'triangle_normals')
-            N = inmesh.triangle_normals;                
-        else
-            N = Mesh.normals_of_triangles(inmesh.vertices, inmesh.triangles, 1);
-        end
+            if isprop(inmesh, 'triangle_normals')
+                N = inmesh.triangle_normals;                
+            else
+                N = Mesh.normals_of_triangles(inmesh.vertices, inmesh.triangles, 1);
+            end
 
-        if isprop(inmesh, 'barycentric_v_area')
-            area_vertices = inmesh.barycentric_v_area;
-        else           
-            area_vertices = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
-        end
+            if isprop(inmesh, 'barycentric_v_area')
+                area_vertices = inmesh.barycentric_v_area;
+            else           
+                area_vertices = Mesh.area_of_vertices(inmesh.vertices, inmesh.triangles, 'barycentric');
+            end
 
-        if isprop(inmesh, 'triangle_areas')
-            area_triangles = inmesh.triangle_areas;
-        else           
-            area_triangles = Mesh.area_of_triangles(inmesh.vertices, inmesh.triangles);
-        end
+            if isprop(inmesh, 'triangle_areas')
+                area_triangles = inmesh.triangle_areas;
+            else           
+                area_triangles = Mesh.area_of_triangles(inmesh.vertices, inmesh.triangles);
+            end
 
-        if isprop(inmesh, 'edge_lengths')
-            L = inmesh.edge_lengths;
-        else           
-            L = Mesh.edge_length_of_triangles(inmesh.vertices, inmesh.triangles);
-        end
+            if isprop(inmesh, 'edge_lengths')
+                L = inmesh.edge_lengths;
+            else           
+                L = Mesh.edge_length_of_triangles(inmesh.vertices, inmesh.triangles);
+            end
 
-        t              = mean(L(:))^2;
-        heat_diff      = ( sparse(1:inmesh.num_vertices, 1:inmesh.num_vertices, area_vertices) + t * laplace_beltrami.W ) \ indicator_fct;
-        grad_heat_diff = Mesh.gradient_of_function(heat_diff, inmesh.vertices, inmesh.triangles, N, area_triangles);
-        grad_heat_diff = - grad_heat_diff ./ repmat(l2_norm(grad_heat_diff), [1, 3]);
+            t              = mean(L(:))^2;
+            heat_diff      = ( sparse(1:inmesh.num_vertices, 1:inmesh.num_vertices, area_vertices) + t * laplace_beltrami.W ) \ indicator_fct;
+            grad_heat_diff = Mesh.gradient_of_function(heat_diff, inmesh.vertices, inmesh.triangles, N, area_triangles);
+            grad_heat_diff = - grad_heat_diff ./ repmat(l2_norm(grad_heat_diff), [1, 3]);
 
-        div_vf   = Mesh.divergence_of_vector_field(grad_heat_diff, inmesh.vertices, inmesh.triangles, N, area_vertices);
-        geo_dist = full( laplace_beltrami.W \ ( area_vertices .* div_vf ) );
-        geo_dist = geo_dist - min(geo_dist);
+            div_vf   = Mesh.divergence_of_vector_field(grad_heat_diff, inmesh.vertices, inmesh.triangles, N, area_vertices);
+            geo_dist = full( laplace_beltrami.W \ ( area_vertices .* div_vf ) );
+            geo_dist = geo_dist - min(geo_dist);
         end
         
         function [F] = default_mesh_feautures(inmesh, laplace_beltrami, neigs, wks_samples, hks_samples, mc_samples, gc_samples)                       
@@ -532,6 +592,42 @@ classdef Mesh_Features < dynamicprops
             end
             
             F                     = [hks_sig wks_sig mc_sig gc_sig];
+        end
+        
+        function [F] = extract_subleveled_feautures(features, levels)
+            % Given as input a set of features and a set of levels representing percentiles, it extracts a new set of
+            % features that is non zero only for values that are within the presribed percentiles. 
+            % Note: This is a non-linear transformation of the features.
+            % Input:
+            % Output:
+            % Example:
+            
+            if ~all(all(levels >= 0) && all(levels <= 100))
+                error('Levels must be a vectors with values in [0,100] interval.');
+            end
+
+            [basis_size, num_feats] = size(features);            
+            F = zeros(basis_size, num_feats * length(levels));                        
+            pertile_per_feature = prctile(features, levels);
+            bound =  0;           
+            for i = 1:length(levels)
+                pf = pertile_per_feature(i,:);
+                mask = (features >= repmat(pf, basis_size, 1));
+                F(:, bound+1:bound+num_feats) = features .* mask;   % At each iteration num_features features are created.
+                bound = bound + num_feats;
+            end
+        end
+        
+        function [F] = gaussian_weighted_average(vertex_function, neighborhoods, sigma, cut_off)
+            % Computes the gaussian weighted average of a function defined over mesh vertices. That is, for each vertex 
+            % it averages the function values within its neighborhood, with a weight inversely proportional to the
+            % distance of the neighbor vertex from the center one.  TODO-re cast/ re say.
+            gauss_kernel = exp(-0.5 .* (neighborhoods.distances ./ sigma).^2);
+            if nargin == 4               
+                gauss_kernel(neighborhoods.distances >= cut_off) = 0;
+            end           
+            V = vertex_function(neighborhoods.ids);            
+            F = sum(V .* gauss_kernel, 2 ) ./ sum(gauss_kernel, 2);               
         end
     
     end    

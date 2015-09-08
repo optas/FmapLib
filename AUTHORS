@@ -1,0 +1,46 @@
+Authors:
+    Panos Achlioptas <optas@stanford.edu>        -  Main coordinator and developer.
+    Etienne Corman   <etienne.corman@gmail.com>  -  Developer, focused on Meshes and Fmaps.
+    Leo Guibas       <guibas@cs.stanford.edu>>   -  Theory advisor.
+
+Contributors:
+    Maks Ovsjanikov               <add_content>             - Advisor.
+    Vignesh Ganapathi-Subramanian <vigansub@stanford.edu>   - Fmaps + Optimization.
+    Fan Wang                      <fanw@stanford.edu>       - Fmaps + Images.
+    Qi-xing Huang                 <huangqx@ttic.edu>>       - Fmaps + Optimization.    
+   
+Papers Referenced:
+
+------------------------------
+--- Functional Map Centric ---
+------------------------------
+"Functional Maps: A Flexible Representation of Maps Between Shapes", by M. Ovsjanikov, M. Ben-Chen, J. Solomon 
+A Butscher and Leonidas Guibas, in (SIGGRAPH), 2012.
+
+"Analysis and Visualization of Maps Between Shapes",  by M. Ovsjanikov, M. Ben-Chen, F. Chazal and L. Guibas, 
+in Computer Graphics Forum, 2013.
+
+"Image Co-segmentation via Consistent Functional Maps", by F. Wang, Q. Huang, and L. J. Guibas,
+in Computer Vision (ICCV), 2013 IEEE International Conference on, 2013.
+
+"Unsupervised Multi-Class Joint Image Segmentation", by F. Wang, Q. Huang, M. Ovsjanikov and L. J. Guibas,
+in The IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2014.
+
+"Functional Map Networks for Analyzing and Exploring Large Shape Collections", by Q. Huang, F. Wang and L. Guibas,
+in ACM Trans. Graph. (TOG), 2014.
+
+"Map-Based Exploration of Intrinsic Shape Differences and Variability" add_content
+R. M. Rustamov, M. Ovsjanikov, O. Azencot, M. Ben-Chen, F. Chazal and Leonidas Guibas
+
+------------------------------
+--- Mesh Feature Centric ---
+------------------------------
+"The Wave Kernel Signature: A Quantum Mechanical Approach To Shape Analysis", by M. Aubry, U. Schlickewei and D. Cremers
+in add_content
+
+"A Concise and Provably Informative Multi-Scale Signature-Based on Heat Diffusion", by J. Sun, M. Ovsjanikov and L. Guibas 
+add_content, 2009.
+
+"Shape Distributions", by R. Osada, T. Funkhouser, B. Chazelle, and D. Dobkin, add_content
+ Princeton University
+
