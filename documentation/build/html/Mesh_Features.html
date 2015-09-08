@@ -1,0 +1,274 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>doc_Mesh_Features &mdash; FmapLib 0.0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="FmapLib 0.0.1 documentation" href="index.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+
+        
+          <a href="index.html" class="icon icon-home"> FmapLib
+        
+
+        
+        </a>
+
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <ul class="simple">
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="doc_testing.html">doc_testing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="doc_testing.html#summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="doc_testing.html#contents">Contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="doc_testing_son.html">doc_testing_son</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="doc_testing_son.html#summary">Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="doc_testing_son.html#contents">Contents</a></li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">FmapLib</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>doc_Mesh_Features</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/Mesh_Features.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="doc-mesh-features">
+<h1>doc_Mesh_Features<a class="headerlink" href="#doc-mesh-features" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#doc_test.doc_Mesh_Features.mean_curvature" title="doc_test.doc_Mesh_Features.mean_curvature"><code class="xref mat mat-obj docutils literal"><span class="pre">doc_test.doc_Mesh_Features.mean_curvature</span></code></a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="doc_test.doc_Mesh_Features">
+<em class="property">class </em><code class="descclassname">doc_test.</code><code class="descname">doc_Mesh_Features</code><a class="headerlink" href="#doc_test.doc_Mesh_Features" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref mat mat-class docutils literal"><span class="pre">dynamicprops</span></code></p>
+<p>A class for creating and manipulating features on triangular Meshes. Usually, such features correspond to
+functions defined on the vertices of a mesh. Examples include:</p>
+<blockquote>
+<div>the Wave Kernel Signature,
+the Heat Kernel Signature,
+the Multi-scale Gaussian Curvature,
+the Multi-scale Mean Curvature.</div></blockquote>
+<ol class="loweralpha simple" start="3">
+<li>Achlioptas, Corman, Guibas  - 2015  -  <a class="reference external" href="http://www.fmaplib.org">http://www.fmaplib.org</a></li>
+</ol>
+<dl class="attribute">
+<dt id="doc_test.doc_Mesh_Features.F">
+<code class="descname">F</code><em class="property"> = None</em><a class="headerlink" href="#doc_test.doc_Mesh_Features.F" title="Permalink to this definition">¶</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="doc_test.doc_Mesh_Features.LB">
+<code class="descname">LB</code><em class="property"> = None</em><a class="headerlink" href="#doc_test.doc_Mesh_Features.LB" title="Permalink to this definition">¶</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="doc_test.doc_Mesh_Features.M">
+<code class="descname">M</code><em class="property"> = None</em><a class="headerlink" href="#doc_test.doc_Mesh_Features.M" title="Permalink to this definition">¶</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="doc_test.doc_Mesh_Features.index">
+<code class="descname">index</code><em class="property"> = None</em><a class="headerlink" href="#doc_test.doc_Mesh_Features.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>None</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="doc_test.doc_Mesh_Features.mean_curvature">
+<em class="property">static </em><code class="descname">mean_curvature</code><span class="sig-paren">(</span><em>inmesh</em>, <em>laplace_beltrami</em>, <em>smoothing_time</em><span class="sig-paren">)</span><a class="headerlink" href="#doc_test.doc_Mesh_Features.mean_curvature" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the mean curvature at each vertex of a given mesh.
+This implementation utilizes the Laplace Beltrami (LB) operator of the mesh (see Notes).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>inmesh</strong> (<code class="xref mat mat-class docutils literal"><span class="pre">Mesh</span></code>) &#8211; Input mesh with inmesh.num_vertices vertices.</li>
+<li><strong>laplace_beltrami</strong> (<code class="xref mat mat-class docutils literal"><span class="pre">Laplace_Beltrami</span></code>) &#8211; The corresponding LB of the inmesh.</li>
+<li><strong>smoothing</strong> (<em>(k x 1, optional) Vector</em>) &#8211; Values corresponding to time samples for the heat diffusion smoothing TODO-P: explain more.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>mean_curv</strong> (<em>(num_vertices x k+1)</em>) &#8211;
+The mean curvature of each vertex.
+If smoothing is applied then the first column contains
+the mean curvature and the k-following columns contain
+the k-smoothed versions of it.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">References</p>
+<p>Meyer, M. Desbrun, P. Schroder, and A. H. Barr. &#8220;Discrete
+Differential-Geometry Operators for Triangulated 2-Manifolds.&#8221;</p>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">TODO-E: Let&#8217;s talk for completeness this to take as optional arguement the normals of vertices.</p>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Achlioptas P., Corman E. and Guibas L..
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
