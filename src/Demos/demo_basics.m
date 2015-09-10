@@ -1,16 +1,14 @@
 %%  A Script demonstrating the basic functionalities of the FmapLib (Work in progress).
-% clr;
-% gitdir;
-% cd FmapLib/src
-close all; clear all; clc;
+clr;
+[dp, sp] = get_project_paths('FmapLib');
 %% Mini exposition of the FmapLib.
 %  Load mesh 1.
-meshfile       = '../data/input/tosca_small/michael1.off';
+meshfile       = [dp 'input/tosca_small/michael1.off'];
 mesh1          = Mesh(meshfile, 'mike1');
 mesh1.set_default_vertex_areas('barycentric');              % Associate an area with each vertex via the 'barycentric' rule.
 
 %  Load mesh 2.
-meshfile       = '../data/input/tosca_small/michael2.off';
+meshfile       = [dp 'input/tosca_small/michael2.off'];
 mesh2          = Mesh(meshfile, 'mike2');  
 mesh2.set_default_vertex_areas('barycentric');
 
@@ -29,9 +27,9 @@ feats2         = Mesh_Features(mesh2, LB2);
 % Parameters for the function generation.
 hks_samples    = 100;                                        % Feature dimensions.
 wks_samples    = 100; 
-mc_samples     = 100; 
+mc_samples     = 100;  
 gc_samples     = 100;
-neigs          = 100;                                        % LB eigenvecs to be used.
+neigs          = 50;                                        % LB eigenvecs to be used.
 
 feats1.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
 feats2.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
@@ -44,7 +42,7 @@ figure; plot(feats1.F(:,302))                   % etc.
 
 %% Make some functional maps.
 % 1.
-fmap_method   = 'frobenius_square';
+fmap_method   = 'l1_and_frobenius';
 lambda        = 20;
 neigs         = 64;
 map1          = Functional_Map(LB1, LB2);
@@ -52,7 +50,7 @@ map1.compute_f_map(fmap_method, neigs, neigs, feats1, feats2, 'lambda', lambda);
 map1.plot_transferred_xyz();
 map1.plot_area_distortion();
 map1.plot_conformal_distortion();
-
+%%
 % 2.
 % gt_map = Functional_Map.groundtruth_functional_map(LB1, LB2, (1:mesh1.num_vertices)', neigs, neigs);
 % gt_map.plot_transferred_xyz();

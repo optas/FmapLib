@@ -64,21 +64,17 @@ classdef Mesh < dynamicprops
         end
         
         function [h] = plot(this, vertex_function)
-            figure; hold;
+            figure;
+            hold(axes, 'on');
+
             if ~exist('vertex_function', 'var')                
                 h = trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3));                
             else                
                 h = trisurf(this.triangles, this.vertices(:,1), this.vertices(:,2), this.vertices(:,3), vertex_function, 'EdgeColor', 'none');                                                
-
 %                 vertex_function - mean(vertex_function)
 %                 patch('Faces', this.triangles, 'Vertices', this.vertices, 'FaceColor', 'interp', 'FaceVertexCData', vertex_function, 'EdgeColor', 'none');                               
             end
             axis equal;
-            
-
-%             axis equal; 
-%             cameratoolbar; cameratoolbar('SetCoordSys','none');
-%             hold on
         end
                
         function [M] = normal_expanding_mesh(obj, normal_dist, normal_dirs)
