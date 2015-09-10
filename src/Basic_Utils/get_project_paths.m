@@ -25,9 +25,9 @@ function [data_path, code_path] = get_project_paths(project_name)
             code_path = '/Users/optas/Dropbox/matlab_projects/External_Packages/';
         end
         
-    elseif strcmp(name(1:end-1), 'Ettiene_pc_name')
-        data_path = 'Etienne add here';
-        code_path = 'Etienne add here';
+    elseif strcmp(name(1:end-1), 'Etienne-HP')
+        data_path = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\data\';
+        code_path = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\src\External_Code\';
     
     else
         error('Unknown computer.');

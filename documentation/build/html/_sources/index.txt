@@ -1,5 +1,5 @@
-Welcome to graph-tool's documentation!
-======================================
+Welcome to FmapLib's documentation!
+===================================
 
 Contents:
 
