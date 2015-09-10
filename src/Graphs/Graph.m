@@ -54,6 +54,25 @@ classdef Graph < dynamicprops
             end
             assert(size(obj.A, 1) == obj.num_vertices)
         end
+        
+        function obj = set_name(obj, new_name)
+            obj.name = new_name;
+        end
+        
+        function obj = copy(this)
+            % Defines what is copied when a deep copy is performed.                        
+            obj = feval(class(this));  % Instantiate new object of the same class.
+                        
+            % Copy all non-hidden properties (including dynamic ones) % TODO: Hidden properties
+            p = properties(this);
+            for i = 1:length(p)
+                if ~isprop(obj, p{i})   % Adds all the dynamic properties.
+                    obj.addprop(p{i});
+                end                
+                obj.(p{i}) = this.(p{i});
+            end           
+        end
+        
     end
            
     methods (Static)
@@ -117,19 +136,32 @@ classdef Graph < dynamicprops
             end
                 
             if strcmp(graph_type, 'lattice')
-                total_edges = 2 * (((m-1) * n) + ((n-1) * m));      % Result of from  graph Theory.
+                total_edges = 2 * (((m-1) * n) + ((n-1) * m));      % Result of from graph Theory.
                 diag_vec_1  = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections.
                 diag_vec_1  = spdiags(diag_vec_1, 1, m * n, m * n);
                 diag_vec_2  = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
                 diag_vec_2  = spdiags(diag_vec_2 , n, m * n, m * n);
-                adg = diag_vec_1 + diag_vec_2;
-                adg = adg + adg.';                                  % Edges are symmetric.                        
-                assert(nnz(adg) == total_edges);                
+                adj = diag_vec_1 + diag_vec_2;
+                adj = adj + adj.';                                  % Edges are symmetric.                        
+                assert(nnz(adj) == total_edges);                
                 default_name = sprintf('%d_%d_lattice', m, n);
-                is_directed  = false;                
-                G = Graph(adg, is_directed, default_name);
+                directed  = false;                
+                G = Graph(adj, directed, default_name);
             elseif strcmp(graph_type, 'checkerboard')
-                 % TODO implement.
+                diag_vec_1  = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections. 
+                diag_vec_1  = spdiags(diag_vec_1, 1, m * n, m * n);
+                diag_vec_2  = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
+                diag_vec_2  = spdiags(diag_vec_2 , n, m * n, m * n);
+                diag_vec_3  = [0; diag_vec_1(1 : (n * (m-1)))];     % Anti-diagonal connections.
+                diag_vec_3  = spdiags(diag_vec_3, n-1, m * n, m * n);
+                diag_vec_4  = diag_vec_3(2 : end-1);                % Diagonal connections.
+                diag_vec_4  = spdiags(diag_vec_4, n+1, m * n, m * n);                
+                adj = diag_vec_1 + diag_vec_2 + diag_vec_3 + diag_vec_4;
+                adj = adj + adj.';                        
+                default_name = sprintf('%d_%d_checkerboard', m, n);
+                directed  = false;                
+                G = Graph(adj, directed, default_name);
+        
             else
                 error('Not valid graph type was requested.');
             end

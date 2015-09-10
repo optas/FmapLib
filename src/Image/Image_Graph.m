@@ -12,7 +12,7 @@ classdef Image_Graph < Graph
         function obj = Image_Graph(varargin)
             % Set up super-class (Graph) arguements.
             if nargin == 0
-                super_args = cell();
+                super_args = cell(0);
             else
                 [h, w, ~] = size(varargin{1}.CData);
                 G         = Graph.generate(varargin{2}, h, w);
@@ -28,6 +28,25 @@ classdef Image_Graph < Graph
                 obj.I = varargin{1};             
             end            
         end
+%         
+%         function obj = copy(this)
+%             % Define what is copied when a deep copy is performed.
+%             % Instantiate new object of the same class.
+%             obj = feval(class(this));
+%                         
+%             % Copy all non-hidden properties (including dynamic ones)
+%             % TODO: Hidden properties?
+%             p = properties(this);
+%             p
+%             for i = 1:length(p)
+%                 if ~isprop(obj, p{i})   % Adds all the dynamic properties.
+%                     obj.addprop(p{i});
+%                 end                
+%                 obj.(p{i}) = this.(p{i});
+%             end           
+%         end
+
+               
     end
      
 

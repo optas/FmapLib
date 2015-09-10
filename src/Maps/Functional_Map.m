@@ -87,6 +87,9 @@ classdef Functional_Map < dynamicprops
                 case 'frobenius'
 %                     [F] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
                       [F] = Functional_Map.sum_of_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                case 'l1_and_frobenius'
+                      [F] = l1_and_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                                
                 case 'frobenius_with_covariance'
                     obj.source_features.project_features(obj.source_basis, neigs_source);
                     C1 = obj.source_features.covariance_matrix();
@@ -424,6 +427,27 @@ classdef Functional_Map < dynamicprops
 
         end
         
+        function [X, val] = l1_and_frobenius_norms_cvx(src_functions, trg_functions, src_spectra, trg_spectra, lambda)
+            % Generating a F-Map by penalizing the function correspondences with the 1-norm and the commutativity with the
+            % Laplacian operator with the frobenius. I.e., 
+            %      X = argmin ||X * src_functions - trg_functions||_1  +  lambda * ||X * src_spectra - trg_spectra * X||_F
+                 
+            [src_size, fs_n]  = size(src_functions);
+            [trg_size, ft_n]  = size(trg_functions);
+            if fs_n ~= ft_n
+                error('Same number of functions characterizing the two spaces must be provided.')
+            end
+            
+            cvx_begin        
+                variables X(trg_size, src_size)
+                minimize norm(X*src_functions - trg_functions, '1') + lambda * norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro')
+            cvx_end      
+            val = cvx_optval;               
+        end
+                
+        
+        
+        
         
         function [X] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             % Computes the functional map X that minimizes the following objective: 
@@ -467,14 +491,14 @@ classdef Functional_Map < dynamicprops
             assert(all(size(X) == [N2 N1]))
         end
           
-        function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
-            % Copyright (C) 2014 Fan Wang.            
+        function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)            
             % TODO-P: Add documentation.
             % This code uses Sedumi to write the objective function as a
             % Semi-definite program in the dual form. In this problem we
             % aim to minimize ||X*D1-D2|| + lambda*||X*L1-L2*X||. This is
             % done by solving for min t1 + lambda*t2, s.t t1 >=
             % ||X*D1-D2||, t2 >= ||X*L1-L2*X||.
+            % Written by Fan Wang, 2014.
             
             N1 = size(D1, 1);
             N2 = size(D2, 1);

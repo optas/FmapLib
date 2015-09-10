@@ -39,6 +39,14 @@ classdef Image < dynamicprops
             s = size(obj.CData);
         end
         
+        function c = color(obj)
+            if class(obj.CData) == uint8 || class(obj.CData) == uint16
+                c = im2double(obj.CData);
+            else 
+                obj.CData;    % More on this case.
+            end
+        end
+        
         function [h] = plot(obj)
             h = image(obj.CData);
         end
@@ -59,6 +67,20 @@ classdef Image < dynamicprops
             end
         end
         
+        function set_resized_image(obj, new_height, new_weight)
+            % to do change to varargin
+            propname = 'resized';
+            imres = imresize(obj.CData , [new_height, new_weight]);
+            if isprop(obj, propname)
+                obj.(propname) = imres;
+            else
+                obj.addprop(propname);
+                obj.(propname) = imres;
+            end
+        end
+        
+       
+ 
     end
     
 end

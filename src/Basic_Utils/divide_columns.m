@@ -16,7 +16,7 @@ function B = divide_columns(A, v)
         
     N = size(A, 2);        
     B = zeros(size(A));
-    for i=1:N
+    for i=1:N               % TODO - parfor?
         B(:,i) = A(:,i) / v(i);
     end  
 end

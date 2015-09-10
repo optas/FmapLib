@@ -28,7 +28,7 @@ classdef Basis < dynamicprops
     
         function [evals, evecs] = get_spectra(obj, eigs_num)    
             % Computes the eigenvectors corresponding to the smallest eigenvalues of the Basis matrix. This is 
-            % It stores the results in the spectra property of the object (obj.spectra). It also, 
+            % It stores the in the spectra property of the object (obj.spectra). It also, 
             % automatically reuses the previously computed ones when this is doable, instead of computing them 
             % from the scratch.
             % 
@@ -66,11 +66,28 @@ classdef Basis < dynamicprops
             [E, ~] = obj.get_spectra(eigs_num);
         end
 
-
         function [R] = synthesize_functions(obj, coeffs)
             eigs_num = size(coeffs, 1);            
             R = obj.evecs(eigs_num) * coeffs;            
         end
+
+        function [reconstructed] = compress_and_reconstruct(obj, in_funcs, eigs_num)
+            % Projects the input functions onto the basis, and uses the resulting coeefficients to reconstruct
+            % the original input functions. The resulting reconstructed functions are useful to discover which parts 
+            % of the functions are well preserved in the basis.
+            %
+            % TODO-P continue documentation
+           
+            if nargin == 2
+                eigs_num = length(obj.spectra.evals);
+            end
+            compressed    = obj.project_functions(eigs_num, in_funcs);
+            reconstructed = obj.synthesize_functions(compressed);
+            if any(size(reconstructed) ~= size(in_funcs))
+                error('')
+            end           
+        end
+        
         
     end
 end
