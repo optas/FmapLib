@@ -24,7 +24,26 @@ neigs          = 50;                                        % LB eigenvecs to be
 
 feats1.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
 
-%% Preparing mesh saliency
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%% Preparing mesh saliency (TODO-P move P Mesh Features)
 top_k = 30;
 [ids, dists]     = knnsearch(mesh1.vertices, mesh1.vertices, 'K', top_k + 1);
 neighborhoods.distances = dists;
@@ -48,66 +67,6 @@ mesh1.plot(F);
 mean(F-vertex_function)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-%% Load two Meshes and compute the F-map.
-    num_eigs       = 15;
-    wks_samples    = 15;
-    hks_samples    = 10;
-  
-    meshfile       = '../data/kid_rodola/0001.isometry.1.off';
-    mesh1          = Mesh(meshfile, 'rodola_1_1');        
-    mesh1.set_vertex_areas('barycentric');    
-    LB1            = Laplace_Beltrami(mesh1, mesh1.get_vertex_areas('barycentric'));
-    [evals, evecs] = LB1.get_spectra(num_eigs);
-%     save('../data/output/LB1', 'LB1');              
-%     load('../data/output/LB1');    
-    [evals, evecs] = LB1.get_spectra(num_eigs);
-    
-    [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
-    wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
-    heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
-    hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
-            
-%     source_probes     = LB1.project_functions(num_eigs, wks_sig, hks_sig);     
-    source_probes     = [hks_sig wks_sig];
-    
-    meshfile          = '../data/kid_rodola/0002.isometry.1.off';
-    mesh2             = Mesh(meshfile, 'rodola_2_1');    
-    mesh2.set_default_vertex_areas('barycentric');    
-    LB2               = Laplace_Beltrami(mesh2); 
-    [evals, evecs]    = LB2.get_spectra(num_eigs);
-%     save('../data/output/LB2', 'LB2');              
-%     load('../data/output/LB2');    
-    [evals, evecs] = LB2.get_spectra(num_eigs);
-    
-    [energies, sigma] = Mesh_Features.energy_sample_generator('log_linear', evals(2), evals(end), wks_samples);
-    wks_sig           = Mesh_Features.wave_kernel_signature(evecs(:,2:end), evals(2:end), energies, sigma);    
-    heat_time         = Mesh_Features.energy_sample_generator('log_sampled', evals(2), evals(end), hks_samples);
-    hks_sig           = Mesh_Features.heat_kernel_signature(evecs(:,2:end), evals(2:end), heat_time);
-    
-%     target_probes     = LB2.project_functions(num_eigs, wks_sig, hks_sig);         
-    target_probes     = [hks_sig wks_sig];
-
-    F = Functional_Map(LB1, LB2);    
-    F.compute_f_map('functions_only', 40, 40, source_probes, target_probes, 'normalize', 1);    
-    gt_map = (1:mesh1.num_vertices)';   % Ground truth correspondences from Source_Mesh to Target_Mesh.
-    
-    C = textread('../data/kid_rodola/sym.txt', '%s', 'delimiter', ' ');  % Read symmetries:
-    C = cell2mat(C); symmetries = str2num(C);            
 
     
 %% Test 1: pseudo-inverse VS. Our theretical one.        

@@ -88,7 +88,7 @@ classdef Functional_Map < dynamicprops
 %                     [F] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
                       [F] = Functional_Map.sum_of_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
                 case 'l1_and_frobenius'
-                      [F] = l1_and_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                      [F] = Functional_Map.l1_and_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
                                 
                 case 'frobenius_with_covariance'
                     obj.source_features.project_features(obj.source_basis, neigs_source);
@@ -440,7 +440,7 @@ classdef Functional_Map < dynamicprops
             
             cvx_begin        
                 variables X(trg_size, src_size)
-                minimize norm(X*src_functions - trg_functions, '1') + lambda * norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro')
+                minimize norm(X*src_functions - trg_functions, 1) + lambda * norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro')
             cvx_end      
             val = cvx_optval;               
         end
