@@ -1,9 +1,12 @@
 classdef Mesh_Collection < dynamicprops
     % A class offering a variety of utilities for collecting, maintaining and experimenting with collections of 
     % Triangular Meshes.
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
         
     properties               % Each Mesh_Collection object has at least the following properties.        
         name                 % (String)            -   (default = '') A string identifying the collection i.e., 'Tosca'.    
+
         meshes               % (Containers.Map)    -   A dictionary storing as values the meshes of the collection. The 
                              %                         keys are strings corresponding to mesh names.
     end
@@ -23,15 +26,15 @@ classdef Mesh_Collection < dynamicprops
             %
             % Notes: TODO-P describe format of attributes file
             
-            if nargin == 0                
+            if nargin == 0                 
                 % Construct an empty Mesh_Collection.
                 obj.name = '';
                 obj.meshes = containers.Map;                            
             elseif nargin == 1
                 error('Wrong input arguements.')
             elseif nargin == 2 || nargin == 3                
-                % Find all potential mesh files (.off, .obj files).
-                all_subfiles = rdir([top_directory, '/**/'], 'regexp(name, ''\.obj$|\.off$'')');                                                
+                % Find all potential mesh files (.off, .obj files).                
+                all_subfiles = rdir([top_directory, [filesep '**' filesep]], 'regexp(name, ''\.obj$|\.off$'')');                
                 num_meshes   = length(all_subfiles);
                 if num_meshes == 0
                     warning(['The given top directory does not contain any .off or .obj files' ...
@@ -61,7 +64,7 @@ classdef Mesh_Collection < dynamicprops
             end
                      
             function [mesh_name] = extract_mesh_name(full_path)                
-                path_substrings = strsplit(full_path, '/');   % TODO: use separator of current system.
+                path_substrings = strsplit(full_path, filesep); 
                 last_word = path_substrings{end};
                 mesh_name = last_word(1:end-4);               % Relying on the fact that length('.off') == length('.obj') == 4.                                                               
             end                                 
@@ -131,7 +134,11 @@ classdef Mesh_Collection < dynamicprops
             % Returns true iff the collection contains a mesh with the given mesh_name.
             bool = obj.meshes.isKey(mesh_name);
         end
-
+        
+        function s = size(obj)
+            s = size(obj.meshes, 1);
+        end
+        
         function [C] = get_property_of_meshes(obj, property_name, mesh_list)                
                 if ~ isprop(obj, property_name)                    
                     error('Property requested does not exist.');

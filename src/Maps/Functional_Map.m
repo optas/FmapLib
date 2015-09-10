@@ -6,6 +6,8 @@ classdef Functional_Map < dynamicprops
     %       Shape difference operators, 
     %       Genearation of functional maps given point-to-point correspondences, 
     %       Quality evaluation of maps.
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
 
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Functional_Map class has.
@@ -85,6 +87,9 @@ classdef Functional_Map < dynamicprops
                 case 'frobenius'
 %                     [F] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
                       [F] = Functional_Map.sum_of_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                case 'l1_and_frobenius'
+                      [F] = l1_and_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                                
                 case 'frobenius_with_covariance'
                     obj.source_features.project_features(obj.source_basis, neigs_source);
                     C1 = obj.source_features.covariance_matrix();
@@ -109,43 +114,70 @@ classdef Functional_Map < dynamicprops
             colorbar;
         end
         
-        function [F] = plot_transferred_xyz(obj) %TODO-P movo-merge under a general 'plot' function
+        function [U, S, V] = plot_area_distortion_without_shape_difference(obj)
+            % Do we need to sort eigenvalues after subtracting from them 1?
+                        
+            [U, S, V]    = svd(obj.fmap);
+            max_src_dist = obj.source_basis.synthesize_functions(U(:,1));   % U for source (TODO-E verify)
+            max_trg_dist = obj.target_basis.synthesize_functions(V(:,1));   % V for target 
+            F1 = obj.source_basis.M.plot(max_src_dist);                     % What should mesh.plot return so that we can manipulate better. E.g., put F1 and F2 on single plot?
+            set(F1, 'WindowStyle', 'docked'); colorbar;
+            F2 = obj.target_basis.M.plot(max_trg_dist);
+            set(F2, 'WindowStyle', 'docked'); colorbar;            
+        end
+        
+        function plot_area_distortion(obj)  % TODO - P only max? and also use area diff only if.            
+            area_diff = obj.area_difference();
+            [V, ~]    = eigs(area_diff, 1);
+            neigs     = obj.source_neigs;
+            max_dist  = obj.source_basis.evecs(neigs) * V(:,1);
+%             obj.source_basis.M.plot(abs(max_dist));      % abs?
+            obj.source_basis.M.plot(max_dist);      % abs?
+            title('Maximum Area Distortion'); colorbar;
+        end
+                
+        function plot_conformal_distortion(obj)            
+            conf_diff = obj.conformal_difference();
+%             [~,~,V]   = svd(conf_diff);            
+            [V, ~]      = eigs(conf_diff, 1, 1);
+            neigs     = obj.source_neigs;
+            max_dist  = obj.source_basis.evecs(neigs) * V(:,1);
+%             obj.source_basis.M.plot(abs(max_dist));
+            obj.source_basis.M.plot(max_dist);
+            title('Maximum conformal distortion'); colorbar;            
+        end
+                
+        function [F] = plot_transferred_xyz(obj)
             F = figure; 
             
             V = obj.source_basis.M.vertices;             
             T = obj.source_basis.M.triangles;
-            nv = obj.source_basis.M.num_vertices;  
-            col1 = V - repmat(mean(V), nv, 1);                  % what is this color? TODO-E
-            col1 = col1 ./ repmat(max(col1), nv, 1);            
-            h1 = subplot(1,2,1); title('Source mesh.');
-            patch('Faces',T, 'Vertices', V, 'FaceColor', 'interp', 'FaceVertexCData', col1, 'EdgeColor', 'none');       
+            nv = obj.source_basis.M.num_vertices; 
+            
+            center = repmat(min(V), [nv, 1]);
+            col1 = (V - center) ./ repmat(max(V - center), [nv, 1]);
+            subplot(1,2,1); title('Source mesh.');
+            patch('Faces', T, 'Vertices', V, 'FaceColor', 'interp', 'FaceVertexCData', col1, 'EdgeColor', 'none');
             axis equal; axis tight; axis off; cameratoolbar;  
+                                    
+            V  = obj.target_basis.M.vertices;             
+            T  = obj.target_basis.M.triangles;
+            subplot(1,2,2); title('Target mesh.');
+            
+            col2 = obj.transfer_function(col1);  % TODO-E apply some normalization here: otherwise black pictures.
             
             
-            
-            V = obj.target_basis.M.vertices;             
-            T = obj.target_basis.M.triangles;
-            nv = obj.target_basis.M.num_vertices;                                     
-            h2 = subplot(1,2,2); title('Target mesh.');
-            
-            col2 = obj.transfer_function(col1);
-            
-            patch('Faces',T, 'Vertices', V, 'FaceColor', 'interp', 'FaceVertexCData', col2, 'EdgeColor', 'none');       
-            axis equal; axis tight; axis off; cameratoolbar;  
-            
+            patch('Faces', T, 'Vertices', V, 'FaceColor', 'interp', 'FaceVertexCData', col2, 'EdgeColor', 'none');       
+            axis equal; axis tight; axis off; cameratoolbar;              
             set(F,'WindowStyle','docked');    
-            %col2 = transferFunction(col1, basis1, basis2, fmap);
-%             colorbar;
+            colorbar;
         end
         
         function trg_function = transfer_function(obj, src_function)
-            
             src_coeffs   = obj.source_basis.project_functions(obj.source_neigs, src_function);
-            out_coeffs   = obj.fmap * src_coeffs;
-            trg_function = obj.target_basis.evecs(obj.target_neigs) * out_coeffs;  % Wrap this operation to LB.
+            trg_coeffs   = obj.fmap * src_coeffs;            
+            trg_function = obj.target_basis.synthesize_functions(trg_coeffs);
         end
-        
-        
         
         function obj = set_fmap(obj, new_map)
             obj.fmap = new_map;
@@ -178,54 +210,48 @@ classdef Functional_Map < dynamicprops
                 proj_feats = divide_columns(proj_feats, sqrt(sum(proj_feats.^2)));
             end
         end            
-        
-        
+                
         function [D] = area_difference(obj)
             if isempty(obj.fmap)
                 error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
             end
-            
-            target_evecs = obj.target_basis.evecs(obj.target_neigs);
-            target_inner_prod = target_evecs' * obj.target_basis.A * target_evecs;  
-            
-            source_evecs = obj.source_basis.evecs(obj.source_neigs);            
-            source_inner_prod = source_evecs' * obj.source_basis.A * source_evecs;   
-            
-            D = pinv(source_inner_prod) * ( obj.fmap' * target_inner_prod * obj.fmap );        
+                        
+            if isa(obj.source_basis, 'Laplace_Beltrami') && isa(obj.target_basis, 'Laplace_Beltrami') % Special easy case.                
+                D = obj.fmap'* obj.fmap;                
+            else                                                                                      % Generic case for any basis.
+                target_evecs = obj.target_basis.evecs(obj.target_neigs);
+                target_inner_prod = target_evecs' * obj.target_basis.A * target_evecs;  
+
+                source_evecs = obj.source_basis.evecs(obj.source_neigs);            
+                source_inner_prod = source_evecs' * obj.source_basis.A * source_evecs;   
+
+                D = pinv(source_inner_prod) * ( obj.fmap' * target_inner_prod * obj.fmap );        
+            end
         end
-        
-        function [D] = area_difference2(obj)
-            if isempty(obj.fmap)
-                error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
-            end            
-            D = obj.fmap'* obj.fmap;       
-        end
-        
-        
-        function [D] = conformal_difference(obj, laplace_beltrami)
+                
+        function [D] = conformal_difference(obj)
             if isempty(obj.fmap)
                 error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
             end
             
-            target_evecs = obj.target_basis.evecs(obj.target_neigs);
-            target_inner_prod = target_evecs' * laplace_beltrami.W * target_evecs;  
-            
-            source_evecs = obj.source_basis.evecs(obj.source_neigs);            
-            source_inner_prod = source_evecs' * laplace_beltrami.W * source_evecs;   
-            
-            D = pinv(source_inner_prod) * ( obj.fmap' * target_inner_prod * obj.fmap ); 
-        end
-        
-        function [D] = conformal_difference2(obj)
-            if isempty(obj.fmap)
-                error('It appears that this object currently is not carrying a matrix corresponding to a functional map.')
+            if isa(obj.source_basis, 'Laplace_Beltrami') && isa(obj.target_basis, 'Laplace_Beltrami') % Special easy case.                
+                source_evals = -1 * obj.source_basis.evals(obj.source_neigs);
+                target_evals = -1 * obj.target_basis.evals(obj.target_neigs);               
+                D = pinv(diag(source_evals)) * ( obj.fmap' * diag(target_evals) * obj.fmap );     
+            else                                                                                      % Generic case for any basis.
+                error('Not implemented yet');                
             end
             
-            [source_evals, ~]    = obj.source_basis.get_spectra(obj.source_neigs);
-            [target_evals, ~]    = obj.target_basis.get_spectra(obj.target_neigs);
-            
-            D = pinv(diag(source_evals)) * ( obj.fmap' * diag(target_evals) * obj.fmap ); 
+
+%             target_evecs = obj.target_basis.evecs(obj.target_neigs);
+%             target_inner_prod = target_evecs' * laplace_beltrami.W * target_evecs;  
+%             
+%             source_evecs = obj.source_basis.evecs(obj.source_neigs);            
+%             source_inner_prod = source_evecs' * laplace_beltrami.W * source_evecs;   
+%             
+%             D = pinv(source_inner_prod) * ( obj.fmap' * target_inner_prod * obj.fmap ); 
         end
+        
                 
         function [dists, indices] = pairwise_distortion(obj, groundtruth, varargin)                                    
             [dists, indices] = Functional_Map.pairwise_distortion_of_map(obj.fmap, obj.source_basis, obj.target_basis, groundtruth, varargin{:});
@@ -373,13 +399,21 @@ classdef Functional_Map < dynamicprops
         end
         
                    
-        function [X] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
-             %TODO-P input should be an LB.
+        
+        function [F] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, src_neigs, trg_neigs)                        
+%         function [F] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
+            F = Functional_Map(basis_from, basis_to);
+            to_areas = spdiags(basis_to.A);
+            
 %             nodes_from = size(basis_from, 1);
 %             nodes_to   = size(basis_to, 1);              
 %             non_zero   = length(correspondences_from_to(:, 2));
 %             P          = sparse(correspondences_from_to(:, 2), correspondences_from_to(:, 1), ones(non_zero,1), nodes_to, nodes_from);            
 %             X          = basis_to' * P * basis_from;
+            
+            basis_from = basis_from.evecs(src_neigs);
+            basis_to   = basis_to.evecs(trg_neigs);
+            
             
             basis_from = basis_from(gt_from_to ~= 0, :) ;              % Remove dimensions for which you do not know the groundtruth (i.e., map -ith- vertex to 0).
             
@@ -389,8 +423,30 @@ classdef Functional_Map < dynamicprops
            
             A = spdiags(to_areas, 0, length(to_areas), length(to_areas)); 
             X          = basis_to' * A * basis_from;                       
+            F.set_fmap(X);
 
         end
+        
+        function [X, val] = l1_and_frobenius_norms_cvx(src_functions, trg_functions, src_spectra, trg_spectra, lambda)
+            % Generating a F-Map by penalizing the function correspondences with the 1-norm and the commutativity with the
+            % Laplacian operator with the frobenius. I.e., 
+            %      X = argmin ||X * src_functions - trg_functions||_1  +  lambda * ||X * src_spectra - trg_spectra * X||_F
+                 
+            [src_size, fs_n]  = size(src_functions);
+            [trg_size, ft_n]  = size(trg_functions);
+            if fs_n ~= ft_n
+                error('Same number of functions characterizing the two spaces must be provided.')
+            end
+            
+            cvx_begin        
+                variables X(trg_size, src_size)
+                minimize norm(X*src_functions - trg_functions, '1') + lambda * norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro')
+            cvx_end      
+            val = cvx_optval;               
+        end
+                
+        
+        
         
         
         function [X] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
@@ -435,14 +491,14 @@ classdef Functional_Map < dynamicprops
             assert(all(size(X) == [N2 N1]))
         end
           
-        function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)
-            % Copyright (C) 2014 Fan Wang.            
+        function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)            
             % TODO-P: Add documentation.
             % This code uses Sedumi to write the objective function as a
             % Semi-definite program in the dual form. In this problem we
             % aim to minimize ||X*D1-D2|| + lambda*||X*L1-L2*X||. This is
             % done by solving for min t1 + lambda*t2, s.t t1 >=
             % ||X*D1-D2||, t2 >= ||X*L1-L2*X||.
+            % Written by Fan Wang, 2014.
             
             N1 = size(D1, 1);
             N2 = size(D2, 1);
@@ -612,6 +668,18 @@ classdef Functional_Map < dynamicprops
             cvx_end      
             val = cvx_optval;   
         end
+        
+        function X = l2_regularized_map(F, G, lambda)
+            % Computes a map matrix by solving:
+            %   X = argmin ||XF-G||_2^2 + lambda^2 * ||X||_fro^2
+
+            % Again, XF = G <--> F'X' = G'.  We augment with lambda * identity to get Tikhonov regularization.
+            % Panos obsersvation: huge ammount of memory is required.
+            lhs = [ F'; lambda * speye(size(F', 2)) ];
+            rhs = [ G'; sparse(size(F', 2), size(G', 2)) ];
+            X   = (lhs\rhs)';
+        end
+        
                 
     end % Static.
 end % ClassDef.

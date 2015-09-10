@@ -17,11 +17,11 @@
     feats2         = Mesh_Features(mesh2, LB2);
 
 %%  Compute Mesh features that will be used to produce Fmaps.
-    neigs          = 10;                           % Eigenvectors that will be used in computing wks/hks.
+    neigs          = 100;                           % Eigenvectors that will be used in computing wks/hks.
     wks_samples    = 100;
     hks_samples    = 100;    
-    mc_samples     = 0; 
-    gc_samples     = 0;
+    mc_samples     = 50; 
+    gc_samples     = 50;
     feats1.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);
 	feats2.compute_default_feautures(neigs, wks_samples, hks_samples, mc_samples, gc_samples);    
     
@@ -36,7 +36,7 @@
     rnd_feats_2.set_features(deltas2, {'rand_deltas'}, random_samples);  
 
 %%  Compute some Fmaps.
-    fmap_method    = 'frobenius';
+    fmap_method    = 'frobenius_square';
     lambda         = 20;                                                    
     all_map        = Functional_Map(LB1, LB2);
     all_map.compute_f_map(fmap_method, neigs, neigs, feats1, feats2, 'lambda', lambda);

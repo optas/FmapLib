@@ -4,13 +4,24 @@ cd 'FmapLib/src';
 
 %% Load the collection of Meshes and their semantic attributes (i.e., class of each represented mesh).
 collection_name = 'Tosca';
-collection_dir  = '../data/input/tosca_small';
-semantics       = '../data/input/TOSCA_class_attributes';
-Tosca           = Mesh_Collection(collection_name, collection_dir, semantics);
+collection_dir  = '../data/input/Tosca';
+semantics_file  = '../data/input/TOSCA_class_attributes';
+Tosca           = Mesh_Collection(collection_name, collection_dir, semantics_file);
+Tosca.size()
+
 
 %% Compute Laplacian Basis and Mesh Features.
 neigs     = 64; 
 area_type = 'barycentric';
+for mesh_name = Tosca.meshes.keys                  % TODO-E: implement class iterator i.e., for m = Tosca {do }.
+    mesh_name = mesh_name {:};
+    m        = Tosca.meshes(mesh_name);    
+    m.set_default_vertex_areas('barycentric');
+    if sum(m.barycentric_v_area <= 0) ~= 0
+        mesh_name
+    end
+end
+                
 Tosca.compute_laplace_beltrami_basis(neigs, area_type);
 
 %% Compute Features.

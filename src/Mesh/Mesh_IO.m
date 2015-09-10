@@ -1,6 +1,8 @@
 classdef Mesh_IO
     % Implementing a set of functions facilitating Input and Output operations
     % on Triangular Meshes.
+    %
+    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
        
     methods (Static)
         function [vertices, faces] = read_off(filename)
