@@ -1,4 +1,3 @@
-%Test
 %%
 %%    Script for dirty tests (to be deleted).
 %%

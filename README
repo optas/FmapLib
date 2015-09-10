@@ -1,11 +1,11 @@
 FmapLib -- An efficient implementation of the Functional Map Framework
-===========================================================================
+======================================================================
 
 FmapLib is an efficient Matlab implementation of the Functional Map Framework, which 
-was introduced in the seminal paper “Functional maps: a flexible representation
-of maps between shapes” by M. Ovsjanikov, et al. in SIGGRAPH 2012.
+was introduced in the seminal paper "Functional Maps: a flexible representation
+of maps between shapes" by M. Ovsjanikov, et al. in SIGGRAPH 2012.
 
-The implementation follows the Object Oriented Programming paradigm and it provides a big arsenal of object representations. These include: Images, 3D Meshes, and Graphs along with Basis elements like those stemming from the graph Laplacian or the mesh's Laplace Beltrami operator.
+Our implementation follows the Object Oriented Programming and provides classes to abstract modalities such as: Images, 3D Meshes, Graphs. 
 
 This way, one can infer and manipulate Functional Maps, among all the modalities that have currently been explored in the literature in a straightforward way.
 
@@ -17,7 +17,13 @@ the GNU General Public License, version 3 or above. See LICENSE for details.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
+Availability
+============
+The current stable version of FmapLib is always available from the project's website: http://www.fmaplib.org
 
 Reporting Bugs
 ==============
 Please contact optas@stanford.edu for any bugs or unexpected behavior you may experience. 
+
+------------------------------------------------
+(c) 2015 Achlioptas P., Corman E. and Guibas L.
