@@ -53,7 +53,12 @@ napoleon_use_param = True
 napoleon_use_rtype = False
 
 # Matlab related directives
-matlab_src_dir = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\src'
+try:
+  if os.environ['USER'] == 'optas' :
+    matlab_src_dir = '/Users/optas/Documents/Git_Repos/FmapLib/src'
+except:
+  matlab_src_dir = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\src'
+
 primary_domain = 'mat'
 autoclass_content = 'both'
 autodoc_member_order = 'bysource'

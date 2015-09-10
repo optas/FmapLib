@@ -1,6 +1,6 @@
 classdef doc_Mesh_Features < dynamicprops
-    % A class for creating and manipulating features on triangular Meshes. Usually, such features correspond to
-    % functions defined on the vertices of a mesh. Examples include:
+    % A class for creating and manipulating features on triangular Meshes. Usually, such features correspond to 
+    %  functions defined on the vertices of a mesh. Examples include:
     %    * the Wave Kernel Signature,
     %    * the Heat Kernel Signature,
     %    * the Multi-scale Gaussian Curvature,

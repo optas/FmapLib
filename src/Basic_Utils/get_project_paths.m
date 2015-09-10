@@ -15,7 +15,7 @@ function [data_path, code_path] = get_project_paths(project_name)
     data_path = '';
     code_path = '';
     
-    if strcmp(name(1:end-1), 'optasMacPro')        
+    if strcmp(name(1:end-1), 'optasMacPro')
         if strcmp(project_name, 'FmapLib')
             data_path = '/Users/optas/Documents/Git_Repos/FmapLib/data/';
             code_path = '/Users/optas/Documents/Git_Repos/FmapLib/src/External_Code/';
