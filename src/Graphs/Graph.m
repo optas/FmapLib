@@ -73,6 +73,31 @@ classdef Graph < dynamicprops
             end           
         end
         
+        function [node_from, node_to] = all_edges(obj)
+            % Computes all the edges between every pair of nodes. If the graph is undirected it returns each edge once 
+            % and the. TODO-P add documentation
+            %
+            if obj.is_directed
+                [node_from, node_to] = find(obj.A);                   
+            else
+                [node_from, node_to] = find(triu(obj.A));     % Each edge is returned once since there is not direciton.                  
+            end
+        end
+        function [N] = neighbors(obj, vertices)            
+            % Finds the neighbor vertices (edge-connected) of all input vertices.
+            %
+            % Parameters
+            %
+            % Returns
+            %
+            N = cell(length(vertices), 1);              % TODO-P take care of directionality. 
+            for i = 1:length(vertices)
+                    N{i} = find(obj.A(i,:));                               
+            end
+                       
+        end
+        
+        
     end
            
     methods (Static)

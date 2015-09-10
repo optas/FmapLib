@@ -46,8 +46,8 @@ end
 
 
 %% Resize every image 
-new_height = NaN;
-new_weight = 200;
+new_height = 64;
+new_weight = 64;
 num_eigs   = 32;
 images_laplacians = cell(length(all_image_files), 1);
 
@@ -57,7 +57,7 @@ for i=1:length(images)
     Fi = faceFeatures(images{i}.resized, {'color'});  % normalize probe fs
     [h, w, ~] = size(images{i}.resized);
     
-    G  = Graph.generate('lattice', h, w);                 % P fix non_writtable properties.
+    G  = Graph.generate('lattice', h, w);               % P fix non_writtable properties.
     
     [node_from, node_to] = find(G.A);                   % all edges between nodes (double counting)
 
@@ -66,7 +66,7 @@ for i=1:length(images)
     from_col = node_from - ((from_row - 1) * w );
     to_col   = node_to   - ((to_row - 1) * w );
 
-    G.num_edges *2 == length(node_from)   % TODO take care for bidir.
+    G.num_edges * 2 == length(node_from)   % TODO take care for bidir.
     edges = length(node_from);
 
     all_dist  = zeros(edges, 1);
