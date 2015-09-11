@@ -3,6 +3,7 @@
 % standarizeImage
 % see vis_CorLoc and there in e.g., the loadView_seg
 
+
 clr;
 [dp, cp] = get_project_paths('ImageJointUnderstanding');
 

@@ -95,9 +95,7 @@ classdef Graph < dynamicprops
                     N{i} = find(obj.A(i,:));                               
             end
                        
-        end
-        
-        
+        end 
     end
            
     methods (Static)
@@ -149,8 +147,9 @@ classdef Graph < dynamicprops
             % Output:
             %           G           - (Graph) resuting graph model.
             
-            if strcmp(graph_type, 'lattice') || strcmp(graph_type, 'checkerboard')  % Type-checking
-                if nargin ~= 3
+            
+            if strcmp(graph_type, 'lattice') || strcmp(graph_type, 'checkerboard') || strcmp(graph_type, 'r_radius_connected')  % Type-checking
+                if nargin < 3
                     error('For a lattice graph, please specify the (x,y) number of nodes.')
                 end
                 m = varargin{1};                                    % X-axis number of nodes.
@@ -173,21 +172,71 @@ classdef Graph < dynamicprops
                 directed  = false;                
                 G = Graph(adj, directed, default_name);
             elseif strcmp(graph_type, 'checkerboard')
-                diag_vec_1  = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections. 
-                diag_vec_1  = spdiags(diag_vec_1, 1, m * n, m * n);
-                diag_vec_2  = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
-                diag_vec_2  = spdiags(diag_vec_2 , n, m * n, m * n);
-                diag_vec_3  = [0; diag_vec_1(1 : (n * (m-1)))];     % Anti-diagonal connections.
-                diag_vec_3  = spdiags(diag_vec_3, n-1, m * n, m * n);
-                diag_vec_4  = diag_vec_3(2 : end-1);                % Diagonal connections.
-                diag_vec_4  = spdiags(diag_vec_4, n+1, m * n, m * n);                
-                adj = diag_vec_1 + diag_vec_2 + diag_vec_3 + diag_vec_4;
-                adj = adj + adj.';                        
+                adj = simple_graphs('checkerboard_dense', m, n);                              
+%                 diag_vec_1  = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections. 
+%                 diag_vec_1  = spdiags(diag_vec_1, 1, m * n, m * n);
+%                 diag_vec_2  = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
+%                 diag_vec_2  = spdiags(diag_vec_2 , n, m * n, m * n);
+%                 diag_vec_3  = [0; diag_vec_1(1 : (n * (m-1)))];     % Anti-diagonal connections.
+%                 diag_vec_3  = spdiags(diag_vec_3, n-1, m * n, m * n);
+%                 diag_vec_4  = diag_vec_3(2 : end-1);                % Diagonal connections.
+%                 diag_vec_4  = spdiags(diag_vec_4, n+1, m * n, m * n);                
+%                 adj = diag_vec_1 + diag_vec_2 + diag_vec_3 + diag_vec_4;
+%                 adj = adj + adj.';                        
                 default_name = sprintf('%d_%d_checkerboard', m, n);
                 directed  = false;                
-                G = Graph(adj, directed, default_name);
-        
+                G = Graph(adj, directed, default_name);        
+            elseif strcmp(graph_type, 'r_radius_connected')
+                radius = varargin{3};
+                rows = m ;
+                columns = n;
+                all_starts = {}; all_ends = {}; all_vals = {};
+                image = ones(rows, columns);
+                for i1=1:2*radius + 1
+                    i = i1 - radius - 1;
+                    width = ceil(sqrt(radius^2 - i^2+1));
+                    starts = [];
+                    ends = [];
+                    vals = [];
+                    for j = -width:width
+                        if i == 0 && j == 0
+                            continue;
+                        end
+
+                        section = image(1+max(i,0):end+min(i,0), 1+max(j,0):end + min(j,0));
+                        shift   = zeros(size(image,1),size(image,2));
+                        shift(1 - min(i,0):end-max(i,0),1-min(j,0):end-max(j,0)) = section;
+                        where = (image == shift);
+                        weights = zeros(rows, columns);
+                        dist=sqrt(i^2 + j^2);
+                        weights(where == 1) = dist;
+                        weights = weights';
+
+
+                        start_indices = find(weights)';
+                        end_indices = start_indices + i*size(image,2) + j;
+                        val         = weights(weights~=0);
+
+                        starts(end+1:end+length(start_indices)) = start_indices;
+                        ends(end+1:end+length(end_indices)) = end_indices;
+                        vals(end+1:end+length(val)) = val';
+                    end
+
+                    all_starts{i1} = starts;
+                    all_ends{i1}   = ends;
+                    all_vals{i1}   = vals;
+                end
+                all_starts = cell2mat(all_starts);
+                all_ends   = cell2mat(all_ends);                
+                all_vals   = cell2mat(all_vals);
+                adj        = sparse(all_starts, all_ends, all_vals);
+                assert(all_close(adj, adj', 0.0001, +Inf));
+                default_name = sprintf('%d_%d_%d_radius_connected', m, n, radius);
+                directed  = false;                
+                G = Graph(adj, directed, default_name);                              
             else
+                
+                
                 error('Not valid graph type was requested.');
             end
         end

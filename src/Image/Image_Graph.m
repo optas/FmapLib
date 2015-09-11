@@ -4,7 +4,7 @@ classdef Image_Graph < Graph
     % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
-        I;          %  (Image) - Underlying Image object.                
+        I;          %  (Image) - Underlying Image object.
     end
         
     methods (Access = public)
@@ -14,8 +14,15 @@ classdef Image_Graph < Graph
             if nargin == 0
                 super_args = cell(0);
             else
-                [h, w, ~] = size(varargin{1}.CData);
-                G         = Graph.generate(varargin{2}, h, w);
+                [h, w, ~] = size(varargin{1}.CData);                
+                
+                if strcmp('r_radius_connected', varargin{2})
+                    radius = varargin{3};                           % TODO-store this.
+                    G   = Graph.generate(varargin{2}, h, w, radius);
+                else                    
+                    G   = Graph.generate(varargin{2}, h, w);
+                end
+                
                 super_args{1} = G.A;       % Adjacency matrix.               % TODO-P Add construct from graph in Graph.
                 super_args{2} = false;     % is_directed attribute.
                 super_args{3} = G.name;    % Graph's name.
@@ -28,7 +35,72 @@ classdef Image_Graph < Graph
                 obj.I = varargin{1};             
             end            
         end
-%         
+        
+        function [I] = graph_node_to_pixel_index(obj, nodes)
+            % Convert row-expanded nodes of pixel matrix (i.e.m nodes of graph), to 2D (i,j) indices for pixels.
+            %
+            %            
+            w = obj.I.width;
+            I = zeros(length(nodes), 2);
+            I(:,1) = ceil(nodes ./ double(w));             
+            I(:,2) = nodes - ((I(:,1) - 1) * w );            
+        end
+        
+        function obj = adjust_weights_via_feature_differences(obj, features, recipie, varargin)            
+            [h, w, ~] = size(features);            
+            if h ~= obj.I.height || w ~= obj.I.width    % TODO-P maybe better align with graph dimensions
+                error('Feature dimensions are not compatible with the stored image.');
+            end
+                        
+            if strcmp(recipie, 'normalized_cut')                
+                options = struct('sigma_f', 'median', 'sigma_s', 'median');
+                options = load_key_value_input_pairs(options, varargin{:});
+                
+                sigma = check_and_derive_sigma(options.sigma_s, obj.A(obj.A ~= 0));
+                                
+                [i, j, vals]   = find(obj.A);
+                spatial_dists  = sparse(i, j, exp(-((vals).^2) ./ sigma) );
+                
+                [node_from, node_to] = obj.all_edges();
+                from_index = obj.graph_node_to_pixel_index(node_from);
+                to_index   = obj.graph_node_to_pixel_index(node_to);                
+                edges      = obj.num_edges;
+                assert(size(to_index,1) == edges);
+                feature_dists  = zeros(edges, 1);
+                for i = 1:edges                                 
+                    f_from = squeeze(features(from_index(i,1), from_index(i,2), :));
+                    f_to   = squeeze(features(to_index(i,1), to_index(i,2), :));
+                    feature_dists(i) = norm(f_from - f_to);
+                end
+                sigma = check_and_derive_sigma(options.sigma_f, feature_dists);                
+                                              
+                feature_dists = exp( - ((feature_dists).^2) ./ sigma);                                
+                num_nodes = obj.num_vertices;
+                feature_dists = sparse(node_from, node_to, feature_dists, num_nodes, num_nodes); % Put values back in adjacecny matrix format.
+                feature_dists = feature_dists + feature_dists';
+                feature_dists = feature_dists .* spatial_dists;
+                assert(all(all(feature_dists >= 0 )));
+                %TODO ADD ASSERT symmetric
+                obj.add_or_reset_property('Gw', Graph(feature_dists, obj.is_directed));
+            else
+                error('Not implemented yet.')
+            end
+            
+            function [newsigma] = check_and_derive_sigma(sigma, values)
+                if strcmp(sigma, 'median')                    
+                    newsigma = 2 * (median(values(:)))^2;                    
+                else
+                    if sigma <= 0
+                        error('Provided standard deviation parameters must be all possitive.')
+                    end     
+                    newsigma = sigma;
+                end
+            end          
+        end
+        
+        
+        
+        %
 %         function obj = copy(this)
 %             % Define what is copied when a deep copy is performed.
 %             % Instantiate new object of the same class.
@@ -45,9 +117,21 @@ classdef Image_Graph < Graph
 %                 obj.(p{i}) = this.(p{i});
 %             end           
 %         end
-
                
     end
-     
+    
+    methods (Access = private)
+        function [] = add_or_reset_property(obj, propname, value)
+            % Check if the dynamic property already exists. In this case it
+            % only updates it via the setter and the varargin. Otherwise, 
+            % it first adds it on the object.            
+            if isprop(obj, propname)
+                obj.(propname) = value;
+            else
+                obj.addprop(propname);
+                obj.(propname) = value;
+            end
+        end        
+    end
 
 end

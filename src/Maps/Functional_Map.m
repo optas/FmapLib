@@ -85,8 +85,8 @@ classdef Functional_Map < dynamicprops
                 case 'frobenius_square'
                     [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
                 case 'frobenius'
-%                     [F] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
-                      [F] = Functional_Map.sum_of_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                    [F] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
+%                       [F] = Functional_Map.sum_of_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
                 case 'l1_and_frobenius'
                       [F] = Functional_Map.l1_and_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
                                 

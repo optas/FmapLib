@@ -1,13 +1,8 @@
-% seg.coords = RP(img, params_rp); %[xmin, ymin, xmax, ymax]
-% seg.coords = [seg.coords; 1, 1, size(img,2), size(img,1)]; % add a whole box
-% standarizeImage
-% see vis_CorLoc and there in e.g., the loadView_seg
-
 clr;
 [dp, cp] = get_project_paths('ImageJointUnderstanding');
 
-%% Load VOC image collection.
-image_folder    = '/Users/optas/Dropbox/with_others/Zimo_Peter_Panos/Joint_Image_Understanding/Data/VOC/2007/Train_Validate_Data/VOC2007_6x2/aeroplane_left/';
+%% Load VOC image collection with gist, gt_segmentation and object_proposals.
+image_folder    = [dp 'VOC/2007/Train_Validate_Data/VOC2007_6x2/aeroplane_left/'];
 all_image_files = rdir([image_folder, [filesep '**' filesep]], 'regexp(name, ''\.jpg$'')');
 images          = cell(length(all_image_files), 1);
 obj_proposals   = cell(length(all_image_files), 1);
@@ -30,118 +25,51 @@ for i=1:length(images)
     gist_signatures{i}  = gist_signatures{i}.gist_feat;
 end
 
-%% Load Rubinstein image collection.
-image_folder = [dp 'Rubinstein_CVPR_13/Data/Airplane100/'];
-all_image_files = rdir([image_folder, [filesep '**' filesep]], 'regexp(name, ''\.jpg$'')');                
-images = cell(length(all_image_files), 1);
-for i=1:length(images)
-    full_path       = all_image_files(i).name;
-    path_substrings = strsplit(full_path, filesep); 
-    last_word       = path_substrings{end};
-    image_name      = last_word(1:end-4);               % Relying on the fact that length('.jpg') == length('.obj') == 4.                                                               
-    images{i}       = Image(full_path, image_name);    
-    gt              = [image_folder 'GroundTruth/' image_name '.png'];
-    images{i}.set_gt_segmentation(imread(gt));    
-end
-
-
-%% Resize every image 
+%% Resize every image and extract a laplacian basis.
 new_height = 64;
-new_weight = 64;
-num_eigs   = 32;
-images_laplacians = cell(length(all_image_files), 1);
-
-for i=1:length(images)
-    images{i}.set_resized_image(new_height, new_weight);
-           
-    Fi = faceFeatures(images{i}.resized, {'color'});  % normalize probe fs
-    [h, w, ~] = size(images{i}.resized);
-    
-    G  = Graph.generate('lattice', h, w);               % P fix non_writtable properties.
-    
-    [node_from, node_to] = find(G.A);                   % all edges between nodes (double counting)
-
-    from_row = ceil(node_from / double(w));             % next four convert row-expanded nodes of pixel matrix, to 2d (i,j) indices.
-    to_row   = ceil(node_to   / double(w));
-    from_col = node_from - ((from_row - 1) * w );
-    to_col   = node_to   - ((to_row - 1) * w );
-
-    G.num_edges * 2 == length(node_from)   % TODO take care for bidir.
-    edges = length(node_from);
-
-    all_dist  = zeros(edges, 1);
-    parfor k = 1:edges                       % traverse all edges
-        all_dist(k) = norm(squeeze(Fi(from_row(k), from_col(k), :)) - squeeze(Fi(to_row(k), to_col(k), :)));      % distances based on feautures (Fi)   
-    end
-
-    sigma = 2*median(all_dist)^2           % convert distances to similarities
-    all_dist = exp(-all_dist.^2 ./ sigma);
-    
-    A = G.A;
-
-    for k = 1:edges
-        A(node_from(k), node_to(k)) = all_dist(k);    
-    end
-
-    G = Graph(A, 0);
-    Li_w = Laplacian(G, 'comb');
-    Li_w.get_spectra(num_eigs);
-    
-    images_laplacians{i} = Li_w;    
+new_width  = 64;
+radius     = 1;
+eigs_num   = 32;
+image_laplacians = cell(length(all_image_files), 1);
+% length(images)    
+for i=1:1 
+    images{i}.set_resized_image(new_height, new_width);
+    im_i = images{i}.get_resized_image();
+    G = Image_Graph(im_i, 'r_radius_connected',  radius);
+    Fi = im_i.color();
+    G.adjust_weights_via_feature_differences(Fi, 'normalized_cut', 'sigma_s', 92, 'sigma_f', 800);   
+    image_laplacians{i} = Laplacian(G.Gw, 'norm');         
+    image_laplacians{i}.get_spectra(eigs_num);
 end
-    
-%% Create image graphs, their Laplacians and compute their spectra.
-image_graphs = containers.Map;
-eigs_num     = 64;
-for i = 1:length(images)
-    im_dims = sprintf('%d_%d',images{i}.height, images{i}.weight);
-    if ~ image_graphs.isKey(im_dims)                       
-        image_graphs(im_dims) = Laplacian(Image_Graph(images{i}, 'lattice'), 'norm');
-        image_graphs(im_dims).get_spectra(eigs_num);
-    end    
-end
-save('voc_airplane_left_lattice_with_64_spectra.mat', 'image_graphs')
 %%
-load('voc_airplane_left_lattice_with_64_spectra.mat')
+plot(image_laplacians{1}.evals(eigs_num))
+E = image_laplacians{1}.evecs(32);
 
-%% Laplacians that take into account the RGB diffrences as weights.
-i = 1;
-im_dims = sprintf('%d_%d', images{i}.height, images{i}.weight);
-Li = image_graphs(im_dims);    
-Fi = faceFeatures(images{i}.CData, {'color'});  % normalize probe fs
-w = images{i}.weight;
-h = images{i}.height;
-[node_from, node_to] = find(Li.G.A);                   % all edges between nodes (double counting)
-
-from_row = ceil(node_from / double(w));             % next four convert row-expanded nodes of pixel matrix, to 2d (i,j) indices.
-to_row   = ceil(node_to   / double(w));
-from_col = node_from - ((from_row - 1) * w );
-to_col   = node_to   - ((to_row - 1) * w );
-
-Li.G.num_edges *2 == length(node_from)   % TODO take care for bidir.
-edges = length(node_from);
-
-all_dist  = zeros(edges, 1);
-for k = 1:edges                       % traverse all edges
-    all_dist(k) = norm(squeeze(Fi(from_row(k), from_col(k), :)) - squeeze(Fi(to_row(k), to_col(k), :)));      % distances based on feautures (Fi)   
+for i = 31: 32
+    eigenv = E(:,i)
+    eigenv = (eigenv - min(eigenv)) / (max(eigenv) - min(eigenv)) ;
+    eigenv = reshape(eigenv, 64, 64)   
+    figure; imshow(eigenv)
 end
 
-sigma = 2*median(all_dist)^2           % convert distances to similarities
-all_dist = exp(-all_dist.^2 ./ sigma)
+% image( im2single(reshape(E(:,2)), 64, 64))
 
-G = Graph.generate('lattice', h, w);                % P fix non_writtable properties.
-A = G.A;
 
-for k = 1:edges
-    A(node_from(k), node_to(k)) = all_dist(k);    
-end
+%%
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
-G = Graph(A, 0);
-Li_w = Laplacian(G, 'norm');
 
-Li_w.get_spectra(3);
 
-i = 1;
+
+%%
 for eigs_num = [1,2,5,10,30,45,62];
 
     im_dims = sprintf('%d_%d', images{i}.height, images{i}.weight);
@@ -171,6 +99,7 @@ for eigs_num = [1,2,5,10,30,45,62];
 end
 
 %% Derive hogs for every image.
+
 eigs_num  = 64;
 hogs      = cell(length(all_image_files), 1);
 hogs_proj = cell(length(all_image_files), 1);

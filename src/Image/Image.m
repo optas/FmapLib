@@ -6,11 +6,11 @@ classdef Image < dynamicprops
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Image class has.
         
-        CData          %   (height x weight) or (height x weight x 3) matrix capturing the image's color data. This
+        CData          %   (height x width) or (height x width x 3) matrix capturing the image's color data. This
                        %   property has an identical role as the CData property of the 'matlab.graphics.primitive.Image'
                        %   class.
         height         %   (int)     -    Number of vertical pixels.
-        weight         %   (int)     -    Number of horizontal pixels.
+        width          %   (int)     -    Number of horizontal pixels.
         name           %   (String)  -    (default = '') A string identifying the image, e.g., 'Mandrill'.
     end
     
@@ -27,7 +27,7 @@ classdef Image < dynamicprops
             else % Directly provide the matrix with the pixel conntent.
                 obj.CData = varargin{1};                
             end
-            [obj.height, obj.weight, ~] = size(obj.CData);
+            [obj.height, obj.width, ~] = size(obj.CData);
             if nargin > 1 && ischar(varargin{end}) % Add potential name of picture.
                 obj.name = varargin{end};
             else
@@ -40,7 +40,7 @@ classdef Image < dynamicprops
         end
         
         function c = color(obj)
-            if class(obj.CData) == uint8 || class(obj.CData) == uint16
+            if isa(obj.CData, 'uint8') || isa(obj.CData, 'uint16')
                 c = im2double(obj.CData);
             else 
                 obj.CData;    % More on this case.
@@ -67,18 +67,21 @@ classdef Image < dynamicprops
             end
         end
         
-        function set_resized_image(obj, new_height, new_weight)
+        function set_resized_image(obj, new_height, new_width)
             % to do change to varargin
             propname = 'resized';
-            imres = imresize(obj.CData , [new_height, new_weight]);
+            imres = imresize(obj.CData , [new_height, new_width], 'bilinear');
             if isprop(obj, propname)
-                obj.(propname) = imres;
+                obj.(propname) = Image(imres);
             else
                 obj.addprop(propname);
-                obj.(propname) = imres;
+                obj.(propname) = Image(imres);
             end
         end
         
+        function [resized] = get_resized_image(obj)
+            resized = obj.resized;
+        end
        
  
     end
