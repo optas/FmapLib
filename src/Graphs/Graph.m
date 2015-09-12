@@ -52,7 +52,13 @@ classdef Graph < dynamicprops
             if size(obj.A, 1) ~= size(obj.A, 2)                
                 error('The provided adjacency matrix is not a square matrix.')                
             end
+            if any(obj.A < 0)
+                error('The provided adjacency matrix has negative entries but the edges must be non negative.')                
+            end
+            
+            
             assert(size(obj.A, 1) == obj.num_vertices)
+            
         end
         
         function obj = set_name(obj, new_name)
@@ -210,11 +216,12 @@ classdef Graph < dynamicprops
                         weights = zeros(rows, columns);
                         dist=sqrt(i^2 + j^2);
                         weights(where == 1) = dist;
-                        weights = weights';
+%                         weights = weights';
 
 
                         start_indices = find(weights)';
-                        end_indices = start_indices + i*size(image,2) + j;
+%                         end_indices = start_indices + i*size(image,2) + j;
+                        end_indices = start_indices + j*size(image,1) + i;
                         val         = weights(weights~=0);
 
                         starts(end+1:end+length(start_indices)) = start_indices;

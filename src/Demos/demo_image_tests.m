@@ -1,6 +1,5 @@
 % seg.coords = RP(img, params_rp); %[xmin, ymin, xmax, ymax]
 % seg.coords = [seg.coords; 1, 1, size(img,2), size(img,1)]; % add a whole box
-% standarizeImage
 % see vis_CorLoc and there in e.g., the loadView_seg
 
 

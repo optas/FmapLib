@@ -62,17 +62,36 @@ classdef Patch < dynamicprops
             
             
     end
-%         function left_down_corner ()       % TODO-Z
-%         function left_up_corner ()
-%         function right_down_corner ()
-%         function right_up_corner ()
     
-    methods (Static, Access = private)
+    methods (Static, Access = public)
         function [b] = are_valid_corners(corners, src_image)            
-            b =  corners(0) < src_image.weight && corners(3) < src_image.weight && ...  % Inside photo's x-dim.
-                 corners(2) < src_image.height && corners(4) < src_image.height && ...  % Inside photo's y-dim.
+            b =  corners(1) <= src_image.width && corners(3) <= src_image.width && ...   % Inside photo's x-dim.
+                 corners(2) <= src_image.height && corners(4) <= src_image.height && ...  % Inside photo's y-dim.
                  all(corners) > 0 ;                 
         end
+        
+        function mask = extract_patch_features(corners, features)
+            %TODO fix corner to ints
+            mask = zeros(size(features));
+            mask(corners(2):corners(4), corners(1):corners(3), :) = features(corners(2):corners(4), corners(1):corners(3), :);
+        end
+        
+        function new_corners = find_new_corners(old_height, old_width, new_height, new_width, old_corners)
+            xmin = old_corners(1);
+            ymin = old_corners(2);
+            xmax = old_corners(3);
+            ymax = old_corners(4);
+            
+            xmin_n = double(xmin) * new_width / old_width;
+            xmax_n = double(xmax) * new_width / old_width;
+            ymin_n = double(ymin) * new_height/ old_height;
+            ymax_n = double(ymax) * new_height/ old_height;
+            
+            new_corners = [xmin_n ymin_n xmax_n ymax_n];
+            new_corners = uint16(ceil(new_corners));
+            
+        end
+        
         
 %         function [b] = is_within_area_range(in_patch)
 %             w = in_patch.source_image.weight;
@@ -90,7 +109,7 @@ classdef Patch < dynamicprops
             
             
             
-        end
+%         end
          
     end
     

@@ -36,16 +36,29 @@ classdef Image_Graph < Graph
             end            
         end
         
+%         function [I] = graph_node_to_pixel_index(obj, nodes)
+%             % Convert row-expanded nodes of pixel matrix (i.e.m nodes of graph), to 2D (i,j) indices for pixels.
+%             %
+%             %            
+%             w = obj.I.width;
+%             I = zeros(length(nodes), 2);
+%             I(:,1) = ceil(nodes ./ double(w));             
+%             I(:,2) = nodes - ((I(:,1) - 1) * w );            
+%         end
+        
         function [I] = graph_node_to_pixel_index(obj, nodes)
             % Convert row-expanded nodes of pixel matrix (i.e.m nodes of graph), to 2D (i,j) indices for pixels.
             %
             %            
-            w = obj.I.width;
+            h = obj.I.height;
+            
             I = zeros(length(nodes), 2);
-            I(:,1) = ceil(nodes ./ double(w));             
-            I(:,2) = nodes - ((I(:,1) - 1) * w );            
+            
+            I(:,2) = ceil(nodes ./ double(h));             % y
+            I(:,1) = nodes - ((I(:,2) - 1) * h );          % x  
         end
-        
+
+
         function obj = adjust_weights_via_feature_differences(obj, features, recipie, varargin)            
             [h, w, ~] = size(features);            
             if h ~= obj.I.height || w ~= obj.I.width    % TODO-P maybe better align with graph dimensions
@@ -72,7 +85,7 @@ classdef Image_Graph < Graph
                     f_to   = squeeze(features(to_index(i,1), to_index(i,2), :));
                     feature_dists(i) = norm(f_from - f_to);
                 end
-                sigma = check_and_derive_sigma(options.sigma_f, feature_dists);                
+                sigma = check_and_derive_sigma(options.sigma_f, feature_dists);        
                                               
                 feature_dists = exp( - ((feature_dists).^2) ./ sigma);                                
                 num_nodes = obj.num_vertices;
@@ -88,7 +101,7 @@ classdef Image_Graph < Graph
             
             function [newsigma] = check_and_derive_sigma(sigma, values)
                 if strcmp(sigma, 'median')                    
-                    newsigma = 2 * (median(values(:)))^2;                    
+                    newsigma = 2 * (mean(values(:)))^2;                    
                 else
                     if sigma <= 0
                         error('Provided standard deviation parameters must be all possitive.')

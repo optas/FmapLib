@@ -11,7 +11,7 @@ for i=1:length(images)
     full_path         = all_image_files(i).name;
     path_substrings   = strsplit(full_path, filesep); 
     last_word         = path_substrings{end};
-    image_name        = last_word(1:end-4);               % Relying on the fact that length('.jpg') == length('.obj') == 4.                                                               
+    image_name        = last_word(1:end-4);                             % Relying on the fact that length('.jpg') == length('.obj') == 4.                                                               
     images{i}         = Image(full_path, image_name);    
     
     gt_segmentation   = load([image_folder image_name '.mat']);
@@ -19,40 +19,174 @@ for i=1:length(images)
     images{i}.set_gt_segmentation(gt_segmentation);
     
     obj_proposals{i}  = load([image_folder image_name '_seg.mat']);    
-    obj_proposals{i}  = obj_proposals{i}.feat.boxes;
+    obj_proposals{i}  = int16(obj_proposals{i}.feat.boxes);
   
     gist_signatures{i} = load([image_folder image_name '_gist.mat']);    
     gist_signatures{i}  = gist_signatures{i}.gist_feat;
 end
 
+num_images = length(images);
+
 %% Resize every image and extract a laplacian basis.
-new_height = 64;
-new_width  = 64;
-radius     = 1;
-eigs_num   = 32;
-image_laplacians = cell(length(all_image_files), 1);
-% length(images)    
-for i=1:1 
-    images{i}.set_resized_image(new_height, new_width);
-    im_i = images{i}.get_resized_image();
-    G = Image_Graph(im_i, 'r_radius_connected',  radius);
-    Fi = im_i.color();
-    G.adjust_weights_via_feature_differences(Fi, 'normalized_cut', 'sigma_s', 92, 'sigma_f', 800);   
-    image_laplacians{i} = Laplacian(G.Gw, 'norm');         
-    image_laplacians{i}.get_spectra(eigs_num);
+
+% new_height = 32;
+% new_width  = 32;
+% 
+% radius     = 3;
+% eigs_num   = 5;
+% 
+% sigma_s    = 92 /(255^2);
+% sigma_f    = 800/(255^2);   
+% 
+% image_laplacians = cell(length(all_image_files), 1);
+
+for i= 1:num_images
+    images{i}.set_resized_image(new_height, new_width);    
+%     im_i = images{i}.get_resized_image();    
+%     G = Image_Graph(im_i, 'r_radius_connected',  radius);
+%     
+%     Fi = im_i.color();
+%     G.adjust_weights_via_feature_differences( Fi , 'normalized_cut', 'sigma_s', sigma_s, 'sigma_f', sigma_f);
+%     
+%     image_laplacians{i} = Laplacian(G.Gw, 'norm');             
+%     image_laplacians{i}.get_spectra(eigs_num);
+   
+end
+
+%% Extract hog feature (pixel-wise) and project them into Laplacian basis
+hog_feats = cell(num_images ,1);
+proj_hogs = cell(num_images, 1);
+
+for i= 1:num_images
+    im_i = images{i}.get_resized_image();    
+    
+    h = im_i.height;
+    w = im_i.width;
+    
+    hog_feats{i} = Image_Features.hog_signature(im_i);    
+    
+    Fp = reshape(hog_feats{i}, h*w, size(hog_feats{i}, 3));       % Now Fp, contains the pixel-level features stack in a long vector column-wise.
+    Fp = divide_columns(Fp, sqrt(sum(Fp.^2)));                      % Rescale to unit norm.    
+       
+    proj_hogs{i}    = image_laplacians{i}.project_functions(eigs_num, Fp);
+end
+% save
+
+%% Make all F-maps.
+all_fmaps = cell(num_images, num_images);
+regulizer_w = 15;
+for i = 1:num_images
+    evals_i = image_laplacians{i}.evals(eigs_num);
+    for j = 1:num_images
+        if i ~= j
+            evals_j = image_laplacians{j}.evals(eigs_num);            
+            all_fmaps{i,j} = Functional_Map.sum_of_squared_frobenius_norms(proj_hogs{i}, proj_hogs{j}, evals_i, evals_j, regulizer_w);
+        end        
+    end
+end
+
+%% k-nn GIST initial image network
+k_neighbors = 5;
+gist_desc = cell2mat(gist_signatures);
+[nns, gist_dists] = knnsearch(gist_desc, gist_desc, 'k', k_neighbors+1);
+nns = nns(:, 2:k_neighbors+1);
+gist_dists = gist_dists(:, 2:k_neighbors+1);
+
+
+%% Rank every proposal (no triplets involved)
+top_p   = 5;                                 % How many top-scoring patches to keep per image at each iteration
+top_patches = zeros(num_images, top_p);
+
+for i = 1:num_images
+    im_i = images{i}.get_resized_image();    
+    
+    orig_height = images{i}.height;
+    orig_width  = images{i}.width;
+    
+    new_height = im_i.height;
+    new_width  = im_i.width;
+    
+    o_i  = obj_proposals{i};
+    
+    score_i = zeros(length(o_i) , 1);
+    for pi = 1:length(o_i)          % Proposals for image_i
+%         if ~ Patch.are_valid_corners(o_i(pi, :),  im_i) 
+%             continue;
+%         end
+        corners_pi = Patch.find_new_corners(orig_height, orig_width, new_height, new_width, o_i(pi,:));
+        Fs = Patch.extract_patch_features(corners_pi , hog_feats{i});
+        
+        for j = nns(i, :)
+            misalignment = 0;             
+            im_j = images{j}.get_resized_image();  
+            orig_heightj = images{j}.height;
+            orig_widthj = images{j}.width;
+            new_heightj = im_j.height;
+            new_widthj = im_j.width;
+         
+            o_j = obj_proposals{j};
+                       
+            for pj = 1:length(o_j)      % Proposals for image_j                        
+%                 if ~ Patch.are_valid_corners(o_j(pj, :),  im_i) 
+%                     continue; 
+%                 end
+                corners_pj = Patch.find_new_corners(orig_heightj, orig_widthj, new_heightj, new_widthj, o_j(pj,:));
+                Ft = Patch.extract_patch_features(corners_pj , hog_feats{j});
+                
+                misalignment = misalignment + sum(sum(abs((all_fmaps{i,j} * Fs) - Ft), 1)); % alignment error (L1 dist) of probe functions.       
+                misalignment = misalignment + sum(sum(abs((all_fmaps{j,i} * Ft) - Fs), 1));
+            end
+            
+            score_i(pi) = score_i(pi) + (misalignment / length(o_j));
+        end        
+    end
+    [sort_scores, indices] = sort(score_i);      
+    top_patches(i, :) = indices(1:top_p);            
 end
 %%
-plot(image_laplacians{1}.evals(eigs_num))
-E = image_laplacians{1}.evecs(32);
+% Zimo corloc
+% Zimo corloc with standout
 
-for i = 31: 32
-    eigenv = E(:,i)
-    eigenv = (eigenv - min(eigenv)) / (max(eigenv) - min(eigenv)) ;
-    eigenv = reshape(eigenv, 64, 64)   
-    figure; imshow(eigenv)
+%%
+
+
+
+
+
+
+
+
+
+
+
+
+%%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                                                                          Basement
+%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+
+% Get object Proposals
+params = load([cp 'Randomized_Prim_Object_Proposal/config/rp.mat']);  % Default Params for RP method.
+params = params.params;
+
+params.approxFinalNBoxes = 100;    
+
+proposals = cell(num_images, 1);
+
+for i = 1:num_images
+    im_id = image_trio(i);    
+    im = images{im_id};         
+    [h, w, ~] = size(im);
+    proposals{i} = RP(im, params);
 end
 
-% image( im2single(reshape(E(:,2)), 64, 64))
+
+
 
 
 %%
@@ -64,6 +198,8 @@ end
     
     
     
+
+
     
 
 
@@ -121,30 +257,6 @@ for i=1:length(images)
 end
 
 
-%% Make F-maps.
-    Fproj = cell(1);
-    for i = 1:length(image_trio)            
-        F  = features{i};
-        F  = reshape(F, size(F,1)*size(F,2), size(F,3));
-        F  = divide_columns(F, sqrt(sum(F.^2)));
-        Fproj{i}  = evecs{i}' * F;
-    end    
-    
-    n_ims = length(image_trio);
-    Fmaps = cell(n_ims, n_ims);
-    regulizer_w = 15;
-    for i = 1:length(image_trio)            
-        for j = 1:length(image_trio)         
-            if i ~= j
-                Fmaps{i,j} = Functional_Map.sum_of_frobenius_norms(Fproj{i}, Fproj{j}, diag(evals{i}), diag(evals{j}), regulizer_w);
-            end
-        end
-    end
-    
-
-
-
-image(im2uint8(im_r_i.CData))
 % im_r_i.plot()
 %%
             
@@ -165,23 +277,9 @@ param.orientationsPerScale = [8 8 8 8];
 param.numberBlocks = 4;
 param.fc_prefilt = 4;
 LMgist(image_folder, '', param, image_folder)
-
 k_neighbors = 2;
 [gist_descriptors, gist_nn] = get_gist_nn(images, k_neighbors);
     
-
-%% Get object Proposals
-params = load('external/rp-master/config/rp.mat');  % Default Params for RP method.
-params = params.params;
-params.approxFinalNBoxes = 100;
-proposals = cell(n_ims, 1);
-
-for i = 1:length(image_trio)          
-    im_id = image_trio(i);    
-    im = images{im_id};         
-    [h, w, ~] = size(im);
-    proposals{i} = RP(im, params);
-end
 
 %%
 overlaps{i} = cell(n_ims, 1);
@@ -223,24 +321,7 @@ for i = 1:n_ims
 end
 
 
-%% Now rank every pair of proposals (no triplets involved)
-scores = cell(n_ims, n_ims);
-for i = 1:n_ims
-        for j = i+1:n_ims                        
-                scores{i,j} = cell(length(proposal_features{i}), length(proposal_features{j}));
-                for pi = 1:length(proposal_features{i})          % Proposals for image_i
-                    for pj = 1:length(proposal_features{j})      % Proposals for image_j                        
-                        if ~isempty(proposal_features{i}{pi}) &&  ~isempty(proposal_features{j}{pj})                      
-                            Fs = proposal_features{i}{pi};
-                            Ft = proposal_features{i}{pj};
-                            misalignment = sum(sum(abs((Fmaps{i,j} * Fs) - Ft), 1));     %  ./ size(Fs, 2) % alignment error (L1 dist) of probe functions.       
-                            misalignment = misalignment + sum(sum(abs((Fmaps{j,i} * Ft) - Fs), 1));
-                            scores{i,j,pi,pj} = misalignment
-                        end
-                    end
-                end
-        end
-end
+
 
 
 %% Do simple stats
@@ -286,12 +367,6 @@ end
 
 
 
-
-
-%% Partition each image into tiles.
-grid_dim   = [20, 20];                                                        % Image will be partioned in grid_dim tiles.
-grid_graph = simple_graphs('grid', grid_dim(1), grid_dim(2));
-
 %% Extract BOW-feature.
 bow_dict = load('/Users/optas/Dropbox/matlab_projects/Image_Graphs/data/Centers_MSRC');
 bow_dict = bow_dict.Centers;
@@ -302,30 +377,5 @@ for i=1:total_images
     bow_feats{i} = F;
 end
 
-%%
-    save('../data/output/aeroplane_first_20_bow_feats_100_100_grid', 'bow_feats')
 
-%%
-    load('../data/output/aeroplane_first_20_bow_feats', 'bow_feats')
-%%
-    F1 = bow_feats{1};
-
-%% Derive weights of Laplacian.
-    pd1 = pdist(F1);
-    sigma = 2 * median(pd1(:))^2;
-    pd1 = exp(-(pd1 .^2) / sigma );
-    pd1 = squareform(pd1);
-    m   = size(pd1, 1);
-    pd1(1: m+1: end) = 1;
-    imagesc(pd1)    
-    pd1 = pd1 .* grid_graph;        % Try checker-board graph.    
-%% Laplacian basis.
-    neigs  = 64;
-    Lg1    = diag(sum(pd1)) - pd1;
-    [U, V] = eigs(Lg1, neigs, 'SA');
-    Fproj  = U' * F1;
-        
-%     Freconstruct = U * Fproj;    
-%     norm(abs(Freconstruct - F1), 'fro') / norm(F1, 'fro')
-    
 %%
