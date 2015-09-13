@@ -1,6 +1,6 @@
 clr;
 [dp, cp] = get_project_paths('ImageJointUnderstanding');
-
+            
 %% Load VOC image collection with gist, gt_segmentation and object_proposals.
 image_folder    = [dp 'VOC/2007/Train_Validate_Data/VOC2007_6x2/aeroplane_left/'];
 all_image_files = rdir([image_folder, [filesep '**' filesep]], 'regexp(name, ''\.jpg$'')');
@@ -28,30 +28,29 @@ end
 num_images = length(images);
 
 %% Resize every image and extract a laplacian basis.
+new_height = 128;
+new_width  = NaN;
 
-% new_height = 32;
-% new_width  = 32;
-% 
-% radius     = 3;
-% eigs_num   = 5;
-% 
-% sigma_s    = 92 /(255^2);
-% sigma_f    = 800/(255^2);   
-% 
-% image_laplacians = cell(length(all_image_files), 1);
+radius     = 3;
+eigs_num   = 5;
+
+sigma_s    = 92 /(255^2);
+sigma_f    = 800/(255^2);   
+
+image_laplacians = cell(length(all_image_files), 1);
 
 for i= 1:num_images
     images{i}.set_resized_image(new_height, new_width);    
-%     im_i = images{i}.get_resized_image();    
-%     G = Image_Graph(im_i, 'r_radius_connected',  radius);
-%     
-%     Fi = im_i.color();
-%     G.adjust_weights_via_feature_differences( Fi , 'normalized_cut', 'sigma_s', sigma_s, 'sigma_f', sigma_f);
-%     
-%     image_laplacians{i} = Laplacian(G.Gw, 'norm');             
-%     image_laplacians{i}.get_spectra(eigs_num);
-   
+    im_i = images{i}.get_resized_image();    
+    G = Image_Graph(im_i, 'r_radius_connected',  radius);
+    
+    Fi = im_i.color();
+    G.adjust_weights_via_feature_differences(Fi , 'normalized_cut', 'sigma_s', sigma_s, 'sigma_f', sigma_f);    
+    
+    image_laplacians{i} = Laplacian(G.Gw, 'norm');             
+    image_laplacians{i}.get_spectra(eigs_num);   
 end
+% save('image_laplacians_aeroplane_left', 'image_laplacians')
 
 %% Extract hog feature (pixel-wise) and project them into Laplacian basis
 hog_feats = cell(num_images ,1);
@@ -99,23 +98,30 @@ top_patches = zeros(num_images, top_p);
 
 for i = 1:num_images
     im_i = images{i}.get_resized_image();    
-    
+
     orig_height = images{i}.height;
-    orig_width  = images{i}.width;
-    
+    orig_width = images{i}.width;
+
     new_height = im_i.height;
     new_width  = im_i.width;
-    
+
     o_i  = obj_proposals{i};
-    
+
     score_i = zeros(length(o_i) , 1);
-    for pi = 1:length(o_i)          % Proposals for image_i
-%         if ~ Patch.are_valid_corners(o_i(pi, :),  im_i) 
-%             continue;
-%         end
+    for pi = 1:length(o_i)                   % Proposals for image_i
+        if ~ Patch.are_valid_corners(o_i(pi, :),  images{i}) 
+%                 o_i(pi, :)
+%                 input('')
+%                 break;
+            continue;
+
+        end
         corners_pi = Patch.find_new_corners(orig_height, orig_width, new_height, new_width, o_i(pi,:));
         Fs = Patch.extract_patch_features(corners_pi , hog_feats{i});
-        
+        Fs = reshape(Fs, new_height*new_width, size(Fs, 3));
+        Fs = image_laplacians{i}.project_functions(eigs_num, Fs);
+
+
         for j = nns(i, :)
             misalignment = 0;             
             im_j = images{j}.get_resized_image();  
@@ -123,25 +129,28 @@ for i = 1:num_images
             orig_widthj = images{j}.width;
             new_heightj = im_j.height;
             new_widthj = im_j.width;
-         
+
             o_j = obj_proposals{j};
-                       
+
             for pj = 1:length(o_j)      % Proposals for image_j                        
-%                 if ~ Patch.are_valid_corners(o_j(pj, :),  im_i) 
-%                     continue; 
-%                 end
+                if ~ Patch.are_valid_corners(o_j(pj, :),  images{j})                        
+                    continue; 
+
+                end
                 corners_pj = Patch.find_new_corners(orig_heightj, orig_widthj, new_heightj, new_widthj, o_j(pj,:));
                 Ft = Patch.extract_patch_features(corners_pj , hog_feats{j});
-                
+                Ft = reshape(Ft, new_heightj*new_widthj, size(Ft, 3));
+                Ft = image_laplacians{i}.project_functions(eigs_num, Ft);
+
                 misalignment = misalignment + sum(sum(abs((all_fmaps{i,j} * Fs) - Ft), 1)); % alignment error (L1 dist) of probe functions.       
                 misalignment = misalignment + sum(sum(abs((all_fmaps{j,i} * Ft) - Fs), 1));
             end
-            
+
             score_i(pi) = score_i(pi) + (misalignment / length(o_j));
         end        
     end
     [sort_scores, indices] = sort(score_i);      
-    top_patches(i, :) = indices(1:top_p);            
+    top_patches(i, :) = indices(1:top_p)            
 end
 %%
 % Zimo corloc
