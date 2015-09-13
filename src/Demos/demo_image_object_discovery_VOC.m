@@ -1,4 +1,4 @@
-%clr;
+clear; clc;
 [dp, cp] = get_project_paths('ImageJointUnderstanding');
             
 %% Load VOC image collection with gist, gt_segmentation and object_proposals.
@@ -28,18 +28,18 @@ end
 num_images = length(images);
 
 %% Resize every image and extract a laplacian basis.
-new_height = 128;
+new_height = 100;
 new_width  = NaN;
 
 radius     = 3;
-eigs_num   = 5;
+eigs_num   = 64;
 
-sigma_s    = 92 /(255^2);
-sigma_f    = 800/(255^2);   
+sigma_s   =  2 * (0.1 * norm([new_width-1, new_height-1]))^2;
+sigma_f   = 800 / (255^2);   
 
 image_laplacians = cell(length(all_image_files), 1);
 
-for i= 1:num_images
+for i= 3:3
     images{i}.set_resized_image(new_height, new_width);    
     im_i = images{i}.get_resized_image();    
     G = Image_Graph(im_i, 'r_radius_connected',  radius);
@@ -52,7 +52,15 @@ for i= 1:num_images
     image_laplacians{i}.get_spectra(eigs_num);   
     fprintf('Laplacian %d constructed.\n', i)
 end
-save([dp 'output/laplacians_aeroplane_left_norm'], 'image_laplacians');
+% save([dp 'output/laplacians_aeroplane_left_norm'], 'image_laplacians');
+
+%%
+E = image_laplacians{3}.evecs(10);   
+E = E(:,2);
+E = reshape(E, new_height, new_width);
+E = (E - min(E(:))) ./ (max(E(:)) - min(E(:)));    % imshow expects values in [0,1] if they are floats.
+imshow(E)
+
 
 %% Extract hog feature (pixel-wise) and project them into Laplacian basis
 hog_feats = cell(num_images ,1);
@@ -81,7 +89,7 @@ for i = 1:num_images
     for j = 1:num_images
         if i ~= j
             evals_j = image_laplacians{j}.evals(eigs_num);            
-            all_fmaps{i,j} = Functional_Map.sum_of_squared_frobenius_norms(proj_hogs{i}, proj_hogs{j}, evals_i, evals_j, regulizer_w);
+            all_fmaps{i,j} = Functional_Map.l1_and_frobenius_norms_cvx(proj_hogs{i}, proj_hogs{j}, evals_i, evals_j, regulizer_w);
         end        
     end
 end
@@ -95,6 +103,7 @@ gist_dists = gist_dists(:, 2:k_neighbors+1);
 
 
 %% Rank every proposal (no triplets involved)
+
 top_p   = 5;                                 % How many top-scoring patches to keep per image at each iteration
 top_patches = zeros(num_images, top_p);
 

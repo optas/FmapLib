@@ -36,18 +36,9 @@ classdef Image_Graph < Graph
             end            
         end
         
-%         function [I] = graph_node_to_pixel_index(obj, nodes)
-%             % Convert row-expanded nodes of pixel matrix (i.e.m nodes of graph), to 2D (i,j) indices for pixels.
-%             %
-%             %            
-%             w = obj.I.width;
-%             I = zeros(length(nodes), 2);
-%             I(:,1) = ceil(nodes ./ double(w));             
-%             I(:,2) = nodes - ((I(:,1) - 1) * w );            
-%         end
         
         function [I] = graph_node_to_pixel_index(obj, nodes)
-            % Convert row-expanded nodes of pixel matrix (i.e.m nodes of graph), to 2D (i,j) indices for pixels.
+            % Convert column-expanded nodes of pixel matrix (i.e.m nodes of graph), to 2D (i,j) indices for pixels.
             %
             %            
             h = obj.I.height;
@@ -101,7 +92,7 @@ classdef Image_Graph < Graph
             
             function [newsigma] = check_and_derive_sigma(sigma, values)
                 if strcmp(sigma, 'median')                    
-                    newsigma = 2 * (mean(values(:)))^2;                    
+                    newsigma = 2 * (median(values(:)))^2;                    
                 else
                     if sigma <= 0
                         error('Provided standard deviation parameters must be all possitive.')
