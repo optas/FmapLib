@@ -95,14 +95,14 @@ classdef Laplacian < Basis
             lambda        = diag(lambda);
             
             if ~isreal(Phi) || ~isreal(lambda)
-                error ('Laplacian has not real spectra.')
+                warning ('Laplacian has not real spectra.')
             end            
             if sum(lambda < 0) > 1                
                 warning ('More than one *negative* eigenvalue were produced. Laplacian is PSD and only the 1st eigenvalue is expected to potentially be smaller than zero (instead of exactly zero).')
             end            
             atol = 1e-08; rtol = +Inf;            
             if ~all_close(Phi' * Phi, eye(eigs_num), atol, rtol) 
-                error ('The produced eigenvectors are not orthogonal.')
+                warning ('The produced eigenvectors are not orthogonal (within %e tolerance).', atol)
             end
   
             lambda        = abs(lambda);
