@@ -1,4 +1,4 @@
-clr;
+%clr;
 [dp, cp] = get_project_paths('ImageJointUnderstanding');
             
 %% Load VOC image collection with gist, gt_segmentation and object_proposals.
@@ -43,14 +43,16 @@ for i= 1:num_images
     images{i}.set_resized_image(new_height, new_width);    
     im_i = images{i}.get_resized_image();    
     G = Image_Graph(im_i, 'r_radius_connected',  radius);
-    
+    fprintf('Graph %d constructed.\n', i)
+
     Fi = im_i.color();
     G.adjust_weights_via_feature_differences(Fi , 'normalized_cut', 'sigma_s', sigma_s, 'sigma_f', sigma_f);    
     
     image_laplacians{i} = Laplacian(G.Gw, 'norm');             
     image_laplacians{i}.get_spectra(eigs_num);   
+    fprintf('Laplacian %d constructed.\n', i)
 end
-% save('image_laplacians_aeroplane_left', 'image_laplacians')
+save([dp 'output/laplacians_aeroplane_left_norm'], 'image_laplacians');
 
 %% Extract hog feature (pixel-wise) and project them into Laplacian basis
 hog_feats = cell(num_images ,1);
