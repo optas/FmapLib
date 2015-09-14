@@ -28,41 +28,37 @@ end
 num_images = length(images);
 
 %% Resize every image and extract a laplacian basis.
-new_height = 100;
-new_width  = NaN;
+new_height = 10;
+new_width  = 10;
 
-radius     = 3;
-eigs_num   = 64;
+radius     = 1;
+eigs_num   = 2;
 
-sigma_s   =  2 * (0.1 * norm([new_width-1, new_height-1]))^2;
 sigma_f   = 800 / (255^2);   
 
 image_laplacians = cell(length(all_image_files), 1);
 
-for i= 3:3
+for i= 1:num_images
     images{i}.set_resized_image(new_height, new_width);    
     im_i = images{i}.get_resized_image();    
+    new_width = im_i.width;
+        
     G = Image_Graph(im_i, 'r_radius_connected',  radius);
     fprintf('Graph %d constructed.\n', i)
 
+    
     Fi = im_i.color();
+    sigma_s  =  2 * (0.1 * norm([new_width-1, new_height-1]))^2;    
     G.adjust_weights_via_feature_differences(Fi , 'normalized_cut', 'sigma_s', sigma_s, 'sigma_f', sigma_f);    
     
-    image_laplacians{i} = Laplacian(G.Gw, 'norm');             
-    image_laplacians{i}.get_spectra(eigs_num);   
+    image_laplacians{i} = Laplacian(G.Gw, 'norm');
+    image_laplacians{i}.get_spectra(eigs_num);
     fprintf('Laplacian %d constructed.\n', i)
 end
 % save([dp 'output/laplacians_aeroplane_left_norm'], 'image_laplacians');
 
-%%
-E = image_laplacians{3}.evecs(10);   
-E = E(:,2);
-E = reshape(E, new_height, new_width);
-E = (E - min(E(:))) ./ (max(E(:)) - min(E(:)));    % imshow expects values in [0,1] if they are floats.
-imshow(E)
 
-
-%% Extract hog feature (pixel-wise) and project them into Laplacian basis
+%% Extract hog feature (pixel-wise) and project them into Laplacian basis.
 hog_feats = cell(num_images ,1);
 proj_hogs = cell(num_images, 1);
 
@@ -75,7 +71,7 @@ for i= 1:num_images
     hog_feats{i} = Image_Features.hog_signature(im_i);    
     
     Fp = reshape(hog_feats{i}, h*w, size(hog_feats{i}, 3));       % Now Fp, contains the pixel-level features stack in a long vector column-wise.
-    Fp = divide_columns(Fp, sqrt(sum(Fp.^2)));                      % Rescale to unit norm.    
+    Fp = divide_columns(Fp, sqrt(sum(Fp.^2)));                    % Rescale to unit norm.    
        
     proj_hogs{i}    = image_laplacians{i}.project_functions(eigs_num, Fp);
 end
@@ -102,6 +98,32 @@ nns = nns(:, 2:k_neighbors+1);
 gist_dists = gist_dists(:, 2:k_neighbors+1);
 
 
+%% Extract and project features for every patch
+tic
+patch_feat = cell(num_images, 1);
+for i = 1:num_images    
+    o_i  = obj_proposals{i};
+    patch_feat = cell(length(o_i), 1);
+    
+    im_i = images{i}.get_resized_image();        
+    new_height = im_i.height;
+    new_width  = im_i.width;
+    
+    for pi = 1:length(o_i)                   % Proposals for image_i
+        if ~ Patch.are_valid_corners(o_i(pi, :),  images{i}) 
+            continue;
+        end
+        corners_pi = Patch.find_new_corners(images{i}.height, images{i}.width, new_height, new_width, o_i(pi,:));
+        
+        Fs = Patch.extract_patch_features(corners_pi , hog_feats{i});        
+        Fs = reshape(Fs, new_height*new_width, size(Fs, 3));        
+        Fs = divide_columns(Fs, sqrt(sum(Fs.^2)));                    % Rescale to unit norm.    
+        Fs = image_laplacians{i}.project_functions(eigs_num, Fs);
+        patch_feat{i, pi} = Fs;
+    end
+end
+toc
+
 %% Rank every proposal (no triplets involved)
 
 top_p   = 5;                                 % How many top-scoring patches to keep per image at each iteration
@@ -119,6 +141,7 @@ for i = 1:num_images
     o_i  = obj_proposals{i};
 
     score_i = zeros(length(o_i) , 1);
+    
     for pi = 1:length(o_i)                   % Proposals for image_i
         if ~ Patch.are_valid_corners(o_i(pi, :),  images{i}) 
 %                 o_i(pi, :)
@@ -128,9 +151,8 @@ for i = 1:num_images
 
         end
         corners_pi = Patch.find_new_corners(orig_height, orig_width, new_height, new_width, o_i(pi,:));
-        Fs = Patch.extract_patch_features(corners_pi , hog_feats{i});
-        Fs = reshape(Fs, new_height*new_width, size(Fs, 3));
-        Fs = image_laplacians{i}.project_functions(eigs_num, Fs);
+        
+        
 
 
         for j = nns(i, :)
@@ -190,7 +212,7 @@ end
 
 
 
-% Get object Proposals
+%% Get object Proposals
 params = load([cp 'Randomized_Prim_Object_Proposal/config/rp.mat']);  % Default Params for RP method.
 params = params.params;
 
@@ -206,21 +228,12 @@ for i = 1:num_images
 end
 
 
-
-
-
-%%
-    
-    
-    
-    
-    
-    
-    
-    
-
-
-    
+%% Visualize an eigenvector coming from the mincut method
+E = image_laplacians{3}.evecs(10);   
+E = E(:,2);
+E = reshape(E, new_height, new_width);
+E = (E - min(E(:))) ./ (max(E(:)) - min(E(:)));    % imshow expects values in [0,1] if they are floats.
+imshow(E)
 
 
 

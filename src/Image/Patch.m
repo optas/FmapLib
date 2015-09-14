@@ -4,7 +4,7 @@ classdef Patch < dynamicprops
         % Basic properties that every instance of the Patch class has.        
         source_image    %   (Image)           -    Image over which the patch was sampled.
         
-        corners         %   (1 x 4 matrix)    -    x-y coordinates wrt. source image, corresponding to the corners 
+        corners         %   (1 x 4 uint)    -    x-y coordinates wrt. source image, corresponding to the corners 
                         %                          of the rectangular patch. They are [xmin, ymin, xmax, ymax]
     end
        
@@ -70,10 +70,22 @@ classdef Patch < dynamicprops
                  all(corners) > 0 ;                 
         end
         
-        function mask = extract_patch_features(corners, features)
-            %TODO fix corner to ints
-            mask = zeros(size(features));
-            mask(corners(2):corners(4), corners(1):corners(3), :) = features(corners(2):corners(4), corners(1):corners(3), :);
+        function [F] = extract_patch_features(corners, features, type)
+                switch type
+                    case 'zero_pad'
+                        F = zeros(size(features));
+                        F(corners(2):corners(4), corners(1):corners(3), :) = features(corners(2):corners(4), corners(1):corners(3), :);
+                    case 'tilling'
+                        
+                                        
+                end
+                
+                
+            
+            
+            
+            
+            
         end
         
         function new_corners = find_new_corners(old_height, old_width, new_height, new_width, old_corners)
@@ -82,13 +94,13 @@ classdef Patch < dynamicprops
             xmax = old_corners(3);
             ymax = old_corners(4);
             
-            xmin_n = double(xmin) * new_width / old_width;
-            xmax_n = double(xmax) * new_width / old_width;
-            ymin_n = double(ymin) * new_height/ old_height;
-            ymax_n = double(ymax) * new_height/ old_height;
+            xmin_n = (double(xmin) * new_width)  / old_width;                % Linear interpolation case.
+            xmax_n = (double(xmax) * new_width)  / old_width;
+            ymin_n = (double(ymin) * new_height) / old_height;
+            ymax_n = (double(ymax) * new_height) / old_height;
             
             new_corners = [xmin_n ymin_n xmax_n ymax_n];
-            new_corners = uint16(ceil(new_corners));
+            new_corners = uint16(max(1, round(new_corners)));
             
         end
         

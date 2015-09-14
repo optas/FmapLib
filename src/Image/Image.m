@@ -83,6 +83,20 @@ classdef Image < dynamicprops
             resized = obj.resized;
         end
        
+        function [obj] = set_patches(obj, patches)                        
+            propname = 'patches';
+            if isprop(obj, propname)
+                obj.(propname) = patches;
+            else
+                obj.addprop(propname);
+                obj.(propname) = patches;
+            end
+        end
+        
+        
+        
+        
+        
  
     end
     
