@@ -21,20 +21,19 @@ for i=1:length(images)
     obj_proposals{i}  = load([image_folder image_name '_seg.mat']);    
     obj_proposals{i}  = int16(obj_proposals{i}.feat.boxes);
   
-    gist_signatures{i} = load([image_folder image_name '_gist.mat']);    
+    gist_signatures{i}  = load([image_folder image_name '_gist.mat']);    
     gist_signatures{i}  = gist_signatures{i}.gist_feat;
 end
-
 num_images = length(images);
 
 %% Resize every image and extract a laplacian basis.
-new_height = 10;
-new_width  = 10;
-
-radius     = 1;
-eigs_num   = 2;
-
-sigma_f   = 800 / (255^2);   
+new_height = 128;
+new_width  = NaN;
+% 
+% radius     = 1;
+% eigs_num   = 5;
+% 
+% sigma_f   = 800 / (255^2);   
 
 image_laplacians = cell(length(all_image_files), 1);
 
@@ -55,10 +54,11 @@ for i= 1:num_images
     image_laplacians{i}.get_spectra(eigs_num);
     fprintf('Laplacian %d constructed.\n', i)
 end
-% save([dp 'output/laplacians_aeroplane_left_norm'], 'image_laplacians');
+save([dp 'output/laplacians_aeroplane_left_norm'], 'image_laplacians');
+%%
+load([dp 'output/laplacians_aeroplane_left_norm'], 'image_laplacians');
 
-
-%% Extract hog feature (pixel-wise) and project them into Laplacian basis.
+%% Extract hog features: whole-image, (pixel-wise) and project them into Laplacian basis.
 hog_feats = cell(num_images ,1);
 proj_hogs = cell(num_images, 1);
 
@@ -75,7 +75,8 @@ for i= 1:num_images
        
     proj_hogs{i}    = image_laplacians{i}.project_functions(eigs_num, Fp);
 end
-% save
+%%
+load([dp 'output/hogs_aeroplane_left'], 'hog_feats', 'proj_hogs');
 
 %% Make all F-maps.
 all_fmaps = cell(num_images, num_images);
@@ -85,10 +86,12 @@ for i = 1:num_images
     for j = 1:num_images
         if i ~= j
             evals_j = image_laplacians{j}.evals(eigs_num);            
-            all_fmaps{i,j} = Functional_Map.l1_and_frobenius_norms_cvx(proj_hogs{i}, proj_hogs{j}, evals_i, evals_j, regulizer_w);
+            all_fmaps{i,j} = Functional_Map.sum_of_squared_frobenius_norms(proj_hogs{i}, proj_hogs{j}, evals_i, evals_j, regulizer_w);
         end        
     end
 end
+%%
+load([dp 'output/fmaps_aeroplane_left'], 'all_fmaps');
 
 %% k-nn GIST initial image network
 k_neighbors = 5;
@@ -99,11 +102,11 @@ gist_dists = gist_dists(:, 2:k_neighbors+1);
 
 
 %% Extract and project features for every patch
-tic
+method = 'zero_pad' ; % 'tiling'
 patch_feat = cell(num_images, 1);
 for i = 1:num_images    
     o_i  = obj_proposals{i};
-    patch_feat = cell(length(o_i), 1);
+    patch_feat{i} = cell(length(o_i), 1);
     
     im_i = images{i}.get_resized_image();        
     new_height = im_i.height;
@@ -113,83 +116,66 @@ for i = 1:num_images
         if ~ Patch.are_valid_corners(o_i(pi, :),  images{i}) 
             continue;
         end
-        corners_pi = Patch.find_new_corners(images{i}.height, images{i}.width, new_height, new_width, o_i(pi,:));
-        
-        Fs = Patch.extract_patch_features(corners_pi , hog_feats{i});        
-        Fs = reshape(Fs, new_height*new_width, size(Fs, 3));        
-        Fs = divide_columns(Fs, sqrt(sum(Fs.^2)));                    % Rescale to unit norm.    
+        corners_pi = Patch.find_new_corners(images{i}.height, images{i}.width, new_height, new_width, o_i(pi,:));        
+        Fs = Patch.extract_patch_features(corners_pi , hog_feats{i}, method);                        
+        Fs = reshape(Fs, new_height*new_width, size(Fs, 3));                              
+        Fs = divide_columns(Fs, max(sqrt(sum(Fs.^2)), 1e-20));                    % Rescale to unit norm.    
         Fs = image_laplacians{i}.project_functions(eigs_num, Fs);
         patch_feat{i, pi} = Fs;
     end
 end
-toc
 
-%% Rank every proposal (no triplets involved)
-
-top_p   = 5;                                 % How many top-scoring patches to keep per image at each iteration
-top_patches = zeros(num_images, top_p);
-
-for i = 1:num_images
-    im_i = images{i}.get_resized_image();    
-
-    orig_height = images{i}.height;
-    orig_width = images{i}.width;
-
-    new_height = im_i.height;
-    new_width  = im_i.width;
-
-    o_i  = obj_proposals{i};
-
-    score_i = zeros(length(o_i) , 1);
-    
-    for pi = 1:length(o_i)                   % Proposals for image_i
-        if ~ Patch.are_valid_corners(o_i(pi, :),  images{i}) 
-%                 o_i(pi, :)
-%                 input('')
-%                 break;
-            continue;
-
-        end
-        corners_pi = Patch.find_new_corners(orig_height, orig_width, new_height, new_width, o_i(pi,:));
-        
-        
+load([dp 'output/patch_feats_' method], 'patch_feat')
 
 
-        for j = nns(i, :)
-            misalignment = 0;             
-            im_j = images{j}.get_resized_image();  
-            orig_heightj = images{j}.height;
-            orig_widthj = images{j}.width;
-            new_heightj = im_j.height;
-            new_widthj = im_j.width;
 
-            o_j = obj_proposals{j};
 
-            for pj = 1:length(o_j)      % Proposals for image_j                        
-                if ~ Patch.are_valid_corners(o_j(pj, :),  images{j})                        
-                    continue; 
 
-                end
-                corners_pj = Patch.find_new_corners(orig_heightj, orig_widthj, new_heightj, new_widthj, o_j(pj,:));
-                Ft = Patch.extract_patch_features(corners_pj , hog_feats{j});
-                Ft = reshape(Ft, new_heightj*new_widthj, size(Ft, 3));
-                Ft = image_laplacians{i}.project_functions(eigs_num, Ft);
 
-                misalignment = misalignment + sum(sum(abs((all_fmaps{i,j} * Fs) - Ft), 1)); % alignment error (L1 dist) of probe functions.       
-                misalignment = misalignment + sum(sum(abs((all_fmaps{j,i} * Ft) - Fs), 1));
-            end
 
-            score_i(pi) = score_i(pi) + (misalignment / length(o_j));
-        end        
+
+
+
+
+
+%% Find top patches
+top_p = 5;
+number_iters = 5;
+[new_nns, top_patches] = Patch.iterative_compute_patches(nns, patch_feat, all_fmaps, top_p, number_iters);
+
+%%
+
+save([dp 'output/top_patches_and_nns_tiling_minimum_square_rule'])
+
+%% Evaluation 
+overlaps = zeros(num_images, top_p, number_iters);
+no_gt = 0;
+for m = 1:number_iters
+    for i = 1:num_images
+        h = images{i}.height;
+        w = images{i}.width;
+        for gt_j = images{i}.gt_segmentation            
+            if isempty(gt_j)
+                no_gt = no_gt + 1;
+                continue
+            end        
+            gt = gt_j{:};                
+            bitmask = zeros(h, w);
+            bitmask(gt(2):gt(4), gt(1):gt(3)) = 1;  
+            overlaps(i,:,m) = max(overlaps(i,:,m), overlap_with_mask(obj_proposals{i}(top_patches(i, :, m), :), bitmask)');        
+        end           
     end
-    [sort_scores, indices] = sort(score_i);      
-    top_patches(i, :) = indices(1:top_p)            
 end
-%%
-% Zimo corloc
-% Zimo corloc with standout
 
+save([dp 'output/top_overlapss_tiling_minimum_square_rule'], 'overlaps')
 %%
+
+
+
+
+
+
+
 
 
 
@@ -268,7 +254,6 @@ for eigs_num = [1,2,5,10,30,45,62];
 end
 
 %% Derive hogs for every image.
-
 eigs_num  = 64;
 hogs      = cell(length(all_image_files), 1);
 hogs_proj = cell(length(all_image_files), 1);
@@ -286,7 +271,7 @@ for i=1:length(images)
     hogs_proj{i} = Li.project_functions(eigs_num, Fp);
 
     reconstructed = Li.synthesize_functions(hogs_proj{i});
-    accu = mean(sqrt(sum(abs(Fp - reconstructed).^2)))
+    accu = mean(sqrt(sum(abs(Fp - reconstructed).^2)));
 end
 
 
@@ -314,14 +299,8 @@ k_neighbors = 2;
 [gist_descriptors, gist_nn] = get_gist_nn(images, k_neighbors);
     
 
-%%
-overlaps{i} = cell(n_ims, 1);
-for i = 1:length(image_trio)          
-    im_id = image_trio(i);
-    overlaps{i} = overlap_with_mask(proposals{i}, gts{im_id});       
-end
-
 %% Extract feautures of proposals and project them in corresponding basis.
+
 proposal_features = cell(n_ims,1);
 for i = 1:n_ims
     im_id = image_trio(i);    

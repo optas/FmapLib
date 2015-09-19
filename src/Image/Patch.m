@@ -75,19 +75,18 @@ classdef Patch < dynamicprops
                     case 'zero_pad'
                         F = zeros(size(features));
                         F(corners(2):corners(4), corners(1):corners(3), :) = features(corners(2):corners(4), corners(1):corners(3), :);
-                    case 'tilling'
+                    case 'tiling'
+                        tile = features(corners(2):corners(4), corners(1):corners(3), :);
+                        tile_length = ceil(size(features,2)/size(tile,2));
+                        tile_height = ceil(size(features,1)/size(tile,1));
                         
-                                        
+                        big_tiled = repmat(tile, tile_height, tile_length);
+                        F = big_tiled(1:size(features, 1), 1:size(features, 2),:);                 
+                    otherwise
+                        error('Type not implemented.')
                 end
-                
-                
-            
-            
-            
-            
-            
         end
-        
+                
         function new_corners = find_new_corners(old_height, old_width, new_height, new_width, old_corners)
             xmin = old_corners(1);
             ymin = old_corners(2);
@@ -100,28 +99,87 @@ classdef Patch < dynamicprops
             ymax_n = (double(ymax) * new_height) / old_height;
             
             new_corners = [xmin_n ymin_n xmax_n ymax_n];
-            new_corners = uint16(max(1, round(new_corners)));
-            
+            new_corners = uint16(max(1, round(new_corners)));            
         end
         
+        function [top_patches, top_scores] = compute_top_patches_in_images(nns, patch_feat, fmaps, top_p)
+            num_images = size(patch_feat, 1);
+            top_patches = zeros(num_images, top_p);
+            top_scores  = zeros(num_images, top_p);            
+            for i = 1:num_images
+                loc_i = find(~cellfun(@isempty, patch_feat(i,:)));
+                score_i = zeros(length(loc_i), 1);
+                               
+                for pi = loc_i % Proposals for image_i       
+                    for j = nns(i, :)
+                        mis_pi_j = +Inf;           
+                        loc_j = find(~cellfun(@isempty, patch_feat(j,:)));
+                        for pj = loc_j      %Proposals for image_j                        
+                            mis_pi_j = min(mis_pi_j, patch_transferability(i, j, patch_feat{i, pi}, patch_feat{j, pj}, fmaps));
+                        end
+%                         mis_pi_j = mis_pi_j / length(loc_j);
+                    end
+                    score_i(pi) = score_i(pi)  + mis_pi_j;
+                end    
+
+                [sort_scores, indices] = sort(score_i);
+                top_patches(i, :)      = indices(1:top_p);
+                top_scores(i,:)        = sort_scores(1:top_p);                
+            end
+        end
+                
+        function [new_nns, top_patches] = iterative_compute_patches(nns, patch_feat, fmaps, top_p, number_iters)                        
+            num_images = size(patch_feat, 1);            
+            new_nns     = zeros(num_images, top_p, number_iters + 1);
+            new_nns(:, :, 1) = nns;   
+            top_patches = zeros(num_images, top_p, number_iters);
+                                                
+            for k = 1:number_iters                
+                [top_indices, top_scores] = Patch.compute_top_patches_in_images(new_nns(:,:,k), patch_feat, fmaps, top_p);                
+                top_patches(:,:,k) = top_indices;
+                top_feat = cell(num_images, top_p);
+            
+                for i = 1:num_images                    
+                    top_feat(i, :) = patch_feat(i, top_indices(i, :));                     
+                end
+            
+                new_distances = Patch.all_pairwise_distances(top_feat, fmaps);
+                [sorted_dists, sorted_indices] = sort(new_distances);
+                new_nns(:,:,k+1) = sorted_indices(2 : top_p + 1, :)' ;            
+            end
+            
+        end
+                        
+        function distances = all_pairwise_distances(top_patches, all_fmaps)
+            distances = zeros(length(top_patches));
+    
+            for i= 1:length(top_patches) -1
+                for j=i+1:length(top_patches)
+                    distances(i,j) = Patch.distance_between_two_sets_of_patches(i,j,top_patches, all_fmaps);
+                    distances(j,i) = distances(i,j);
+                end
+            end
+        end
         
-%         function [b] = is_within_area_range(in_patch)
-%             w = in_patch.source_image.weight;
-%             h = in_patch.source_image.height;
-%             [xmin, ymin, xmax, ymax] = in_patch.get_corners();
-%             b1 = xmin < 0.01 
-%             
-%             
-%             b1 = boxes(:,1) > feat.imsize(1)*0.01 & boxes(:,3) < feat.imsize(1)*0.99 ...
-%             & boxes(:,2) > feat.imsize(2)*0.01 & boxes(:,4) < feat.imsize(2)*0.99;
-% bValid2 = boxes(:,1) < feat.imsize(1)*0.01 & boxes(:,3) > feat.imsize(1)*0.99 ...
-%         & boxes(:,2) < feat.imsize(2)*0.01 & boxes(:,4) > feat.imsize(2)*0.99;
-
-
+        function distance = distance_between_two_sets_of_patches(img1, img2, top_patches, all_fmaps)
+            distances = zeros(size(top_patches, 1), size(top_patches, 2));
+            for i = 1:length(top_patches(img1, :))
+                for j = 1:length(top_patches(img2, :))
+                    dist = patch_transferability(img1, img2, top_patches{img1, i}, top_patches{img2, j}, all_fmaps);
+                    distances(i,j) = dist;
+                end                
+            end                
             
-            
-            
+            distance = sum(min(distances))
+        end
+        
+%         function [misalignment] = patch_transferability_triplet(source_image, target_image, source_patch, target_patch, fmaps) 
+%             misalignment = sum(sum(abs((fmaps{source_image, target_image} * source_patch) - target_patch), 1));
+%             misalignment = misalignment + sum(sum(abs((fmaps{target_image, source_image} * target_patch) - source_patch), 1));
+% 
 %         end
+        
+
          
     end
     

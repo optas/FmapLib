@@ -67,6 +67,17 @@ classdef Image < dynamicprops
             end
         end
         
+        function [F] = content_in_rectangle(obj, xmin, ymin, xmax, ymax )
+            if nargin == 2                
+                ymin = xmin(2);
+                xmax = xmin(3);
+                ymax = xmin(4);
+                xmin = xmin(1);
+            end
+            % Add checks
+            F = obj.CData(ymin:ymax, xmin:xmax, :);
+        end
+        
         function set_resized_image(obj, new_height, new_width)
             % to do change to varargin
             propname = 'resized';

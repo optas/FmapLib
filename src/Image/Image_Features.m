@@ -31,7 +31,7 @@ classdef Image_Features < dynamicprops
                 signatures = f(pad_size+1:pad_size+h, pad_size+1:pad_size+w, :);
 %                 assert( any(isnan(signatures(:))) == 0)
                 if any(isnan(signatures(:)))
-                    warning('oops. bud hog!')
+                    warning('oops. bad hog!')
                 end
                     
         end
