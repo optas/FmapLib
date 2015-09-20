@@ -509,7 +509,7 @@ classdef Functional_Map < dynamicprops
             dim = numel(D2);
             K.q = [1 + dim];
             b   = [z; -1];
-            D2t = sparse(D2');
+            D2t = sparse(D2');                 %TODO-P: sparse should be making this slower here.
             c   = [0; D2t(:)];
             At = [z' -1;
                   kron(speye(N2), D1') sparse(dim, length(K.q))];
