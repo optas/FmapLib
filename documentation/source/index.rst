@@ -4,23 +4,21 @@ Welcome to FmapLib's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
+   :glob:
 
+Module documentation
+====================
+.. toctree::
+   :maxdepth: 1
 
-Basis Class
----------------
-
-.. automodule:: doc_test
-
-.. autoclass:: doc_testing
-    :show-inheritance:
-    :members:
-
-
+   doc_testing
+   doc_testing_son
+   doc_Mesh_Features
+   
 Indexes and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

@@ -47,9 +47,11 @@ lambda        = 20;
 neigs         = 64;
 map1          = Functional_Map(LB1, LB2);
 map1.compute_f_map(fmap_method, neigs, neigs, feats1, feats2, 'lambda', lambda);
+
 map1.plot_transferred_xyz();
 map1.plot_area_distortion();
 map1.plot_conformal_distortion();
+
 %%
 % 2.
 % gt_map = Functional_Map.groundtruth_functional_map(LB1, LB2, (1:mesh1.num_vertices)', neigs, neigs);

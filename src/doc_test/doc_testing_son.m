@@ -1,5 +1,5 @@
-classdef doc_testing < handle & my.super.Class
-    % General 'idea' about Class's functionality.
+classdef doc_testing_son < handle & doc_testing
+    % Inhereted.
    
     properties (SetAccess = private)    
         spectra % A struct carrying the eigenvalues and eigenvectors of the basis. 
@@ -33,7 +33,7 @@ classdef doc_testing < handle & my.super.Class
     end
     
     methods (Static)
-        function [w,x] = my_static_function(z)
+        function [w,x] = my_test_function(z)
 
         % A static function in 
 		%
@@ -50,16 +50,6 @@ classdef doc_testing < handle & my.super.Class
 		%	A buffered writable file descriptor
 		% x : int
 		%	Another useless output
-
-            w = z
-        end
-		
-		function w = my_other_static_function(z)
-
-        % A static function in 
-        %
-        % :param z: input z : int
-        % :returns: w : (Laplace_Beltrami) A buffered writable file descriptor
 
             w = z
         end

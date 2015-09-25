@@ -99,8 +99,38 @@ classdef Optimization
                 [X] = Optimization.linear_sdp_admm(X_0, C, W/8, ids, b, X);
                 X_all(:,:,i+1) = X(ids_y, ids_z);
             end
-            X = X(ids_y, ids_z);
+            X = X(ids_y, ids_z);   % seems unecessary 
         end
+        
+        
+        function [Y, V] = latent_basis_given_functional_maps(in_maps, weigths, latent_size)
+            % Returns a set of orthonormal vectors that correspond to latent commonalities among objects of a
+            % collection. These commonalities are found by exploiting a set of functional maps between pairs of related 
+            % objects.
+            % 
+            % Input:
+            %           in_maps  -  ( N x N cell array ) carrying the functional map from object i to object j, it its  
+            %                       (i,j) position. N is the total number of objects in the collection.
+            %
+            %           weights  -  ( N x N matrix) weights(i,j) is a double reflecting how closely related object i to 
+            %                       object j.
+            %
+            %           latent_size - (int) Specifies how many latent functions will be derived in each object.
+            %
+            %
+            % Output: _add_
+            %
+            %
+            % Reference: 'Image Co-Segmentation via Consistent Functional Maps, F. Wan et al. in _add_''
+            
+            % _add_content
+            
+            
+            
+            
+            
+        end
+            
 
     end
 end
