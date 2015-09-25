@@ -686,7 +686,7 @@ classdef Functional_Map < dynamicprops
         function [X, W, iter_ran] = iteratively_refined_fmap(src_functions, trg_functions, src_spectra, trg_spectra, lambda, varargin)            
             probe_n = size(src_functions, 2);           % Number of probe functions.
             
-            options = struct('weights', ones(size(probe_n)), 'max_iter', 100, 'weight_mask', [], 'convergence', 1e-4);
+            options = struct('weights', ones(size(probe_n)), 'max_iter', 100, 'weight_mask', [], 'convergence', 1e-3);
             options = load_key_value_input_pairs(options, varargin{:});
             
             W       = zeros(probe_n, options.max_iter + 1);     % Matrix carrying the tuning weights for every iteration.
@@ -694,30 +694,32 @@ classdef Functional_Map < dynamicprops
             W(:, 1) = options.weights;
                         
             for i = 1:options.max_iter
-                
                 wi = (spdiags(W(:, i), 0, probe_n, probe_n));                
-                X(:,:,i) = Functional_Map.sum_of_frobenius_norms(src_functions * wi, trg_functions * wi, src_spectra, trg_spectra, lambda);
+                X(:,:,i) = Functional_Map.sum_of_squared_frobenius_norms(src_functions * wi, trg_functions * wi, src_spectra, trg_spectra, lambda);
                 W(:,i+1) = new_weights(X(:,:,i), src_functions, trg_functions, options.weight_mask);
                 
                 if all( abs(W(:,i) - W(:,i+1)) < options.convergence)                    
-                    fprintf('Converged in iteration: %d', i);
+                    fprintf('Converged in iteration: %d\n', i);
                     break
                 end                                    
             end
                         
             iter_ran = i;
             X = X(:,:,1:iter_ran);         % Adjust sizes in case of convergence was reached before max_iter runs.            
-            W = W(:, 1:iter_ran+1);
+            W = W(:,  1:iter_ran+1);
+            
+            fprintf('In the final two iterations, the average difference between the weights was %f.\n', mean(abs(W(:,end) - W(:,end-1))) );
             
             function [W] = new_weights(X, src_f, trg_f, weight_mask)
                 delta = 1e-5;  % TODO-P
-                if isempty(weight_mask)                                        
-                    W = 1 / max(delta,  sqrt(sum( (X*src_f - trg_f).^2 ) ) ) ;
-                elseif size(weight_mask,1) == 1 && size(weight_mask,2) == 1     % Single number.                    
+                if isempty(weight_mask) || weight_mask == 1;
+                    W = 1 ./ max(delta,  sqrt(sum( (X*src_f - trg_f).^2 ) ) ) ;
+                elseif size(weight_mask,1) == 1 && size(weight_mask, 2) == 1     % Single number.                    
                     W = sqrt(sum( (X*src_f - trg_f).^2 ) ) ;
                     m = weight_mask;
                     aggregate = reshape(W, m, []);
                     aggregate = mean(aggregate);
+                    aggregate = aggregate ./ norm(aggregate); 
                     aggregate = repmat(aggregate, m, 1);
                     W         = reshape(aggregate, size(W));
                 else

@@ -1,37 +1,87 @@
 clear; clc;
-[dp, cp] = get_project_paths('ImageJointUnderstanding');
+[dp, cp]    = get_project_paths('ImageJointUnderstanding');
             
-%% Load VOC image collection with gist, gt_segmentation and object_proposals.
-image_folder        = [dp 'VOC/2007/Train_Validate_Data/VOC2007_6x2/aeroplane_left/'];
+%% Load a pair of images that has similar foreground and drastically different background.
+object_type         = 'winston_chair';
+image_folder        = [dp 'Our_Constructions/Distinct_Pairs/' object_type '/'];
 all_image_files     = rdir([image_folder, [filesep '**' filesep]], 'regexp(name, ''\.jpg$'')');
 images              = cell(length(all_image_files), 1);
-obj_proposals       = cell(length(all_image_files), 1);
-gist_signatures     = cell(length(all_image_files), 1);
-orig_hog_patch_sigs = cell(length(all_image_files), 1);
 for i=1:length(images)
-    full_path         = all_image_files(i).name;
-    path_substrings   = strsplit(full_path, filesep); 
-    last_word         = path_substrings{end};
-    image_name        = last_word(1:end-4);                             % Relying on the fact that length('.jpg') == length('.obj') == 4.                                                               
-    images{i}         = Image(full_path, image_name);    
+    full_path       = all_image_files(i).name;
+    path_substrings = strsplit(full_path, filesep); 
+    last_word       = path_substrings{end};
+    image_name      = last_word(1:end-4);               % Relying on the fact that length('.jpg') == length('.obj') == 4.                                                               
+    images{i}       = Image(full_path, image_name);    
     
-    gt_segmentation   = load([image_folder image_name '.mat']);
-    gt_segmentation   = gt_segmentation.bbox_list;
-    images{i}.set_gt_segmentation(gt_segmentation);
+%     gt              = [image_folder 'GroundTruth/' image_name '.png'];
+%     images{i}.set_gt_segmentation(imread(gt));    
     
-    obj_proposals{i}       = load([image_folder image_name '_seg.mat']);    
-    orig_hog_patch_sigs{i} = obj_proposals{i}.feat.hist;
-    obj_proposals{i}       = int16(obj_proposals{i}.feat.boxes);
-    
-    
-    gist_signatures{i}  = load([image_folder image_name '_gist.mat']);    
-    gist_signatures{i}  = gist_signatures{i}.gist_feat;
+%     gt_segmentation   = load([image_folder image_name '.mat']);
+%     gt_segmentation   = gt_segmentation.bbox_list;
+%     images{i}.set_gt_segmentation(gt_segmentation);
+       
 end
+
 num_images = length(images);
 
-%% Test 40, 43 images with iterative fmaps
+%% Load/compute image proposals
+approx_prop_per_image = 100;
+obj_proposals   = cell(length(all_image_files), 1);
+params = load([cp 'Randomized_Prim_Object_Proposal/config/rp.mat']);  % Default Params for RP method.
+params = params.params;
+params.approxFinalNBoxes = approx_prop_per_image;    
+
+for i=1:length(images)    
+    obj_proposals{i} = RP(images{i}.CData, params);
+end
+
+%%
+% 
+% op_I = obj_proposals{I}
+%     subplot(2,1,1);  images{I}.plot_patch(op_I);
+
+images{1}.plot
+plotBoxes(obj_proposals{1}, 'random', [], '-')
+%%
+
+
+
+
+
+
+
+%% Filterout bad proposals (too small or even not rectangular)
+obj_filtered = cell(num_images, 1);
+for i=1:length(images)    
+    keep = [];
+    for j=1:size(obj_proposals{i}, 1)
+        if Patch.is_valid(obj_proposals{i}(j,:), images{i}) && Patch.is_within_limits(obj_proposals{i}(j,:), 0.9, 0.9, images{i}) 
+            keep(end+1) = j;
+        end
+    end    
+    obj_filtered{i} = obj_proposals{i}(keep,:);    
+end
+obj_proposals = obj_filtered;
+
+%% Compute patch-wide HOG Feats
+% patch_wide_hog = cell(num_images, 1);
+% for i = 1:num_images
+%     patch_wide_hog{i} = get_hog(obj_proposals{i}, images{i}.CData);
+% end 
+% %%
+patch_wide_hog2 = cell(num_images, 1);
+for i = 1:num_images
+    seg.coords = obj_proposals{i};    
+    patch_wide_hog2{i} = extract_segfeat_hog(images{i}.CData, seg);
+    patch_wide_hog2{i} = patch_wide_hog2{i}.hist;
+end 
+patch_wide_hog = patch_wide_hog2;
+%% Specifying a single pair of images;
+I = 1;
+J = 2;
+pair = [I, J];
+num_images = 2;
 %% Exctract image laplacians
-pair = [40, 43];
 new_height = 128;
 new_width  = NaN;
 radius     = 3;
@@ -53,13 +103,21 @@ for i = pair
     image_laplacians{i}.get_spectra(eigs_num);
     fprintf('Laplacian %d constructed.\n', i);    
 end
+save([image_folder 'mincut_lapacians_128_NaN_64eigs'], 'image_laplacians')
+%% or
+new_height = 128;
+new_width  = NaN;
+eigs_num = 64;
+for i = pair
+    images{i}.set_resized_image(new_height, new_width);        
+end
+load([image_folder 'mincut_lapacians_128_NaN_64eigs'])
 
-%% Visualize Small Eigenvectors
-im_id = 43; eig_to_vis = 20;
-E = image_laplacians{im_id}.evecs(eigs_num);   
-new_width = images{im_id}.get_resized_image().width;
+%% Visualize Small Eigenvectors of single image.
+im_id = I; eig_to_vis = 20;
+E = image_laplacians{I}.evecs(eigs_num);   
+new_width = images{I}.get_resized_image().width;
 figure();
-% set(f, 'DefaultFigureWindowStyle','docked')
 for i = 1:eig_to_vis     
     eig_i = E(:,i);
     eig_i = reshape(eig_i, new_height, new_width);
@@ -68,7 +126,7 @@ for i = 1:eig_to_vis
 end
 suptitle('20 Smallest Eigenvectors (Min-Cut method).')    
 
-%% Extract hog features over the Whole image for every pixel and project them into Laplacian basis.
+%% Extract hog features over every pixel of the resized image and project them into Laplacian basis.
 hog_feats = cell(num_images ,1);
 proj_hogs = cell(num_images, 1);
 for i=pair
@@ -79,79 +137,154 @@ for i=pair
     Fp = divide_columns(Fp, sqrt(sum(Fp.^2)));                    % Rescale to unit norm.           
     proj_hogs{i}    = image_laplacians{i}.project_functions(eigs_num, Fp);
 end
+
+
+%% Black them mother fucker. 
+hog_feats = cell(num_images ,1);
+for i=pair
+    im_i = images{i}.get_resized_image();        
+    h = im_i.height;  w = im_i.width;    
+    hog_feats{i} = ones(h,w);   
+end
+
 %% Extract and project features for every patch
 method = 'zero_pad' ;  
 % method = 'tiling';
-patch_feat = cell(num_images, 1);
+patch_feat        = cell(num_images, 1);
 for i = pair
-    o_i  = obj_proposals{i};
-    patch_feat{i} = cell(length(o_i), 1);    
-    im_i = images{i}.get_resized_image();        
-    new_height = im_i.height;
-    new_width  = im_i.width;
+    o_i           = obj_proposals{i};
+    patch_feat{i} = cell(length(o_i), 1);
+    im_i          = images{i}.get_resized_image();        
+    new_height    = im_i.height;
+    new_width     = im_i.width;
     
-    for pi = 1:length(o_i)                          % Proposals for image_i
-        if ~ Patch.are_valid_corners(o_i(pi, :),  images{i}) 
-            continue;
-        end
+    for pi = 1:length(o_i)                          % Proposals for image_i        
         corners_pi = Patch.find_new_corners(images{i}.height, images{i}.width, new_height, new_width, o_i(pi,:));
+        
+        
         Fs = Patch.extract_patch_features(corners_pi , hog_feats{i}, method);                        
+        
+        
+        
         Fs = reshape(Fs, new_height*new_width, size(Fs, 3));                              
         Fs = divide_columns(Fs, max(sqrt(sum(Fs.^2)), 1e-20));                    % Rescale to unit norm.   
         Fs = image_laplacians{i}.project_functions(eigs_num, Fs);
         patch_feat{i, pi} = Fs;
     end
 end
+feat_num = size(patch_feat{1,1}, 2);
 
-%% Original Hog of patches, build matching.
+%% Build hog based matchings and align the Probe Functions with it.
 raw_hog_matching = cell(num_images, num_images, 2);
+aligned_probes   = cell(num_images, num_images, 2);
 for i = 1:length(pair)        
-    for j = i+1:length(pair)
-        I=pair(i);
-        J=pair(j);
-        [raw_hog_matching{I,J, 1}, raw_hog_matching{I,J,2}] = knnsearch(orig_hog_patch_sigs{J}, orig_hog_patch_sigs{I}, 'k', 2);
+    for j = 1:length(pair)                      % NN is not symmetric thus we need both (i,j) and (j,i)
+        if i ~= j
+            pi = pair(i);
+            pj = pair(j);
+            [raw_hog_matching{pi, pj, 1}, raw_hog_matching{pi, pj, 2}] = knnsearch(patch_wide_hog{pj}, patch_wide_hog{pi}, 'k', 2);
+                         
+%             % Align probe functions
+%             probe_source = cell2mat(patch_feat(pi,:));            
+%             probe_target = cell(1);
+%             for k = 1:length(raw_hog_matching{pi, pj, 1})
+%                 match = raw_hog_matching{pi, pj, 1}(k);
+%                 probe_target{k} = patch_feat{pj, match};
+%             end
+%             probe_target = cell2mat(probe_target);            
+%             aligned_probes{pi, pj, 1} = probe_source;
+%             aligned_probes{pi, pj, 2} = probe_target;            
+        end
     end
 end
-
-%% Use original HOG matching for aligning probe functions (pathces)
-probe_source = cell2mat(patch_feat(I,:));
-probe_target = cell(1);
-for i = 1:length(raw_hog_matching{I,J,1})
-    match = raw_hog_matching{I,J,1}(i);
-    probe_target{i} = patch_feat{J, match};
-end
-probe_target = cell2mat(probe_target);
 
 %% Make all F-maps.
 all_fmaps = cell(num_images, num_images);
-regulizer_w = 20;
-weight_mask = size(patch_feat{I,1},2);
+regularizer_w = 20;
+weight_mask = feat_num;
 
 for i = 1:length(pair)
     evals_i  = image_laplacians{pair(i)}.evals(eigs_num);
-    for j = i+1:length(pair)
+    evals_i  = evals_i ./max(evals_i);
+    
+    for j = 1:length(pair)
         if pair(i) ~= pair(j)
             evals_j = image_laplacians{pair(j)}.evals(eigs_num);            
+            evals_j = evals_j ./ max(evals_j);
+            
             W = double(1) ./ raw_hog_matching{pair(i), pair(j), 2}(:,1);
             W = repmat(W', weight_mask, 1);
-            W = W(:);            
-            [all_fmaps{pair(i), pair(j)}.X, all_fmaps{pair(i), pair(j)}.W, ran_it] = Functional_Map.iteratively_refined_fmap(probe_source, probe_target, ...
-                                                                             evals_i, evals_j, regulizer_w, 'max_iter', 10, 'weight_mask', weight_mask, 'weights', W);
+            W = W(:);        
+            
+            probe_source = aligned_probes{pair(i), pair(j), 1};
+            probe_target = aligned_probes{pair(i), pair(j), 2};
+            
+            [all_fmaps{pair(i), pair(j)}.X, all_fmaps{pair(i), pair(j)}.W] = Functional_Map.iteratively_refined_fmap(probe_source, probe_target, ...
+                                                                             evals_i, evals_j, regularizer_w, 'max_iter', 200, 'weight_mask', weight_mask) ; % , 'weights', W);
         end        
     end
 end
+
+ran_for = size(all_fmaps{I,J}.X, 3);
+%%
+ran_for  = size(all_fmaps{I,J}.X, 3);
+diff = zeros(ran_for, 1);
+for i=1:ran_for
+    diff(i) = max(abs(all_fmaps{I,J}.W(:,i+1)  - all_fmaps{I,J}.W(:,i) ));
+end
+plot([1:ran_for], diff);
+
 %% Get Fmap based - matching
+I = 1;
+J = 2;
 X_final = all_fmaps{I,J}.X(:, :, end);
 w_final = all_fmaps{I,J}.W(:, end);
 w_final = w_final(1:weight_mask:end);
-nns     = raw_hog_matching{I,J,1}(:,1);
+nns     = raw_hog_matching{I, J, 1}(:,1);
 dist    = w_final;
 [sorted_dis, sorted_ind] = sort(dist, 'descend');
 sorted_nns = nns(sorted_ind);                   % Sort the top-scoring matches.
+method = sprintf('Fmap_lambda_%d_uni_weights', regularizer_w) ;
+
+%% Make bitmaps for GT
+
+bitmask_I = images{I}.gt_segmentation;
+bitmask_I(bitmask_I ~= 0) = 1;
+
+bitmask_J = images{J}.gt_segmentation;
+bitmask_J(bitmask_J ~= 0) = 1;
+%  
+% bitmask_I = zeros(images{I}.height, images{I}.width);
+% for gt_I = images{I}.gt_segmentation            
+%     if isempty(gt_I)
+%             continue
+%     end        
+%     gt = gt_I{:};                
+%     bitmask_I(gt(2):gt(4), gt(1):gt(3)) = 1;      
+% end
+% 
+% bitmask_J = zeros(images{J}.height, images{J}.width);
+% for gt_J = images{J}.gt_segmentation            
+%     if isempty(gt_J)
+%             continue
+%     end        
+%     gt = gt_J{:};                
+%     bitmask_J(gt(2):gt(4), gt(1):gt(3)) = 1;      
+% end            
+
+%% If you want to plot pairs of matching (decreasing order of closeness) based on HOG
+nns  = raw_hog_matching{I,J,1}(:,1);
+dist = raw_hog_matching{I,J,2}(:,1);
+[sorted_dis, sorted_ind] = sort(dist);
+sorted_nns = nns(sorted_ind);                   % Sort the top-scoring correspondences.
+method = 'HOG';
 
 %% Plot the Matchings
-ps_name = 'Fmap_based_matching_zero_pad_hog_init_fro_10_iter';
-for c = 1:length(sorted_dis)
+clc
+ps_name = [method '_based_match_' object_type '_' sprintf('%d_%d', I, J)]        
+
+top_pairs = length(obj_proposals{1});
+for c = 1:top_pairs
     c
     if c == 1        
         f = figure('visible', 'off');        
@@ -160,59 +293,34 @@ for c = 1:length(sorted_dis)
         suptitle('Original Images');
         print ( '-dpsc2', ps_name, f);        
         
-        f = figure('visible', 'off');     % Plot weight evolution (over diff. iterations)
-        plot(all_fmaps{I, J}.W(:,1)); hold on; 
-        plot(all_fmaps{I, J}.W(:,2), 'g'); hold on;  
-        plot(all_fmaps{I, J}.W(:,end), 'r')
-        ylabel('Weight'); xlabel('Patches: each contributes 36 functions with same weight (plateau).')
-        legend('init', '2-iter', sprintf('%d-iter(last)',ran_it))
-        print ( '-dpsc2', ps_name, '-append', f);                
+        if strcmp(method, 'Fmap')            
+            f = figure('visible', 'off');     % Plot weight evolution (over diff. iterations)
+            plot(all_fmaps{I, J}.W(:,1)); hold on; 
+            plot(all_fmaps{I, J}.W(:,end-1), 'g'); hold on;  
+            plot(all_fmaps{I, J}.W(:,end), 'r')
+            ylabel('Weight'); xlabel('Patches: each contributes 36 functions with same weight (plateau).')
+            legend('init', sprintf('%d-iter', ran_for-1), sprintf('%d-iter(last)', ran_for));
+            print ( '-dpsc2', ps_name, '-append', f);                
+        end
     end
     
     f = figure('visible', 'off');
     
-    op_I = obj_proposals{I}(sorted_ind(c), :);
-    subplot(2,1,1); imshow(images{I}.content_in_rectangle(op_I));    
-    xlabel(sprintf('Cor-loc: %f', overlap_with_mask(op_I, bitmask_I)));
-  
-    
+    op_I = obj_proposals{I}(sorted_ind(c), :);    
+    subplot(2,1,1);  images{I}.plot_patch(op_I);
+%     xlabel(sprintf('Cor-loc: %f', overlap_with_mask(op_I, bitmask_I)));
+      
     op_J = obj_proposals{J}(sorted_nns(c), :);
-    subplot(2,1,2); imshow(images{J}.content_in_rectangle(op_J));    
-    xlabel(sprintf('Cor-loc: %f', overlap_with_mask(op_J, bitmask_J)));
+    subplot(2,1,2); images{J}.plot_patch(op_J);
+%     xlabel(sprintf('Cor-loc: %f', overlap_with_mask(op_J, bitmask_J)));
         
-        
-    suptitle(sprintf('Fmap-based similarity %f .', sorted_dis(c)));    
+    
+    suptitle(sprintf([method ' based similarity %f .'], sorted_dis(c)));    
     print ( '-dpsc2', ps_name, '-append', f )    
 end
 close all
 %%
 
-
-%% Plot pairs of matching (decreasing order of closeness) based on HOG
-nns  = raw_hog_matching{I,J,1}(:,1);
-dist = raw_hog_matching{I,J,2}(:,1);
-[sorted_dis, sorted_ind] = sort(dist);
-sorted_nns = nns(sorted_ind);                   % Sort the top-scoring correspondences.
-
-
-%% Make bitmaps for GT
-bitmask_I = zeros(images{I}.height, images{I}.width);
-for gt_I = images{I}.gt_segmentation            
-    if isempty(gt_I)
-            continue
-    end        
-    gt = gt_I{:};                
-    bitmask_I(gt(2):gt(4), gt(1):gt(3)) = 1;      
-end
-
-bitmask_J = zeros(images{J}.height, images{J}.width);
-for gt_J = images{J}.gt_segmentation            
-    if isempty(gt_J)
-            continue
-    end        
-    gt = gt_J{:};                
-    bitmask_J(gt(2):gt(4), gt(1):gt(3)) = 1;      
-end            
 
 
 

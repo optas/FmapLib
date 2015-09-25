@@ -5,13 +5,13 @@ classdef Graph < dynamicprops
     % TODO-P: Extend to allow self-loops.
     % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
-    properties (GetAccess = public, SetAccess = private)
+    properties (GetAccess = public, SetAccess = protected)
         % Basic properties that every instance of the Graph class has.        
         num_vertices   %   (int)                            -    Number of vertices.
         num_edges      %   (int)                            -    Number of edges.
         A              %   (num_vertices x num_vertices)    -    Adjacency matrix capturing the edge connectivity.
         is_directed    %   (logical)                        -    True iff the graph's eges are directed.
-        name = ''      %   (string)                         -    (default = '') A string identifying the graph, 
+        name           %   (string)                         -    (default = '') A string identifying the graph, 
                        %                                         e.g., 'Price_Network'.
     end
     
@@ -33,7 +33,7 @@ classdef Graph < dynamicprops
                 obj.is_directed = varargin{2};
             end            
             % Take care of node/edge size and graph's name.
-            obj.num_vertices  = size(obj.A, 1);            
+            obj.num_vertices  = size(obj.A, 1);
             obj.num_edges     = nnz(obj.A);
             
             if obj.is_directed() == false
@@ -43,8 +43,8 @@ classdef Graph < dynamicprops
                 obj.num_edges    = obj.num_edges   ./ 2;
             end
             
-            if nargin > 1 && ischar(varargin{end}) % The last argument is a string (and this string is not the first 
-                obj.name = varargin{end};          % vararg which is reserved for filenames).
+            if nargin > 1 && ischar(varargin{end})  % The last argument is a string (and this string is not the first 
+                obj.name = varargin{end};           % vararg which is reserved for filenames).
             else
                 obj.name = '';
             end
@@ -56,9 +56,7 @@ classdef Graph < dynamicprops
                 error('The provided adjacency matrix has negative entries but the edges must be non negative.')                
             end
             
-            
-            assert(size(obj.A, 1) == obj.num_vertices)
-            
+            assert(size(obj.A, 1) == obj.num_vertices)            
         end
         
         function obj = set_name(obj, new_name)

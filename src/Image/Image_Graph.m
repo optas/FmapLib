@@ -10,15 +10,15 @@ classdef Image_Graph < Graph
     methods (Access = public)
         % Class Constructor.               
         function obj = Image_Graph(varargin)
-            % Set up super-class (Graph) arguements.
+            % Set up super-class (Graph) arguments.
             if nargin == 0
                 super_args = cell(0);
             else
                 [h, w, ~] = size(varargin{1}.CData);                
                 
                 if strcmp('r_radius_connected', varargin{2})
-                    radius = varargin{3};                           % TODO-store this.
-                    G   = Graph.generate(varargin{2}, h, w, radius);
+                    radius = varargin{3};
+                    G   = Graph.generate('r_radius_connected', h, w, radius);
                 else                    
                     G   = Graph.generate(varargin{2}, h, w);
                 end
@@ -35,20 +35,16 @@ classdef Image_Graph < Graph
                 obj.I = varargin{1};             
             end            
         end
-        
-        
+                
         function [I] = graph_node_to_pixel_index(obj, nodes)
             % Convert column-expanded nodes of pixel matrix (i.e.m nodes of graph), to 2D (i,j) indices for pixels.
             %
             %            
-            h = obj.I.height;
-            
-            I = zeros(length(nodes), 2);
-            
+            h = obj.I.height;            
+            I = zeros(length(nodes), 2);            
             I(:,2) = ceil(nodes ./ double(h));             % y
             I(:,1) = nodes - ((I(:,2) - 1) * h );          % x  
         end
-
 
         function obj = adjust_weights_via_feature_differences(obj, features, recipie, varargin)            
             [h, w, ~] = size(features);            
@@ -79,13 +75,16 @@ classdef Image_Graph < Graph
                 sigma = check_and_derive_sigma(options.sigma_f, feature_dists);        
                                               
                 feature_dists = exp( - ((feature_dists).^2) ./ sigma);                                
-                num_nodes = obj.num_vertices;
-                feature_dists = sparse(node_from, node_to, feature_dists, num_nodes, num_nodes); % Put values back in adjacecny matrix format.
+                num_nodes     = obj.num_vertices;
+                feature_dists = sparse(node_from, node_to, feature_dists, num_nodes, num_nodes);    % Put values back in adjacecny matrix format.
                 feature_dists = feature_dists + feature_dists';
                 feature_dists = feature_dists .* spatial_dists;
                 assert(all(all(feature_dists >= 0 )));
-                %TODO ADD ASSERT symmetric
-                obj.add_or_reset_property('Gw', Graph(feature_dists, obj.is_directed));
+                                                                               
+                obj.A         = feature_dists;
+                obj.name      = [obj.name '_feat_adjusted'];
+                issymmetric(obj.A)                
+%                 obj.add_or_reset_property('Gw', Graph(feature_dists, obj.is_directed));
             else
                 error('Not implemented yet.')
             end
@@ -102,25 +101,21 @@ classdef Image_Graph < Graph
             end          
         end
         
-        
-        
-        %
-%         function obj = copy(this)
-%             % Define what is copied when a deep copy is performed.
-%             % Instantiate new object of the same class.
-%             obj = feval(class(this));
-%                         
-%             % Copy all non-hidden properties (including dynamic ones)
-%             % TODO: Hidden properties?
-%             p = properties(this);
-%             p
-%             for i = 1:length(p)
-%                 if ~isprop(obj, p{i})   % Adds all the dynamic properties.
-%                     obj.addprop(p{i});
-%                 end                
-%                 obj.(p{i}) = this.(p{i});
-%             end           
-%         end
+        function obj = copy(this)
+            % Define what is copied when a deep copy is performed.        
+            
+            % Instantiate new object of the same class.
+            obj = feval(class(this));      
+                        
+            % Copy all non-hidden properties (including dynamic ones)            
+            p = properties(this);            
+            for i = 1:length(p)
+                if ~isprop(obj, p{i})   % Adds all the dynamic properties.
+                    obj.addprop(p{i});
+                end                
+                obj.(p{i}) = this.(p{i});
+            end           
+        end
                
     end
     

@@ -64,11 +64,23 @@ classdef Patch < dynamicprops
     end
     
     methods (Static, Access = public)
-        function [b] = are_valid_corners(corners, src_image)            
-            b =  corners(1) <= src_image.width && corners(3) <= src_image.width && ...   % Inside photo's x-dim.
+        function [b] = is_valid(corners, src_image)            
+            b =  corners(1) <= src_image.width  && corners(3) <= src_image.width && ...   % Inside photo's x-dim.
                  corners(2) <= src_image.height && corners(4) <= src_image.height && ...  % Inside photo's y-dim.
-                 all(corners) > 0 ;                 
+                 all(corners) > 0 ;                                         
         end
+        
+        function [b] = is_within_limits(patch,  width_limit, height_limit, src_image)
+            if width_limit <= 0  || height_limit <= 0 || height_limit > 1 || width_limit > 1
+                error('Limits must be percents in (0,1] and they refer to the size of the original image where the patch comes from.')
+            end
+                
+            b  = (patch(3) - patch(1))  <= width_limit  * src_image.width   && ...
+                 (patch(4) - patch(2))  <= height_limit * src_image.height ;
+            
+        end
+            
+        
         
         function [F] = extract_patch_features(corners, features, type)
                 switch type

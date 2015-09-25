@@ -51,6 +51,18 @@ classdef Image < dynamicprops
             h = image(obj.CData);
         end
         
+        function [h] = plot_patch(obj, patch, varargin)
+            xmin = patch(1);
+            ymin = patch(2);
+            xmax = patch(3);
+            ymax = patch(4);            
+            h = obj.plot();
+            hold on;
+            plot([xmin xmax xmax xmin xmin],[ymin ymin ymax ymax ymin], ...
+                 'Color', 'r', 'LineWidth', 3); %, 'LineStyle',lineStyle);
+        end
+        
+        
         function [b] = is_rgb(obj)
             b = ndims(obj.CData) == 3;
         end        

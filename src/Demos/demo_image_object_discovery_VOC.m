@@ -1,5 +1,5 @@
 clear; clc;
-[dp, cp] = get_project_paths('ImageJointUnderstanding');
+[dp, cp]   =  get_project_paths('ImageJointUnderstanding');
             
 %% Load VOC image collection with gist, gt_segmentation and object_proposals.
 image_folder    = [dp 'VOC/2007/Train_Validate_Data/VOC2007_6x2/aeroplane_left/'];
@@ -26,72 +26,163 @@ for i=1:length(images)
 end
 num_images = length(images);
 
-%% Resize every image and extract a laplacian basis.
+%% Load pixel-leve ground-truth segmentations
+pixel_gt_segmentation = cell(num_images, 1);
+gt_seg_folder = [dp 'VOC/2007/Train_Validate_Data/SegmentationClass/'];
+ending        = '.png';
+class_id      =  1;    % Specific to aeroplanes - hack.
+for i = 1:num_images
+    try
+        gt = imread([gt_seg_folder images{i}.name ending]);
+    catch
+        [gt_seg_folder images{i}.name ending]
+        continue
+    end
+        
+    mask = zeros(size(gt));
+    mask(gt == class_id) = 1;
+    pixel_gt_segmentation{i} = mask;    
+end
+
+%% Resize every image
 new_height = 128;
 new_width  = NaN;
-% 
-% radius     = 1;
-% eigs_num   = 5;
-% 
-% sigma_f   = 800 / (255^2);   
+for i= 1:num_images
+    images{i}.set_resized_image(new_height, new_width);
+end
+
+%% Extract a laplacian basis.
+radius     = 3;
+eigs_num   = 64;
+sigma_f    = 800 / (255^2);
 
 image_laplacians = cell(length(all_image_files), 1);
 
-for i= 1:num_images
-    images{i}.set_resized_image(new_height, new_width);    
-    im_i = images{i}.get_resized_image();    
-    new_width = im_i.width;
+for i = 11:num_images
+    im_i       = images{i}.get_resized_image();
+    new_heigtt = im_i.height;
+    new_width  = im_i.width;
         
     G = Image_Graph(im_i, 'r_radius_connected',  radius);
-    fprintf('Graph %d constructed.\n', i)
-
+    fprintf('Graph %d constructed.\n', i);
     
     Fi = im_i.color();
     sigma_s  =  2 * (0.1 * norm([new_width-1, new_height-1]))^2;    
-    G.adjust_weights_via_feature_differences(Fi , 'normalized_cut', 'sigma_s', sigma_s, 'sigma_f', sigma_f);    
+    G.adjust_weights_via_feature_differences(Fi , 'normalized_cut', 'sigma_s', sigma_s, 'sigma_f', sigma_f);
     
-    image_laplacians{i} = Laplacian(G.Gw, 'norm');
+    image_laplacians{i} = Laplacian(G, 'norm');
     image_laplacians{i}.get_spectra(eigs_num);
-    fprintf('Laplacian %d constructed.\n', i)
+    fprintf('Laplacian %d constructed.\n', i);
 end
+%%
 save([dp 'output/laplacians_aeroplane_left_norm'], 'image_laplacians');
 %%
 load([dp 'output/laplacians_aeroplane_left_norm'], 'image_laplacians');
+%% Visualize Eigenvectors of single image.
+im_id = 10; eig_to_vis = 20;
+E = image_laplacians{im_id}.evecs(eigs_num);   
+new_width  = images{im_id}.get_resized_image().width;
+new_height = images{im_id}.get_resized_image().height;
+figure();
+
+for i = 1:eig_to_vis     
+    eig_i = E(:, i);
+    eig_i = reshape(eig_i, new_height, new_width);
+%     imagesc(eig_i); axis('image'); axis off;    
+    eig_i = (eig_i - min(eig_i(:))) ./ (max(eig_i(:)) - min(eig_i(:)));    % imshow expects values in [0,1] if they are floats.
+    subplot(5,4,i); imshow(eig_i);    
+end
+suptitle('20 Smallest Eigenvectors (Min-Cut method).')    
 
 %% Extract hog features: whole-image, (pixel-wise) and project them into Laplacian basis.
+clc
 hog_feats = cell(num_images ,1);
 proj_hogs = cell(num_images, 1);
 
 for i= 1:num_images
-    im_i = images{i}.get_resized_image();    
-    
-    h = im_i.height;
-    w = im_i.width;
-    
-    hog_feats{i} = Image_Features.hog_signature(im_i);    
+    im_i = images{i}.get_resized_image();   
+    h = im_i.height; w = im_i.width;
+
+%     hog_feats{i} = Image_Features.hog_signature(im_i);    
+    hog_feats{i} = Image_Features.sift_signature(im_i);  
     
     Fp = reshape(hog_feats{i}, h*w, size(hog_feats{i}, 3));       % Now Fp, contains the pixel-level features stack in a long vector column-wise.
-    Fp = divide_columns(Fp, sqrt(sum(Fp.^2)));                    % Rescale to unit norm.    
-       
-    proj_hogs{i}    = image_laplacians{i}.project_functions(eigs_num, Fp);
+    Fp = divide_columns(Fp, sqrt(sum(Fp.^2)));                    % Rescale to unit norm.           
+    proj_hogs{i}  = image_laplacians{i}.project_functions(eigs_num, Fp);    
+    
+%     reconstructed = image_laplacians{i}.synthesize_functions(proj_hogs{i}(:,1));
+%     error_i = l2_norm(Fp(:,1) - reconstructed) ./ l2_norm(Fp(:,1));
+%     imagesc(reshape(reconstructed, h, w));    
 end
 %%
-load([dp 'output/hogs_aeroplane_left'], 'hog_feats', 'proj_hogs');
+% load([dp 'output/hogs_aeroplane_left'], 'hog_feats', 'proj_hogs');
 
 %% Make all F-maps.
 all_fmaps = cell(num_images, num_images);
 regulizer_w = 15;
 for i = 1:num_images
-    evals_i = image_laplacians{i}.evals(eigs_num);
+    evals_i = image_laplacians{i}.evals(eigs_num);    
+%     evals_i = evals_i ./ max(evals_i);
+    
     for j = 1:num_images
         if i ~= j
             evals_j = image_laplacians{j}.evals(eigs_num);            
+%             evals_j = evals_j ./ max(evals_j);
             all_fmaps{i,j} = Functional_Map.sum_of_squared_frobenius_norms(proj_hogs{i}, proj_hogs{j}, evals_i, evals_j, regulizer_w);
         end        
     end
 end
+
+%% Make Iterative-Fmaps.
+iter_fmaps = cell(num_images, num_images);
+regulizer_w = 15;
+for i = 1:2
+    evals_i = image_laplacians{i}.evals(eigs_num);
+%     evals_i = evals_i ./ max(evals_i);
+    for j = 1:4
+        if i ~= j
+            evals_j = image_laplacians{j}.evals(eigs_num);                         
+%             evals_j = evals_j ./ max(evals_j);
+            [X, W, iter_ran]  = Functional_Map.iteratively_refined_fmap(proj_hogs{i}, proj_hogs{j}, evals_i, evals_j, regulizer_w);
+            iter_fmaps{i,j} = X(i,j,end);
+        end        
+    end
+end
+
 %%
-load([dp 'output/fmaps_aeroplane_left'], 'all_fmaps');
+i = 6
+h = images{i}.height;
+w = images{i}.width;
+
+images{i}.plot
+plotBoxes(images{i}.gt_segmentation{1}, 'random', [], '-')
+
+mask = pixel_gt_segmentation{i};
+imshow(mask)
+
+%%
+for gt_j = images{i}.gt_segmentation                       
+    gt = gt_j{:};
+    bitmask = zeros(h, w);    
+    bitmask(gt(2):gt(4), gt(1):gt(3)) = 1;     
+    bitmask = mask .* bitmask;
+    
+%     overlaps(i,:,m) = max(overlaps(i,:,m), overlap_with_mask(obj_proposals{i}(top_patches(i, :, m), :), bitmask)');        
+end
+
+imshow(bitmask)
+%%
+
+
+
+
+
+
+
+
+
+
+% load([dp 'output/fmaps_aeroplane_left'], 'all_fmaps');
 
 %% k-nn GIST initial image network
 k_neighbors = 5;
@@ -126,11 +217,6 @@ for i = 1:num_images
 end
 
 load([dp 'output/patch_feats_' method], 'patch_feat')
-
-
-
-
-
 
 
 
@@ -175,19 +261,6 @@ save([dp 'output/top_overlapss_tiling_minimum_square_rule'], 'overlaps')
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 %%  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%                                                                                          Basement
 %%
@@ -212,17 +285,6 @@ for i = 1:num_images
     [h, w, ~] = size(im);
     proposals{i} = RP(im, params);
 end
-
-
-%% Visualize an eigenvector coming from the mincut method
-E = image_laplacians{3}.evecs(10);   
-E = E(:,2);
-E = reshape(E, new_height, new_width);
-E = (E - min(E(:))) ./ (max(E(:)) - min(E(:)));    % imshow expects values in [0,1] if they are floats.
-imshow(E)
-
-
-
 
 %%
 for eigs_num = [1,2,5,10,30,45,62];
@@ -275,20 +337,6 @@ for i=1:length(images)
 end
 
 
-% im_r_i.plot()
-%%
-            
-
-
-
-
-
-
-
-
-
-
-
 %% Find gist-nearest neighbors per image.
 param.imageSize = [256 256];
 param.orientationsPerScale = [8 8 8 8];
@@ -298,86 +346,6 @@ LMgist(image_folder, '', param, image_folder)
 k_neighbors = 2;
 [gist_descriptors, gist_nn] = get_gist_nn(images, k_neighbors);
     
-
-%% Extract feautures of proposals and project them in corresponding basis.
-
-proposal_features = cell(n_ims,1);
-for i = 1:n_ims
-    im_id = image_trio(i);    
-    im = images{im_id};         
-    [h, w, ~] = size(im);   
-    prop_i = proposals{i};
-    proposal_features{i} = cell(length(prop_i ),1);    
-    frame = zeros(h, w, 387);
-    
-    for j = 1:length(proposals{i})        
-        xmin = prop_i(j, 1);
-        ymin = prop_i(j, 2);
-        xmax = prop_i(j, 3);
-        ymax = prop_i(j, 4);
-        if xmin==xmax || ymin==ymax   
-            continue
-            'moufa'
-        end
-        
-        patch = im(ymin:ymax, xmin:xmax, :);
-%         image(uint8(patch))               
-        yo = faceFeatures(patch, {'sift', 'color'});
-        frame(ymin:ymax, xmin:xmax, :) = yo;        
-        F = reshape(frame, w*h, size(frame, 3));
-        F  = divide_columns(F, sqrt(sum(F.^2)));
-        proposal_features{i}{j}  = evecs{i}' * F;
-        frame(ymin:ymax, xmin:xmax, :) = 0;
-    end
-    
-end
-
-
-
-
-
-%% Do simple stats
-
-for i = 1:n_ims
-        for j = i+1:n_ims                                        
-                X = [];
-                Y = [];
-                for pi = 1:length(proposal_features{i})          % Proposals for image_i
-                    for pj = 1:length(proposal_features{j})      % Proposals for image_j                        
-                        if ~isempty(proposal_features{i}{pi}) &&  ~isempty(proposal_features{j}{pj})                                                  
-                            
-                            X(end+1) = scores{i,j,pi,pj};
-                            Y(end+1) = overlaps{i}(pi) + overlaps{j}(pj);
-                            
-                        end
-                    end
-                end
-                rho    = corr(X',Y')
-                
-                perc_5 = prctile(X, 5);
-                [ind]  = find(X < perc_5);
-                correspond_y = Y(ind);
-                sum(Y < mean(correspond_y)) / length(Y)                
-                
-                figure;
-                hist(X);                
-                figure;
-                hist(Y);                    
-                
-                [xval, xpos] = sort(X);                
-                corres_y = Y(xpos(1:5));                
-                                                
-                [yval, ypos] = sort(Y);
-                
-                
-                min(find(yval == max(corres_y))) ./ length(yval)
-               
-%                 input('')
-                
-        end
-end
-
-
 
 %% Extract BOW-feature.
 bow_dict = load('/Users/optas/Dropbox/matlab_projects/Image_Graphs/data/Centers_MSRC');
