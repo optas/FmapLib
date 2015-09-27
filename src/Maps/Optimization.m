@@ -1,6 +1,5 @@
 classdef Optimization
-    % Some high level routines for doing numerical optimization. Still
-    % figuring this out. TODO-V, Do your best:)
+    % Some high level routines for doing numerical optimization. Work in progress.
   
     methods (Static)
   
@@ -125,11 +124,90 @@ classdef Optimization
             
             % _add_content
             
-            
-            
-            
-            
         end
+        
+        
+        function [X, opt] = least_edges_given_connectivity_first_try(init_graph, dist_matrix, alpha)
+            % Computes the adjacency matrix of a graph for which the algrebraic connectivity is larger than alpha and
+            % the sum of all its edge weigts is minimized. _add content_
+            %            
+            % Input:
+            %           init_graph   -  
+            %                       
+            %           dist_matrix  -  (N x N matrix) weights(i,j) is the weight an edge between (i and j).            
+            %
+            %           alpha        - (int) Lower bound on algebraic connectivity of derived graph.
+            %
+            %
+            % Output: _add_
+            %
+            %
+            % Reference: 'Graph Weight Design for Laplacian Eigenvalue Constraints with Multi-Agent Systems Applications.'
+            
+            n = init_graph.num_vertices;
+            L = Laplacian(init_graph, 'comb');            
+            
+            [~, U    ] = L.get_spectra(n-1);
+            [Ulast, ~] = eigs(L.L, 1);         % Compute the largest eigen-pair.
+            
+            size(U)
+            size(Ulast)
+            U = [U(:, 2:end) Ulast];           % Remove the constant eigenvector and instert Ulast.
+            size(U)
+            
+            alpha = alpha * eye(n);
+            cvx_begin                        
+                variable X(n, n) symmetric                
+                minimize trace(X * dist_matrix)
+                subject to
+                    U.' * ( diag(diag(X * dist_matrix)) - X - alpha) * U >= 0
+                    vec(X)  >= 0
+                    -vec(X) >= -1                
+            cvx_end      
+            opt = cvx_optval;                
+        end
+        
+        
+        function [X, opt] = least_edges_given_connectivity(init_graph, dist_matrix, alpha)
+            % Computes the adjacency matrix of a graph for which the algrebraic connectivity is larger than alpha and
+            % the sum of all its edge weigts is minimized. _add content_
+            %            
+            % Input:
+            %           init_graph   -  
+            %                       
+            %           dist_matrix  -  (N x N matrix) weights(i,j) is the weight an edge between (i and j).            
+            %
+            %           alpha        - (int) Lower bound on algebraic connectivity of derived graph.
+            %
+            %
+            % Output: _add_
+            %
+            %
+            % Reference: 'Graph Weight Design for Laplacian Eigenvalue Constraints with Multi-Agent Systems Applications.'
+            
+            n = init_graph.num_vertices;
+            L = Laplacian(init_graph, 'comb');            
+            
+            [~, U    ] = L.get_spectra(n-1);
+            [Ulast, ~] = eigs(L.L, 1);         % Compute the largest eigen-pair.
+            
+            size(U)
+            size(Ulast)
+            U = [U(:, 2:end) Ulast];           % Remove the constant eigenvector and instert Ulast.
+            size(U)
+            
+            alpha = alpha * eye(n);
+            cvx_begin                        
+                variable X(n, n) symmetric                
+                minimize trace(X * dist_matrix)
+                subject to
+                    U.' * ( diag(diag(X * dist_matrix)) - X - alpha) * U >= 0
+                    vec(X)  >= 0
+                    -vec(X) >= -1                
+            cvx_end      
+            opt = cvx_optval;                
+        end
+        
             
 
     end

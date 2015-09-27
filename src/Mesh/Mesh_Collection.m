@@ -31,7 +31,7 @@ classdef Mesh_Collection < dynamicprops
                 obj.name = '';
                 obj.meshes = containers.Map;                            
             elseif nargin == 1
-                error('Wrong input arguements.')
+                error('Wrong input arguments.')
             elseif nargin == 2 || nargin == 3                
                 % Find all potential mesh files (.off, .obj files).                
                 all_subfiles = rdir([top_directory, [filesep '**' filesep]], 'regexp(name, ''\.obj$|\.off$'')');                
@@ -212,7 +212,13 @@ classdef Mesh_Collection < dynamicprops
                         
         function [D] = set_semantics_of_meshes(obj, semantics_file)
             % TODO-P Deal with missing data
-            fid = fopen(semantics_file);
+            fid = fopen(semantics_file);            
+            
+            if fid < 0
+                warning('Cannot open semtantic file. Collection will not save any semantic information.')                 
+                return
+            end
+            
             C   = textscan(fid, '%s', 'delimiter', '\n');
             fclose(fid);
             C   = C{1};

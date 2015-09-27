@@ -25,8 +25,8 @@ function [data_path, code_path] = get_project_paths(project_name)
             code_path = '/Users/optas/Dropbox/matlab_projects/External_Packages/';
                 
         else strcmp(project_name, 'Shape_Classification')
-            data_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/Data';
-            code_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/src';
+            data_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/Data/';
+            code_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/src/';
         end
         
     elseif strcmp(name(1:end-1), 'orionp.stanford.edu')
@@ -35,8 +35,7 @@ function [data_path, code_path] = get_project_paths(project_name)
             code_path = '';
         end
         
-    elseif strcmp(name(1:end-1), 'Etienne-HP')                                              % Etienne's space.
-        
+    elseif strcmp(name(1:end-1), 'Etienne-HP')                                              % Etienne's space.        
         data_path = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\data\';
         code_path = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\src\External_Code\';
     

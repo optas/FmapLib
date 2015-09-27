@@ -55,7 +55,9 @@ classdef Graph < dynamicprops
             if any(obj.A < 0)
                 error('The provided adjacency matrix has negative entries but the edges must be non negative.')                
             end
-            
+            if ~ obj.is_directed && ~issymmetric(obj.A)
+                error('The provided adjacency matrix is not symmetric but an undirected graph was expected.')
+            end            
             assert(size(obj.A, 1) == obj.num_vertices)            
         end
         
@@ -84,7 +86,7 @@ classdef Graph < dynamicprops
             if obj.is_directed
                 [node_from, node_to] = find(obj.A);                   
             else
-                [node_from, node_to] = find(triu(obj.A));     % Each edge is returned once since there is not direciton.                  
+                [node_from, node_to] = find(triu(obj.A));     % Each edge is returned once since there is not direction.                  
             end
         end
         function [N] = neighbors(obj, vertices)            
@@ -97,9 +99,26 @@ classdef Graph < dynamicprops
             N = cell(length(vertices), 1);              % TODO-P take care of directionality. 
             for i = 1:length(vertices)
                     N{i} = find(obj.A(i,:));                               
+            end                       
+        end
+        
+        function [I] = incidence_matrix(obj)
+            % Computes the oriented incidence matrix of the underlying graph. Each column of the incidence matrix corresponds to 
+            % and edge of the graph and has exactly two non zero entries. If the oriented... add_content
+            %
+            % I - (num_vertices x num_edges) matrix. A column corresponds to an edge 
+            
+            
+            I = sparse([], [], [], obj.num_vertices, obj.num_edges, 2*obj.num_edges);            
+            [node_from, node_to] = obj.all_edges();                        
+            for i=1:obj.num_edges                       % TODO- speed up.
+                I(node_from(i), i) = 1; 
+                I(node_to(i),   i) = -1;
             end
-                       
-        end 
+            
+        end
+        
+        
     end
            
     methods (Static)
@@ -142,6 +161,7 @@ classdef Graph < dynamicprops
             %                                       - 'lattice'        -  a planar lattice graph.
             %                                       - 'checkerboard'   -  a lattice graph but with diagonal node 
             %                                                             edges included.
+            %                                       - 'clique'         -  a fully connected graph.
             %
             %           varargin    - Extra parameters specifying properties of each graph model.
             %                           If graph_type is 'lattice' or 'checkerboard' then:
@@ -163,7 +183,12 @@ classdef Graph < dynamicprops
                 end
             end
                 
-            if strcmp(graph_type, 'lattice')
+            if strcmp(graph_type, 'clique')
+                n = varargin{1};
+                directed  = false;                
+                adj = ones(n,n) - diag(ones(n,1)) ; 
+                G = Graph(adj, directed, sprintf('%d_clique', n));
+            elseif strcmp(graph_type, 'lattice')
                 total_edges = 2 * (((m-1) * n) + ((n-1) * m));      % Result of from graph Theory.
                 diag_vec_1  = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections.
                 diag_vec_1  = spdiags(diag_vec_1, 1, m * n, m * n);
@@ -206,7 +231,6 @@ classdef Graph < dynamicprops
                         if i == 0 && j == 0
                             continue;
                         end
-
                         section = image(1+max(i,0):end+min(i,0), 1+max(j,0):end + min(j,0));
                         shift   = zeros(size(image,1),size(image,2));
                         shift(1 - min(i,0):end-max(i,0),1-min(j,0):end-max(j,0)) = section;
@@ -215,8 +239,6 @@ classdef Graph < dynamicprops
                         dist=sqrt(i^2 + j^2);
                         weights(where == 1) = dist;
 %                         weights = weights';
-
-
                         start_indices = find(weights)';
 %                         end_indices = start_indices + i*size(image,2) + j;
                         end_indices = start_indices + j*size(image,1) + i;
@@ -226,7 +248,6 @@ classdef Graph < dynamicprops
                         ends(end+1:end+length(end_indices)) = end_indices;
                         vals(end+1:end+length(val)) = val';
                     end
-
                     all_starts{i1} = starts;
                     all_ends{i1}   = ends;
                     all_vals{i1}   = vals;
