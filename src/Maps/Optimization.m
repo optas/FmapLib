@@ -167,14 +167,19 @@ classdef Optimization
             opt = cvx_optval;                
         end
         
+        function [Q] = get_orthogonal_vectors(in_lap, alpha)
+                nodes = size(in_lap, 1);
+                
+                A     = in_lap - diag(repmat(alpha, nodes, 1));
+                
+                [Q, ~] = eigs(A, nodes - 1);
+        end
         
-        function [X, opt] = least_edges_given_connectivity(init_graph, dist_matrix, alpha)
+        function [X, opt] = least_edges_given_connectivity(dist_matrix, alpha)
             % Computes the adjacency matrix of a graph for which the algrebraic connectivity is larger than alpha and
             % the sum of all its edge weigts is minimized. _add content_
             %            
-            % Input:
-            %           init_graph   -  
-            %                       
+            % Input:                       
             %           dist_matrix  -  (N x N matrix) weights(i,j) is the weight an edge between (i and j).            
             %
             %           alpha        - (int) Lower bound on algebraic connectivity of derived graph.
@@ -184,28 +189,36 @@ classdef Optimization
             %
             %
             % Reference: 'Graph Weight Design for Laplacian Eigenvalue Constraints with Multi-Agent Systems Applications.'
+            tic
+            weighted_clique  = Graph(dist_matrix, false);
+            n                = weighted_clique.num_vertices;
+            e                = weighted_clique.num_edges;
+            [node_f, node_t, weights]  = weighted_clique.all_edges();
+            W                = spdiags(weights, 0, e, e);
+                       
+            clique           = Graph.generate('clique', n);
+            if clique.num_edges ~= e
+                error('"dist_matrix" must containt zeros only on its diagonal.')
+            end
             
-            n = init_graph.num_vertices;
-            L = Laplacian(init_graph, 'comb');            
+            I = clique.incidence_matrix();            
+            toc
             
-            [~, U    ] = L.get_spectra(n-1);
-            [Ulast, ~] = eigs(L.L, 1);         % Compute the largest eigen-pair.
+            Q = Optimization.get_orthogonal_vectors(I*I', alpha);
+            toc
             
-            size(U)
-            size(Ulast)
-            U = [U(:, 2:end) Ulast];           % Remove the constant eigenvector and instert Ulast.
-            size(U)
-            
-            alpha = alpha * eye(n);
-            cvx_begin                        
-                variable X(n, n) symmetric                
-                minimize trace(X * dist_matrix)
+            alpha_i = alpha * eye(n);
+            cvx_begin quiet                       
+                variable K(e, e) diagonal
+                minimize trace(K * W)
                 subject to
-                    U.' * ( diag(diag(X * dist_matrix)) - X - alpha) * U >= 0
-                    vec(X)  >= 0
-                    -vec(X) >= -1                
+                    Q.' * ( I * K * I' - alpha_i ) * Q >= 0
+                    vec(K)  >= 0
+                    -vec(K) >= -1                            
             cvx_end      
-            opt = cvx_optval;                
+            opt = cvx_optval;                            
+            toc
+            X = sparse(node_f, node_t, diag(K));                       
         end
         
             

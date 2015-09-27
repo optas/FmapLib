@@ -17,7 +17,7 @@ classdef Graph < dynamicprops
     
     methods (Access = public)
         % Class Constructor.               
-        function obj = Graph(varargin)     
+        function obj = Graph(varargin)
             if nargin == 0                
                 % Construct an empty Graph.
                 obj.A             = sparse([]);
@@ -79,16 +79,29 @@ classdef Graph < dynamicprops
             end           
         end
         
-        function [node_from, node_to] = all_edges(obj)
+        function [node_from, node_to, weight] = all_edges(obj)
             % Computes all the edges between every pair of nodes. If the graph is undirected it returns each edge once 
             % and the. TODO-P add documentation
             %
             if obj.is_directed
-                [node_from, node_to] = find(obj.A);                   
+                [node_from, node_to, weight] = find(obj.A);                   
             else
-                [node_from, node_to] = find(triu(obj.A));     % Each edge is returned once since there is not direction.                  
+                [node_from, node_to, weight] = find(triu(obj.A));     % Each edge is returned once since there is not direction.                  
             end
         end
+        
+        function [W] = edge_weight(obj, from, to)
+            if ~ all(size(from) == size(to))
+                error('"from" and "to" must have the same size, since they define vertices connected by an edge.')
+            end
+            if length(from) > 1
+                ind = sub2ind(size(obj.A), from, to);
+                W   = obj.A(ind);
+            else
+                W = obj.A(from, to);    
+            end
+        end
+
         function [N] = neighbors(obj, vertices)            
             % Finds the neighbor vertices (edge-connected) of all input vertices.
             %
@@ -107,8 +120,7 @@ classdef Graph < dynamicprops
             % and edge of the graph and has exactly two non zero entries. If the oriented... add_content
             %
             % I - (num_vertices x num_edges) matrix. A column corresponds to an edge 
-            
-            
+                        
             I = sparse([], [], [], obj.num_vertices, obj.num_edges, 2*obj.num_edges);            
             [node_from, node_to] = obj.all_edges();                        
             for i=1:obj.num_edges                       % TODO- speed up.
