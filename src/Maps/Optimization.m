@@ -169,10 +169,16 @@ classdef Optimization
         
         function [Q] = get_orthogonal_vectors(in_lap, alpha)
                 nodes = size(in_lap, 1);
+%                 A = in_lap;
+                A     = in_lap - diag(repmat(alpha, nodes, 1));                
+                [Q, ~] = eigs(A, nodes - 1);                
+
+%                 sigma = 10e-6;
+%                 [Q, ~] = eigs(A, 3, sigma);                
+% %                 Q = fliplr(Q);
+%                 Q = Q(:,1:2)
                 
-                A     = in_lap - diag(repmat(alpha, nodes, 1));
-                
-                [Q, ~] = eigs(A, nodes - 1);
+                                
         end
         
         function [X, opt] = least_edges_given_connectivity(dist_matrix, alpha)
@@ -196,31 +202,54 @@ classdef Optimization
             [node_f, node_t, weights]  = weighted_clique.all_edges();
             W                = spdiags(weights, 0, e, e);
                        
-            clique           = Graph.generate('clique', n);
+            clique           = Graph.generate('clique', n, n);
+                        
             if clique.num_edges ~= e
                 error('"dist_matrix" must containt zeros only on its diagonal.')
             end
             
             I = clique.incidence_matrix();            
             toc
+                                                
+            alpha_i = eye(n)*alpha;
+            num_iter = 2;
             
-            Q = Optimization.get_orthogonal_vectors(I*I', alpha);
+            D = eye(size(I, 2));
+            
+            for i =1:num_iter                
+                Q = Optimization.get_orthogonal_vectors(I*D*I', alpha);
+                K = []
+                cvx_begin sdp quiet
+                    variable K(e, e) diagonal
+                    minimize trace(K * W)                
+                    subject to
+                        Q.' * ( I * K * I' - alpha_i ) * Q == semidefinite(size(Q,2))
+                        K(:)  >= 0
+                        K(:)  <= 1                    
+                cvx_end        
+                opt = cvx_optval;                            
+%                 K
+                D = K;
+           end
+            
+            if opt == +Inf
+                warning('Program was not feasible.')
+                X = NaN;
+                return 
+            else                                                
+                X = sparse(node_f, node_t, diag(K), n, n);  % Put edges on a adjacency matrix.
+                X = X + X';              
+                L = Laplacian(Graph(X, false), 'comb');
+                lambda = L.evals(2);
+                assert(lambda(2) >= alpha)
+            end
+            
             toc
             
-            alpha_i = alpha * eye(n);
-            cvx_begin quiet                       
-                variable K(e, e) diagonal
-                minimize trace(K * W)
-                subject to
-                    Q.' * ( I * K * I' - alpha_i ) * Q >= 0
-                    vec(K)  >= 0
-                    -vec(K) >= -1                            
-            cvx_end      
-            opt = cvx_optval;                            
-            toc
-            X = sparse(node_f, node_t, diag(K));                       
         end
         
+        
+        minimum_effective_resistance
             
 
     end
