@@ -24,7 +24,7 @@ function [data_path, code_path] = get_project_paths(project_name)
             data_path = '/Users/optas/Dropbox/With_others/Zimo_Peter_Panos/Joint_Image_Understanding/Data/';
             code_path = '/Users/optas/Dropbox/matlab_projects/External_Packages/';
                 
-        else strcmp(project_name, 'Shape_Classification')
+        elseif strcmp(project_name, 'Shape_Classification')
             data_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/Data/';
             code_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/src/';
         end
