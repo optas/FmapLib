@@ -25,12 +25,19 @@ classdef Image_Features < dynamicprops
         end
         
         function [signatures] = sift_signature(in_image)
-            SIFTparam.grid_spacing = 1; % Distance between grid centers.            
-            SIFTparam.patch_size = 12;
-            pad_size = SIFTparam.patch_size/2 - 1;
-            padded_im = padarray(in_image.CData, [pad_size, pad_size]);
-            signatures = LMdenseSift(padded_im, '', SIFTparam);            
+            cellsize=3;
+            gridspacing=1;
+            I = im2double(in_image.CData);
+            signatures = im2double(mexDenseSIFT(I, cellsize, gridspacing));
+%             SIFTparam.grid_spacing = 1; % Distance between grid centers.             Old code Fan' type.
+%             SIFTparam.patch_size = 12;
+%             pad_size = SIFTparam.patch_size/2 - 1;
+%             padded_im = padarray(in_image.CData, [pad_size, pad_size]);
+%             signatures = LMdenseSift(padded_im, '', SIFTparam);            
         end
+        
+
+        
         
         function [signatures] = color_histogram(in_image, num_bins, varargin)
             % Histogram of color values of input image. 
@@ -41,9 +48,9 @@ classdef Image_Features < dynamicprops
             options = struct('normalize', 1, 'grayscale', 1);
             options = load_key_value_input_pairs(options, varargin{:});
             
-            I = in_image.CData;            
+            I = in_image.CData;
             if options.grayscale
-                I          = rgb2gray(I);                
+                I          = rgb2gray(I);
                 signatures = imhist(I, num_bins);
             else                
                 signatures        = zeros(num_bins, 3);
@@ -54,9 +61,17 @@ classdef Image_Features < dynamicprops
             
             if options.normalize                
                 signatures = divide_columns(signatures, sum(signatures, 1));
-            end
-            
+            end            
         end
+        
+        function [E] = gist_embedding(in_image)
+            param.imageSize = [256 256];
+            param.orientationsPerScale = [8 8 8 8];
+            param.numberBlocks = 4;
+            param.fc_prefilt = 4;
+            E = LMgist(in_image.CData, '', param);
+        end
+        
         
         
     end

@@ -72,9 +72,8 @@ classdef Laplacian < Basis
             right = 0;                                 
             for i = 1:n_varargin
                 left  = right + 1;
-                right = right + size(varargin{i}, 2);                                
-%                 Proj(:, left:right)  = evecs \ varargin{i};                
-                  Proj(:, left:right)  = evecs' * varargin{i};                            
+                right = right + size(varargin{i}, 2);
+                  Proj(:, left:right)  = evecs' * varargin{i};                            % Exploits orthonormality of basis.
             end            
         end
 

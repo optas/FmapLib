@@ -10,12 +10,12 @@ classdef Patch < dynamicprops
        
     methods (Access = public)
         % Class constructror
-        function obj = Patch(src_img, corners)
+        function obj = Patch(corners, src_img)
             if nargin == 0
                 obj.source_image = Image();
                 obj.corners      = zeros(1,4);
             else
-                if ~ Patch.valid_corners(corners, src_image)
+                if ~ Patch.is_valid(corners, src_img)
                     error('The corners of the Patch do not follow the xmin, ymin, xmax, ymax protocol.')
                 end
                 obj.source_image = src_img;                
@@ -44,7 +44,7 @@ classdef Patch < dynamicprops
 
         function a = area(obj)
                 [xmin, ymin, xmax, ymax] = obj.get_corners();
-                a = (ymax-ymin) * (xmax - xmin);
+                a = double((ymax-ymin)) * double((xmax - xmin));
         end
         
         function area = area_of_intersection(obj, another_patch)
@@ -58,8 +58,7 @@ classdef Patch < dynamicprops
             ymax = min(ymax1, ymax2);
             
             area = max(0, (ymax-ymin) * (xmax-xmin));
-        end
-            
+        end            
             
     end
     
@@ -76,14 +75,21 @@ classdef Patch < dynamicprops
             end
                 
             b  = (patch(3) - patch(1))  <= width_limit  * src_image.width   && ...
-                 (patch(4) - patch(2))  <= height_limit * src_image.height ;
-            
+                 (patch(4) - patch(2))  <= height_limit * src_image.height ;            
         end
-            
-        
-        
+                   
+        function [b] = uodl_patch_constraint(corners, src_image)                        
+            bValid1 = corners(1) > src_image.height *0.01 & corners(3) < src_image.height*0.99 ...
+                    & corners(2) > src_image.width * 0.01 & corners(4) < src_image.width*0.99;
+            bValid2 = corners(1) < src_image.height*0.01 & corners(3) > src_image.height*0.99 ...
+                    & corners(2) < src_image.width*0.01 & corners(4) > src_image.width*0.99;
+            b = bValid1 | bValid2;
+        end
+               
         function [F] = extract_patch_features(corners, features, type)
                 switch type
+                    case 'mask'
+                        F = features(corners(2):corners(4), corners(1):corners(3), :);                    
                     case 'zero_pad'
                         F = zeros(size(features));
                         F(corners(2):corners(4), corners(1):corners(3), :) = features(corners(2):corners(4), corners(1):corners(3), :);
@@ -98,7 +104,13 @@ classdef Patch < dynamicprops
                         error('Type not implemented.')
                 end
         end
-                
+               
+        function [P] = tightest_box_of_segment(in_mask)            
+            [y, x] = find(in_mask);
+            P = [min(x), min(y), max(x), max(y)];            
+        end
+        
+        
         function new_corners = find_new_corners(old_height, old_width, new_height, new_width, old_corners)
             xmin = old_corners(1);
             ymin = old_corners(2);
@@ -191,6 +203,50 @@ classdef Patch < dynamicprops
 % 
 %         end
         
+        function [overlaps] = overlap_with_mask(patches, bitmask)
+            % Computes for every patch in an array, the fraction of its area that resides inside a bit mask.
+            %
+            % Input:    
+            %           patches  - (N x 4) N rectangular image patches. Each patch is a 4-dimensional vector describing the (x,y)
+            %                      coordinates of the corners of the rectangle. Only the 4 extrema values are given for space
+            %                      economy, that is:  [xmin, ymin, xmax, ymax].    
+            %
+            %           bitmask  - (m x n) binary matrix. Usually positions flagged with 1, correspond to ROI wrt. an image. E.g., 
+            %                      they describe a segmentation of an object.
+            %     
+            % Output:                     
+            %           overlaps - (N x 1) vector. overlaps(i) is the fraction of the area of the i-th patch (patches(i))
+            %                      in the bitmask.
+
+
+            overlaps = zeros(size(patches, 1),1);
+            gt_area = sum(bitmask(:));    
+
+
+
+            for i = 1:size(patches,1)
+                xmin = patches(i,1);
+                ymin = patches(i,2);
+                xmax = patches(i,3);
+                ymax = patches(i,4);
+
+                if xmin==xmax || ymin==ymax   % Empty patch.
+                    warning('The patch has not positive area. E.g. it is a line or single point.')
+                    overlaps(i) = 0;
+                    continue
+                elseif ~ any(bitmask == 1)
+                    error('Bitmask has zero elements set to 1.')
+                end
+
+               inter_area  = double(sum(sum(bitmask(ymin:ymax, xmin:xmax))));           
+               overlaps(i) = inter_area / ((1 + double(xmax) - double(xmin)) * (1 + double(ymax) - double(ymin)) + double(gt_area) - inter_area);
+
+            end
+            if any(overlaps<0) || any(overlaps>1)
+                error('Overlaps outside of [0, 1] range were produced. Please check input.')
+            end
+        end
+
 
          
     end

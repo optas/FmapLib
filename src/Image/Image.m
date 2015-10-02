@@ -37,6 +37,9 @@ classdef Image < dynamicprops
         
         function [s] = size(obj)
             s = size(obj.CData);
+%             for k = 1:length(s)  TODO wrap default size 
+%                 varargout{k} = s(k);
+%             end                       
         end
         
         function c = color(obj)

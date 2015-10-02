@@ -27,8 +27,8 @@ classdef Basis < dynamicprops
         end
     
         function [evals, evecs] = get_spectra(obj, eigs_num)    
-            % Computes the eigenvectors corresponding to the smallest eigenvalues of the Basis matrix. This is 
-            % It stores the in the spectra property of the object (obj.spectra). It also, 
+            % Computes the eigenvectors corresponding to the smallest eigenvalues of the Basis matrix. 
+            % It stores the results in the spectra property of the object (obj.spectra). It also, 
             % automatically reuses the previously computed ones when this is doable, instead of computing them 
             % from the scratch.
             % 
