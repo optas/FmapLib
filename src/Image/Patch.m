@@ -69,22 +69,60 @@ classdef Patch < dynamicprops
                  all(corners) > 0 ;                                         
         end
         
-        function [b] = is_within_limits(patch,  width_limit, height_limit, src_image)
-            if width_limit <= 0  || height_limit <= 0 || height_limit > 1 || width_limit > 1
-                error('Limits must be percents in (0,1] and they refer to the size of the original image where the patch comes from.')
-            end
+        
+        function [b] = is_within_limits(patch,  at_most, at_least, src_image)
+%             if width_limit <= 0  || height_limit <= 0 || height_limit > 1 || width_limit > 1
+%                 error('Limits must be percents in (0,1] and they refer to the size of the original image where the patch comes from.')
+%             end
                 
-            b  = (patch(3) - patch(1))  <= width_limit  * src_image.width   && ...
-                 (patch(4) - patch(2))  <= height_limit * src_image.height ;            
+            p_width  = patch(4) - patch(2);
+            p_height = patch(3) - patch(1);
+            
+            if p_width == 1 || p_height == 1
+                b = false;
+                return
+            end
+            
+            if p_width * p_height <= at_least(1) * src_image.width * src_image.height
+                b = false;
+                return
+            end
+            
+            if p_width * p_height >= at_most(1) * src_image.width * src_image.height
+                b = false;
+                return
+            end
+            
+            if ~isempty(at_most)
+                b1 = p_width  <= at_most(1) * src_image.width   ...
+                  || p_height <= at_most(2) * src_image.height;                
+            end
+            
+            if ~isempty(at_least)
+                b2 =  p_width  >= at_least(1) * src_image.width   ...
+                  ||  p_height >= at_least(2) * src_image.height;                
+            end
+            
+            if isempty(at_most)
+                b = b2;
+            elseif isempty(at_least)
+                b = b1;
+            else
+                b = b1 && b2;             
+            end
         end
+        
+        
                    
         function [b] = uodl_patch_constraint(corners, src_image)                        
             bValid1 = corners(1) > src_image.height *0.01 & corners(3) < src_image.height*0.99 ...
                     & corners(2) > src_image.width * 0.01 & corners(4) < src_image.width*0.99;
             bValid2 = corners(1) < src_image.height*0.01 & corners(3) > src_image.height*0.99 ...
                     & corners(2) < src_image.width*0.01 & corners(4) > src_image.width*0.99;
-            b = bValid1 | bValid2;
+            b = bValid1 | bValid2;                           
+
         end
+        
                
         function [F] = extract_patch_features(corners, features, type)
                 switch type
@@ -99,7 +137,7 @@ classdef Patch < dynamicprops
                         tile_height = ceil(size(features,1)/size(tile,1));
                         
                         big_tiled = repmat(tile, tile_height, tile_length);
-                        F = big_tiled(1:size(features, 1), 1:size(features, 2),:);                 
+                        F = big_tiled(1:size(features, 1), 1:size(features, 2),:);                                     
                     otherwise
                         error('Type not implemented.')
                 end
