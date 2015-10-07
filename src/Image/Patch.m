@@ -1,119 +1,102 @@
 classdef Patch < dynamicprops
     
     properties (GetAccess = public, SetAccess = private)
-        % Basic properties that every instance of the Patch class has.        
-        source_image    %   (Image)           -    Image over which the patch was sampled.
-        
-        corners         %   (1 x 4 uint)    -    x-y coordinates wrt. source image, corresponding to the corners 
-                        %                          of the rectangular patch. They are [xmin, ymin, xmax, ymax]
+        % Basic properties that every instance of the Patch class has.                
+        corners         %   (1 x 4 uint)      -    x-y coordinates wrt. source image, corresponding to the corners 
+                        %                          of the rectangular patch. They are [xmin, ymin, xmax, ymax].
     end
        
-    methods (Access = public)
-        % Class constructror
-        function obj = Patch(corners, src_img)
-            if nargin == 0
-                obj.source_image = Image();
-                obj.corners      = zeros(1,4);
-            else
-                if ~ Patch.is_valid(corners, src_img)
+    methods (Access = public)                
+        function obj = Patch(varargin)
+            % Class constructror:
+            %   Input: 
+            %             (1 x 4) vector describing the corners as: [xmin, ymin, xmax, ymax].
+            if nargin == 0                
+                obj.corners  = zeros(1,4);
+            elseif nargin == 1
+                in_corners = varargin{1};
+                if ~ Patch.is_valid(in_corners)
                     error('The corners of the Patch do not follow the xmin, ymin, xmax, ymax protocol.')
-                end
-                obj.source_image = src_img;                
-                obj.corners      = corners;
-                
+                else                    
+                    obj.corners = in_corners;
+                end            
+            else
+                error('Wrong number of arguments.')
             end
         end
         
         function [xmin, ymin, xmax, ymax] = get_corners(obj)
-            % Getter of object's property 'corners' corresponding to the 4 extema of
+            % Getter of object's property 'corners' corresponding to the 4 extrema of
             % the x-y coordinates of the patch.
             xmin = obj.corners(1);
             ymin = obj.corners(2);
             xmax = obj.corners(3);
             ymax = obj.corners(4);
         end
-    
-        function [F] = plot(obj)
+            
+        function [F] = plot(obj, image)
          % Plots the boundary of the patch on its source image.
-            shape_inserter = vision.ShapeInserter('LineWidth', 4);         
             [xmin, ymin, xmax, ymax] = obj.get_corners();
-            rectangle = int32([xmin ymin (xmax - xmax) (ymax - ymin)]);
-            im_out    = step(shape_inserter, obj.source_image, rectangle);            
-            image(im_out);
+            F = image.plot();            
+            hold on;
+            plot([xmin xmax xmax xmin xmin],[ymin ymin ymax ymax ymin], 'Color', 'r', 'LineWidth', 3);
         end
 
-        function a = area(obj)
-                [xmin, ymin, xmax, ymax] = obj.get_corners();
-                a = double((ymax-ymin)) * double((xmax - xmin));
+        function w = width(obj)                       
+            [~, ymin, ~, ymax] = obj.get_corners();
+            w = ymax - ymin + 1;
+            assert(w >= 1);
         end
         
-        function area = area_of_intersection(obj, another_patch)
-            
+        function h = height(obj)                       
+            [xmin, ~, xmax, ~] = obj.get_corners();
+            h = xmax - xmin + 1;
+            assert(h >= 1);
+        end
+                
+        function a = area(obj)                
+            a = obj.height() * obj.width();
+        end
+        
+        function a = area_of_intersection(obj, another_patch)            
             [xmin1, ymin1, xmax1, ymax1] = obj.get_corners();
-            [xmin2, ymin2, xmax2, ymax2] = another_patch.get_corners();
-            
+            [xmin2, ymin2, xmax2, ymax2] = another_patch.get_corners();            
             xmin = max(xmin1, xmin2);
             ymin = max(ymin1, ymin2);
             xmax = min(xmax1, xmax2);
-            ymax = min(ymax1, ymax2);
-            
-            area = max(0, (ymax-ymin) * (xmax-xmin));
-        end            
-            
+            ymax = min(ymax1, ymax2);            
+            a    = max(0, (ymax-ymin+1) * (xmax-xmin+1));
+        end
+        
+        function c = corloc(obj, another_patch)
+            intersection = obj.area_of_intersection(another_patch);            
+            union        = obj.area() + another_patch.area() - intersection;
+            c            = double(intersection) / double(union);
+            assert(c >= 0 && c <= 1);
+        end
+        
     end
     
     methods (Static, Access = public)
-        function [b] = is_valid(corners, src_image)            
-            b =  corners(1) <= src_image.width  && corners(3) <= src_image.width && ...   % Inside photo's x-dim.
-                 corners(2) <= src_image.height && corners(4) <= src_image.height && ...  % Inside photo's y-dim.
-                 all(corners) > 0 ;                                         
-        end
-        
-        
-        function [b] = is_within_limits(patch,  at_most, at_least, src_image)
-%             if width_limit <= 0  || height_limit <= 0 || height_limit > 1 || width_limit > 1
-%                 error('Limits must be percents in (0,1] and they refer to the size of the original image where the patch comes from.')
-%             end
-                
-            p_width  = patch(4) - patch(2);
-            p_height = patch(3) - patch(1);
-            
-            if p_width == 1 || p_height == 1
-                b = false;
-                return
-            end
-            
-            if p_width * p_height <= at_least(1) * src_image.width * src_image.height
-                b = false;
-                return
-            end
-            
-            if p_width * p_height >= at_most(1) * src_image.width * src_image.height
-                b = false;
-                return
-            end
-            
-            if ~isempty(at_most)
-                b1 = p_width  <= at_most(1) * src_image.width   ...
-                  || p_height <= at_most(2) * src_image.height;                
-            end
-            
-            if ~isempty(at_least)
-                b2 =  p_width  >= at_least(1) * src_image.width   ...
-                  ||  p_height >= at_least(2) * src_image.height;                
-            end
-            
-            if isempty(at_most)
-                b = b2;
-            elseif isempty(at_least)
-                b = b1;
+        function [b] = is_valid(corners, src_image)
+            % Checks if the corners obey the necessary conditions for being a patch.            
+            if exist('src_image', 'var') % Verify it fits the image.
+                b =  corners(1) <= src_image.width  && corners(3) <= src_image.width && ...   
+                     corners(2) <= src_image.height && corners(4) <= src_image.height ;
             else
-                b = b1 && b2;             
-            end
+                b = true;                               
+            end            
+            b = b && all(corners > 0) ...
+                  && length(corners) == 4 && corners(1) <= corners(3)  && corners(2) <= corners(4);                  
+        end
+        
+        function [P] = tightest_box_of_segment(in_mask)            
+            [y, x] = find(in_mask);
+            P      =  Patch([min(x), min(y), max(x), max(y)]);            
+            
         end
         
         
-                   
         function [b] = uodl_patch_constraint(corners, src_image)                        
             bValid1 = corners(1) > src_image.height *0.01 & corners(3) < src_image.height*0.99 ...
                     & corners(2) > src_image.width * 0.01 & corners(4) < src_image.width*0.99;
@@ -121,8 +104,7 @@ classdef Patch < dynamicprops
                     & corners(2) < src_image.width*0.01 & corners(4) > src_image.width*0.99;
             b = bValid1 | bValid2;                           
 
-        end
-        
+        end        
                
         function [F] = extract_patch_features(corners, features, type)
                 switch type
@@ -143,12 +125,6 @@ classdef Patch < dynamicprops
                 end
         end
                
-        function [P] = tightest_box_of_segment(in_mask)            
-            [y, x] = find(in_mask);
-            P = [min(x), min(y), max(x), max(y)];            
-        end
-        
-        
         function new_corners = find_new_corners(old_height, old_width, new_height, new_width, old_corners)
             xmin = old_corners(1);
             ymin = old_corners(2);
@@ -235,55 +211,13 @@ classdef Patch < dynamicprops
             distance = sum(min(distances))
         end
         
-%         function [misalignment] = patch_transferability_triplet(source_image, target_image, source_patch, target_patch, fmaps) 
-%             misalignment = sum(sum(abs((fmaps{source_image, target_image} * source_patch) - target_patch), 1));
-%             misalignment = misalignment + sum(sum(abs((fmaps{target_image, source_image} * target_patch) - source_patch), 1));
+
+%    function [misalignment] = patch_transferability(source_image, target_image, source_patch, target_patch, fmaps)
+%     
+%         misalignment = sum(sum(abs((fmaps{P, target_image} * source_patch) - target_patch), 1));
+%         misalignment = misalignment + sum(sum(abs((fmaps{target_image, P} * target_patch) - source_patch), 1));
 % 
-%         end
-        
-        function [overlaps] = overlap_with_mask(patches, bitmask)
-            % Computes for every patch in an array, the fraction of its area that resides inside a bit mask.
-            %
-            % Input:    
-            %           patches  - (N x 4) N rectangular image patches. Each patch is a 4-dimensional vector describing the (x,y)
-            %                      coordinates of the corners of the rectangle. Only the 4 extrema values are given for space
-            %                      economy, that is:  [xmin, ymin, xmax, ymax].    
-            %
-            %           bitmask  - (m x n) binary matrix. Usually positions flagged with 1, correspond to ROI wrt. an image. E.g., 
-            %                      they describe a segmentation of an object.
-            %     
-            % Output:                     
-            %           overlaps - (N x 1) vector. overlaps(i) is the fraction of the area of the i-th patch (patches(i))
-            %                      in the bitmask.
-
-
-            overlaps = zeros(size(patches, 1),1);
-            gt_area = sum(bitmask(:));    
-
-
-
-            for i = 1:size(patches,1)
-                xmin = patches(i,1);
-                ymin = patches(i,2);
-                xmax = patches(i,3);
-                ymax = patches(i,4);
-
-                if xmin==xmax || ymin==ymax   % Empty patch.
-                    warning('The patch has not positive area. E.g. it is a line or single point.')
-                    overlaps(i) = 0;
-                    continue
-                elseif ~ any(bitmask == 1)
-                    error('Bitmask has zero elements set to 1.')
-                end
-
-               inter_area  = double(sum(sum(bitmask(ymin:ymax, xmin:xmax))));           
-               overlaps(i) = inter_area / ((1 + double(xmax) - double(xmin)) * (1 + double(ymax) - double(ymin)) + double(gt_area) - inter_area);
-
-            end
-            if any(overlaps<0) || any(overlaps>1)
-                error('Overlaps outside of [0, 1] range were produced. Please check input.')
-            end
-        end
+%     end     
 
 
          
