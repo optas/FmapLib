@@ -1,4 +1,5 @@
 classdef Image_Features < dynamicprops      
+    
     methods (Static, Access = public)
         
         function [signatures] = hog_signature(in_image)                      
@@ -35,10 +36,7 @@ classdef Image_Features < dynamicprops
 %             padded_im = padarray(in_image.CData, [pad_size, pad_size]);
 %             signatures = LMdenseSift(padded_im, '', SIFTparam);            
         end
-        
-
-        
-        
+                
         function [signatures] = color_histogram(in_image, num_bins, varargin)
             % Histogram of color values of input image. 
             % Parameters

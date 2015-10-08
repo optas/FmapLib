@@ -17,19 +17,23 @@ classdef Patch_Collection < dynamicprops
                 obj.collection = Patch();            
                 obj.image = Image();
             else
-                m = size(corners, 1);
-                if m < 1 
-                    error('A Patch Collection must consist of at least one Patch objects.')
+                obj.image           = in_image;                
+                if isa(corners, 'double')                
+                    m = size(corners, 1);    
+                    if m < 1 
+                        error('A Patch Collection must consist of at least one Patch objects.')
+                    end                
+                    obj.collection(1:m) = Patch();                                
+                    for i = 1:m
+                        if ~ Patch.is_valid(corners(i,:), in_image)
+                            error('Patch %d is cannot go with given image.\n', i);
+                        else
+                            obj.collection(i) = Patch(corners(i, :));
+                        end                    
+                    end
+                else
+                    error('Not correct argument.')
                 end                
-                obj.image = in_image;
-                obj.collection(1:m) = Patch();                                
-                for i = 1:m
-                    if ~ Patch.is_valid(corners(i,:), in_image)
-                        error('Patch %d is cannot go with given image.\n', i);
-                    else
-                        obj.collection(i) = Patch(corners(i, :));
-                    end                    
-                end
             end
         end
         
@@ -39,6 +43,23 @@ classdef Patch_Collection < dynamicprops
         
         function p = get_patch(obj, p_index)
             p = obj.collection(p_index) ;
+        end
+
+        function F = plot_collection(obj, scores)
+            obj.image.plot()
+            hold on;            
+            if exist('scores', 'var')                
+                colors = vals2colormap(scores);
+                for i = 1:length(scores)
+                    if scores(i) ~= 0
+                        F = obj.get_patch(i).plot('color', colors(i,:));
+                    end
+                end
+            else                    
+                for i = 1:size(obj)
+                    F = obj.get_patch(i).plot();
+                end                
+            end
         end
         
         function [keep] = filter_patches(obj, varargin)
@@ -81,6 +102,31 @@ classdef Patch_Collection < dynamicprops
         function purge_patches(obj, purgatory_list)
             obj.collection = obj.collection(purgatory_list);
         end
+        
+        function set_collection(obj, new_patch_array, new_image)
+            if isa(new_patch_array, 'Patch') && isa(new_image, 'Image')
+                obj.collection = new_patch_array;
+                obj.image      = new_image;
+            else
+                error('Incompatible types.')
+            end            
+        end          
+        
+        function [new_collection] = embed_in_new_image(obj, new_image)                       
+            % TODO think of working with array of corners than Patches => use Patch_Collection constructor and not
+            % set_collection.
+            ow = obj.image.width;            
+            oh = obj.image.height;
+            nw = new_image.width;
+            nh = new_image.height;            
+            new_patches(size(obj)) = Patch();
+            for i = 1:size(obj)                     
+                new_patches(i) =  obj.get_patch(i).linear_interpolation(ow, nw, oh, nh);
+            end          
+            new_collection = Patch_Collection();
+            new_collection.set_collection(new_patches, new_image);
+        end
+        
         
         function [A] = area_inside_mask(obj, bitmask)
             % Computes for every patch of the Patch_Collection, the area that resides inside the bit mask.

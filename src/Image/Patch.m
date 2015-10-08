@@ -34,12 +34,18 @@ classdef Patch < dynamicprops
             ymax = obj.corners(4);
         end
             
-        function [F] = plot(obj, image)
-         % Plots the boundary of the patch on its source image.
+        function [F] = plot(obj, varargin)
+            % Plots the boundary of the patch.
+            options = struct('image', [], 'color', 'r', 'line_width', 3);
+            options = load_key_value_input_pairs(options, varargin{:});         
+            
             [xmin, ymin, xmax, ymax] = obj.get_corners();
-            F = image.plot();            
-            hold on;
-            plot([xmin xmax xmax xmin xmin],[ymin ymin ymax ymax ymin], 'Color', 'r', 'LineWidth', 3);
+            if ~ isempty(options.image)
+                image.plot();            
+                hold on;
+            end
+            F = plot([xmin xmax xmax xmin xmin],[ymin ymin ymax ymax ymin], 'Color', options.color, ...
+                                                                            'LineWidth', options.line_width);
         end
 
         function w = width(obj)                       
@@ -75,6 +81,18 @@ classdef Patch < dynamicprops
             assert(c >= 0 && c <= 1);
         end
         
+        function [np] = linear_interpolation(obj, from_width, to_width, from_height, to_height)                                   
+            [xmin, ymin, xmax, ymax] = obj.get_corners();            
+            n_xmin = (double(xmin) * to_width)  / from_width;
+            n_xmax = (double(xmax) * to_width)  / from_width;
+            n_ymin = (double(ymin) * to_height) / from_height;
+            n_ymax = (double(ymax) * to_height) / from_height;                                
+            new_corners = [n_xmin, n_ymin, n_xmax, n_ymax];
+            new_corners = uint16(max(1, round(new_corners)));
+            assert(Patch.is_valid(new_corners, Image(zeros(to_height, to_width))));
+            np = Patch(new_corners);                       
+        end
+               
     end
     
     methods (Static, Access = public)
@@ -96,15 +114,7 @@ classdef Patch < dynamicprops
             
         end
         
-        
-        function [b] = uodl_patch_constraint(corners, src_image)                        
-            bValid1 = corners(1) > src_image.height *0.01 & corners(3) < src_image.height*0.99 ...
-                    & corners(2) > src_image.width * 0.01 & corners(4) < src_image.width*0.99;
-            bValid2 = corners(1) < src_image.height*0.01 & corners(3) > src_image.height*0.99 ...
-                    & corners(2) < src_image.width*0.01 & corners(4) > src_image.width*0.99;
-            b = bValid1 | bValid2;                           
-
-        end        
+               
                
         function [F] = extract_patch_features(corners, features, type)
                 switch type
@@ -125,20 +135,7 @@ classdef Patch < dynamicprops
                 end
         end
                
-        function new_corners = find_new_corners(old_height, old_width, new_height, new_width, old_corners)
-            xmin = old_corners(1);
-            ymin = old_corners(2);
-            xmax = old_corners(3);
-            ymax = old_corners(4);
-            
-            xmin_n = (double(xmin) * new_width)  / old_width;                % Linear interpolation case.
-            xmax_n = (double(xmax) * new_width)  / old_width;
-            ymin_n = (double(ymin) * new_height) / old_height;
-            ymax_n = (double(ymax) * new_height) / old_height;
-            
-            new_corners = [xmin_n ymin_n xmax_n ymax_n];
-            new_corners = uint16(max(1, round(new_corners)));            
-        end
+        
         
         function [top_patches, top_scores] = compute_top_patches_in_images(nns, patch_feat, fmaps, top_p)
             num_images = size(patch_feat, 1);
@@ -211,6 +208,15 @@ classdef Patch < dynamicprops
             distance = sum(min(distances))
         end
         
+        
+        function [b] = uodl_patch_constraint(corners, src_image)                        
+            bValid1 = corners(1) > src_image.height *0.01 & corners(3) < src_image.height*0.99 ...
+                    & corners(2) > src_image.width * 0.01 & corners(4) < src_image.width*0.99;
+            bValid2 = corners(1) < src_image.height*0.01 & corners(3) > src_image.height*0.99 ...
+                    & corners(2) < src_image.width*0.01 & corners(4) > src_image.width*0.99;
+            b = bValid1 | bValid2;                           
+
+        end 
 
 %    function [misalignment] = patch_transferability(source_image, target_image, source_patch, target_patch, fmaps)
 %     
