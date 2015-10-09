@@ -22,7 +22,7 @@ function [data_path, code_path] = get_project_paths(project_name)
         
         elseif strcmp(project_name, 'ImageJointUnderstanding')
             data_path = '/Users/optas/Dropbox/With_others/Zimo_Peter_Panos/Joint_Image_Understanding/Data/';
-            code_path = '/Users/optas/Dropbox/matlab_projects/External_Packages/';
+            code_path = '/Users/optas/Dropbox/Matlab_projects/External_Packages/';
                 
         elseif strcmp(project_name, 'Shape_Classification')
             data_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/Data/';
@@ -32,7 +32,7 @@ function [data_path, code_path] = get_project_paths(project_name)
     elseif strcmp(name(1:end-1), 'orionp.stanford.edu')
         if strcmp(project_name, 'ImageJointUnderstanding')
             data_path = '/orions3-zfs/projects/optas/Matlab_projects/Data/ImageJointUnderstanding/';
-            code_path = '/orions3-zfs/projects/optas/Dropbox/matlab_projects/External_Packages/';
+            code_path = '/orions3-zfs/projects/optas/Dropbox/Matlab_projects/External_Packages/';
         end
         
     elseif strcmp(name(1:end-1), 'Etienne-HP')                                              % Etienne's space.        
