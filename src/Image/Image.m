@@ -62,10 +62,10 @@ classdef Image < dynamicprops
             end
         end
         
-        function c = content(obj)
+        function c = color(obj)
             % Returns the every pixel with its content (i.e., color).
             if isa(obj.CData, 'uint8') || isa(obj.CData, 'uint16')
-                c = im2double(obj.CData);
+                c = im2double(obj.CData);                  % Makes each chanel have values in [0,1].
             else 
                 obj.CData;    % TODO-P See what other data types are expected on an image.
             end
@@ -114,7 +114,7 @@ classdef Image < dynamicprops
         
         function [new_im] = resize(obj, new_height, new_width)
             imres = imresize(obj.CData , [new_height, new_width], 'bilinear');
-            new_im = Image(imres, [obj.name '\_resized']);
+            new_im = Image(imres, [obj.name '-resized']);
         end
         
         function set_resized_image(obj, new_height, new_width)

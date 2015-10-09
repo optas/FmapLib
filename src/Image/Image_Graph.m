@@ -82,7 +82,7 @@ classdef Image_Graph < Graph
                                                                                
                 obj.A         = feature_dists;
                 obj.name      = [obj.name '_feat_adjusted'];
-                issymmetric(obj.A)                
+                assert(issymmetric(obj.A));                
                 assert(obj.num_edges == edges);
             else
                 error('Not implemented yet.')

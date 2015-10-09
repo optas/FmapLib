@@ -92,7 +92,27 @@ classdef Patch < dynamicprops
             assert(Patch.is_valid(new_corners, Image(zeros(to_height, to_width))));
             np = Patch(new_corners);                       
         end
-               
+        
+        function [F] = extract_features(obj, features, method)
+                in_corners = obj.corners();
+                switch method
+                    case 'mask'
+                        F = features(in_corners(2):in_corners(4), in_corners(1):in_corners(3), :);                    
+                    case 'zero_pad'
+                        F = zeros(size(features));
+                        F(in_corners(2):in_corners(4), in_corners(1):in_corners(3), :) = features(in_corners(2):in_corners(4), in_corners(1):in_corners(3), :);
+                    case 'tiling'
+                        tile = features(in_corners(2):in_corners(4), in_corners(1):in_corners(3), :);
+                        tile_length = ceil(size(features,2)/size(tile,2));
+                        tile_height = ceil(size(features,1)/size(tile,1));
+                        
+                        big_tiled = repmat(tile, tile_height, tile_length);
+                        F = big_tiled(1:size(features, 1), 1:size(features, 2),:);                                     
+                    otherwise
+                        error('Type not implemented.')
+                end
+        end
+                       
     end
     
     methods (Static, Access = public)
@@ -114,27 +134,7 @@ classdef Patch < dynamicprops
             
         end
                
-        function [F] = extract_patch_features(corners, features, type)
-                switch type
-                    case 'mask'
-                        F = features(corners(2):corners(4), corners(1):corners(3), :);                    
-                    case 'zero_pad'
-                        F = zeros(size(features));
-                        F(corners(2):corners(4), corners(1):corners(3), :) = features(corners(2):corners(4), corners(1):corners(3), :);
-                    case 'tiling'
-                        tile = features(corners(2):corners(4), corners(1):corners(3), :);
-                        tile_length = ceil(size(features,2)/size(tile,2));
-                        tile_height = ceil(size(features,1)/size(tile,1));
-                        
-                        big_tiled = repmat(tile, tile_height, tile_length);
-                        F = big_tiled(1:size(features, 1), 1:size(features, 2),:);                                     
-                    otherwise
-                        error('Type not implemented.')
-                end
-        end
-               
-        
-        
+
         function [top_patches, top_scores] = compute_top_patches_in_images(nns, patch_feat, fmaps, top_p)
             num_images = size(patch_feat, 1);
             top_patches = zeros(num_images, top_p);

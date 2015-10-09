@@ -1,7 +1,6 @@
 classdef Image_Features < dynamicprops      
     
     methods (Static, Access = public)
-        
         function [signatures] = hog_signature(in_image)                      
             h = in_image.height;
             w = in_image.width;
@@ -30,11 +29,6 @@ classdef Image_Features < dynamicprops
             gridspacing=1;
             I = im2double(in_image.CData);
             signatures = im2double(mexDenseSIFT(I, cellsize, gridspacing));
-%             SIFTparam.grid_spacing = 1; % Distance between grid centers.             Old code Fan' type.
-%             SIFTparam.patch_size = 12;
-%             pad_size = SIFTparam.patch_size/2 - 1;
-%             padded_im = padarray(in_image.CData, [pad_size, pad_size]);
-%             signatures = LMdenseSift(padded_im, '', SIFTparam);            
         end
                 
         function [signatures] = color_histogram(in_image, num_bins, varargin)
@@ -70,7 +64,25 @@ classdef Image_Features < dynamicprops
             E = LMgist(in_image.CData, '', param);
         end
         
-        
+        function [features] = compute_default_features(in_image, feature_types)
+            if ~ isa(feature_types, 'cell')
+                feature_types = {feature_types};
+            end
+            features = [];
+            for i = 1:length(feature_types)
+                switch feature_types{i}
+                    case 'sift'
+                        f = Image_Features.sift_signature(in_image);                        
+                    case 'hog'
+                        f = Image_Features.hog_signature(in_image);                        
+                    case 'color'
+                        f = in_image.color();
+                    otherwise
+                        error('Unknown type of feature was requested.')                    
+                end                                
+                features = cat(3, features, double(f));
+            end
+        end
         
     end
 end
