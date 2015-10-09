@@ -52,7 +52,7 @@ classdef Graph < dynamicprops
             if size(obj.A, 1) ~= size(obj.A, 2)                
                 error('The provided adjacency matrix is not a square matrix.')                
             end
-            if any(obj.A < 0)
+            if any(any(obj.A) < 0)
                 error('The provided adjacency matrix has negative entries but the edges must be non negative.')                
             end
             if ~ obj.is_directed && ~issymmetric(obj.A)
@@ -269,6 +269,7 @@ classdef Graph < dynamicprops
                 all_vals   = cell2mat(all_vals);
                 adj        = sparse(all_starts, all_ends, all_vals);
                 assert(all_close(adj, adj', 0.0001, +Inf));
+                assert(all(nonzeros(adj) > 0));
                 default_name = sprintf('%d_%d_%d_radius_connected', m, n, radius);
                 directed  = false;                
                 G = Graph(adj, directed, default_name);                              

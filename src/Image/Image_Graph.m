@@ -56,9 +56,8 @@ classdef Image_Graph < Graph
                 options = struct('sigma_f', 'median', 'sigma_s', 'median');
                 options = load_key_value_input_pairs(options, varargin{:});
                 
-                sigma = check_and_derive_sigma(options.sigma_s, obj.A(obj.A ~= 0));
-                                
                 [i, j, vals]   = find(obj.A);
+                sigma          = check_and_derive_sigma(options.sigma_s, vals);
                 spatial_dists  = sparse(i, j, exp(-((vals).^2) ./ sigma) );
                 
                 [node_from, node_to] = obj.all_edges();
@@ -79,12 +78,12 @@ classdef Image_Graph < Graph
                 feature_dists = sparse(node_from, node_to, feature_dists, num_nodes, num_nodes);    % Put values back in adjacecny matrix format.
                 feature_dists = feature_dists + feature_dists';
                 feature_dists = feature_dists .* spatial_dists;
-                assert(all(all(feature_dists >= 0 )));
+                assert( all(nonzeros(feature_dists) > 0));
                                                                                
                 obj.A         = feature_dists;
                 obj.name      = [obj.name '_feat_adjusted'];
                 issymmetric(obj.A)                
-%                 obj.add_or_reset_property('Gw', Graph(feature_dists, obj.is_directed));
+                assert(obj.num_edges == edges);
             else
                 error('Not implemented yet.')
             end

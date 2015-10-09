@@ -113,8 +113,6 @@ classdef Patch < dynamicprops
             P      =  Patch([min(x), min(y), max(x), max(y)]);            
             
         end
-        
-               
                
         function [F] = extract_patch_features(corners, features, type)
                 switch type

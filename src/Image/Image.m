@@ -112,16 +112,18 @@ classdef Image < dynamicprops
             F = obj.CData(ymin:ymax, xmin:xmax, :);
         end
         
+        function [new_im] = resize(obj, new_height, new_width)
+            imres = imresize(obj.CData , [new_height, new_width], 'bilinear');
+            new_im = Image(imres, [obj.name '\_resized']);
+        end
+        
         function set_resized_image(obj, new_height, new_width)
             % to do change to varargin
-            propname = 'resized';
-            imres = imresize(obj.CData , [new_height, new_width], 'bilinear');
-            if isprop(obj, propname)
-                obj.(propname) = Image(imres);
-            else
-                obj.addprop(propname);
-                obj.(propname) = Image(imres);
+            propname = 'resized';            
+            if ~ isprop(obj, propname)
+                obj.addprop(propname);            
             end
+            obj.(propname) = obj.resize(new_height, new_width);
         end
         
         function [resized] = get_resized_image(obj)

@@ -17,7 +17,7 @@ classdef Patch_Collection < dynamicprops
                 obj.collection = Patch();            
                 obj.image = Image();
             else
-                obj.image           = in_image;                
+                obj.image = in_image;                
                 if isa(corners, 'double')                
                     m = size(corners, 1);    
                     if m < 1 
