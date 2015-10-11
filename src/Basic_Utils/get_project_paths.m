@@ -31,7 +31,7 @@ function [data_path, code_path] = get_project_paths(project_name)
         
     elseif strcmp(name(1:end-1), 'orionp.stanford.edu')
         if strcmp(project_name, 'ImageJointUnderstanding')
-            data_path = '/orions3-zfs/projects/optas/Matlab_Projects/Data/ImageJointUnderstanding/';
+            data_path = '/orions3-zfs/projects/optas/Data/ImageJointUnderstanding/';
             code_path = '/orions3-zfs/projects/optas/Matlab_Projects/External_Matlab_Code/';             
         end
         
