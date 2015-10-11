@@ -180,13 +180,16 @@ classdef Patch_Collection < dynamicprops
             end            
         end
         
-        function [H] = weight_map(obj)
+        function [H] = weight_map(obj, normalized)
             [h, w] = size(obj.image);
             H = zeros(w, h);
             for i = 1:size(obj)                
                 [xmin, ymin, xmax, ymax] = obj.collection(i).get_corners();
                 H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + 1;               
             end            
+            if exist('normalized', 'var') && normalized
+                H = H ./ sum(H(:)) ;
+            end
         end
         
      
