@@ -70,12 +70,16 @@ classdef Patch < dynamicprops
             xmin = max(xmin1, xmin2);
             ymin = max(ymin1, ymin2);
             xmax = min(xmax1, xmax2);
-            ymax = min(ymax1, ymax2);            
-            a    = max(0, (ymax-ymin+1) * (xmax-xmin+1));
+            ymax = min(ymax1, ymax2);
+            if ymin <= ymax && xmin <= xmax
+                a = (ymax-ymin+1) * (xmax-xmin+1);
+            else
+                a = 0;
+            end
         end
         
         function c = corloc(obj, another_patch)
-            intersection = obj.area_of_intersection(another_patch);            
+            intersection = obj.area_of_intersection(another_patch);
             union        = obj.area() + another_patch.area() - intersection;
             c            = double(intersection) / double(union);
             assert(c >= 0 && c <= 1);
