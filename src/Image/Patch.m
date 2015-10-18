@@ -217,7 +217,6 @@ classdef Patch < dynamicprops
             bValid2 = corners(1) < src_image.height*0.01 & corners(3) > src_image.height*0.99 ...
                     & corners(2) < src_image.width*0.01 & corners(4) > src_image.width*0.99;
             b = bValid1 | bValid2;                           
-
         end 
 
 %    function [misalignment] = patch_transferability(source_image, target_image, source_patch, target_patch, fmaps)

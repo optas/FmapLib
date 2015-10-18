@@ -444,11 +444,7 @@ classdef Functional_Map < dynamicprops
             cvx_end      
             val = cvx_optval;               
         end
-                
-        
-        
-        
-        
+                        
         function [X] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             % Computes the functional map X that minimizes the following objective: 
             %
@@ -680,9 +676,6 @@ classdef Functional_Map < dynamicprops
             X   = (lhs\rhs)';
         end
         
-        
-        
-        
         function [X, W, iter_ran] = iteratively_refined_fmap(src_functions, trg_functions, src_spectra, trg_spectra, lambda, varargin)            
             probe_n = size(src_functions, 2);           % Number of probe functions.
             
@@ -728,16 +721,67 @@ classdef Functional_Map < dynamicprops
                     
                 
             
-            end
-            
-                
-            
-            
-            
+            end  
         end
         
+        function [Y, L] = latent_basis_given_functional_maps(in_maps, weights, latent_size)
+            % Returns a set of orthonormal vectors that correspond to latent commonalities among objects of a
+            % collection. These commonalities are found by exploiting a set of functional maps between pairs of related 
+            % objects.
+            % 
+            % Input:
+            %           in_maps  -  (N x N cell array) carrying the functional map from object i to object j, in its  
+            %                       (i,j) position. N is the total number of objects in the collection.
+            %
+            %           weights  -  (N x N matrix) weights(i,j) is a positive double reflecting how closely related object i to 
+            %                       object j.
+            %
+            %           latent_size - (int) Specifies how many latent functions will be derived in each object.
+            %
+            %
+            % Output:   Y        - (N x1 cell array), Y(i) add_content
+            %
+            %
+            % Reference: 'Image Co-Segmentation via Consistent Functional Maps, F. Wan et al. in _add_''
+            
+            % TODO assert(diag(in_maps) = isempty()) weight are positive            
+            num_images         = length(in_maps);
+            [src, trg]         = find(weights);            
+            map_size           = size(in_maps{src(1), trg(1)});
+            if map_size(1) ~= map_size(2)
+                error('Not implemented yet.');
+            end            
+            empty_ind          = cellfun(@isempty, in_maps);
+            in_maps(empty_ind) = {sparse(map_size)};
+            eye_map            = speye(map_size);
+            W                  = in_maps;
+            for si = 1:length(src)
+                for sj = 1:length(trg)
+                    i      = src(si);
+                    j      = trg(sj);
+                    W{i,j} = - weights(i,j) .*  (in_maps{j,i} * in_maps{i,j}');      % TODO - I think the transpose is the other way.
+                    W{i,i} = W{i,i} + ( weights(i,j) .* ((in_maps{i,j}' * in_maps{i,j}) + eye_map));
+                end
+            end
+            W        = cell2mat(W);
+            [U, L]   = eigs(W, latent_size, 'sm');
+            Y        = cell(num_images, 1);
+            previous = 0;
+            for i = 1:num_images
+                Y{i} = U(previous+1 : previous + map_size(1), :);
+                previous = previous + map_size(1);
+            end
+        end
         
-        
+        function [S, R] = stable_sub_space(in_maps)            
+            W = cell2mat(in_maps);  % Concatenate the maps in a tall matrix.            
+            [S, R, ~] = svd(W);            
+            R = diag(R);
+            assert(IS.non_increasing(R));                        
+            R = flipud(R);
+            S = fliplr(S);            
+        end
+            
                 
     end % Static.
 end % ClassDef.

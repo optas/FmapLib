@@ -1,6 +1,7 @@
 classdef Image_Features < dynamicprops      
     
     methods (Static, Access = public)
+        
         function [signatures] = hog_signature(in_image)                      
             h = in_image.height;
             w = in_image.width;

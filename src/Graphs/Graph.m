@@ -273,13 +273,32 @@ classdef Graph < dynamicprops
                 default_name = sprintf('%d_%d_%d_radius_connected', m, n, radius);
                 directed  = false;                
                 G = Graph(adj, directed, default_name);                              
-            else
-                
-                
+            else                               
                 error('Not valid graph type was requested.');
             end
         end
         
+        function [A] = knn_to_adjacency(neighbors, weights)            
+            % Converts neighbors data into adjacency matrix of corresponding directed and weighted graph.
+            % 
+            % Input:                
+            %        neighbors  - (N x K) neighbors(i,j) is j-th neighbor of the i-th node.
+            %                             
+            %        weights    - (N x K) weights(i,j) is the weight of the edge between i and j.
+            %                            
+            % Output:   
+            %           A       - (N x N) sparse adjacency matrix.      
+            if any(any(weights < 0))
+                error('Non negative weights for an adjacency matrix are not supported.')
+            end
+            [n, k]      = size(neighbors);            
+            temp        = repmat(1:n, k, 1)';
+            i = temp(:);
+            j = neighbors(:);
+            v = weights(:);
+            A = sparse(i, j, v, n, n);
+            assert(nnz(A) == sum(sum(weights>0)))
+        end
         
     end
     

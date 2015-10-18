@@ -107,6 +107,22 @@ classdef IS
             B = min(eig(A)) >= 0;
         end
         
+        function B = non_increasing(A)            
+            B = all(diff(A) <= 0);
+        end
+        
+        function B = non_decreasing(A)
+            B = all(diff(A) >= 0);
+        end
+        
+        function B = decreasing(A)            
+            B = all(diff(A) < 0);
+        end
+        
+        function B = increasing(A)
+            B = all(diff(A) > 0);
+        end
+        
     end
     
 end

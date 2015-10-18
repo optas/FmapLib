@@ -56,7 +56,7 @@ classdef Image < dynamicprops
         
         function [h] = plot(obj)
             % Plots the image and returns the graphic's handle to it.            
-            h = image(obj.CData);
+            h = imshow(obj.CData);
             if ~ isempty(obj.name)
                 title(['Image name = ' obj.name]);
             end
