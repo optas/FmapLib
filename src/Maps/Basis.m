@@ -67,7 +67,7 @@ classdef Basis < dynamicprops
         end
 
         function [R] = synthesize_functions(obj, coeffs)
-            eigs_num = size(coeffs, 1);            
+            eigs_num = size(coeffs, 1);
             R = obj.evecs(eigs_num) * coeffs;            
         end
 

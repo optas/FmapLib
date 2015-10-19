@@ -14,8 +14,7 @@ classdef Image_Graph < Graph
             if nargin == 0
                 super_args = cell(0);
             else
-                [h, w, ~] = size(varargin{1}.CData);                
-                
+                [h, w, ~] = size(varargin{1}.CData);
                 if strcmp('r_radius_connected', varargin{2})
                     radius = varargin{3};
                     G   = Graph.generate('r_radius_connected', h, w, radius);

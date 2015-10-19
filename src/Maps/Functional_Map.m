@@ -773,13 +773,17 @@ classdef Functional_Map < dynamicprops
             end
         end
         
-        function [S, R] = stable_sub_space(in_maps)            
+        function [S, R] = stable_sub_space(in_maps, latent_size)            
             W = cell2mat(in_maps);  % Concatenate the maps in a tall matrix.            
             [S, R, ~] = svd(W);            
             R = diag(R);
             assert(IS.non_increasing(R));                        
             R = flipud(R);
-            S = fliplr(S);            
+            S = fliplr(S);          
+            if exist('latent_size', 'var')
+                R = R(1:latent_size);
+                S = S(:, 1:latent_size);
+            end
         end
             
                 
