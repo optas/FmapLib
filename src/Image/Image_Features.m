@@ -11,9 +11,9 @@ classdef Image_Features < dynamicprops
             pad_mask  = padarray(ones(size(in_image.CData)), [pad_size, pad_size] );
             [x, y]    = find(pad_mask);                                                    % Returns only points that lie inside original image.
 
-            [hog_feats, valid_points] = extractHOGFeatures(padded_im, [y x]);            % Need to swap for matrix coordinates to represent image's one.                                    
+            [hog_feats, valid_points] = extractHOGFeatures(padded_im, [y x]);              % Need to swap for matrix coordinates to represent image's one.                                    
 
-            feat_carrier = nan([h, w , size(hog_feats, 2)]);                                
+            feat_carrier = nan([h, w , size(hog_feats, 2)]);                                                            
             for p = 1:length(valid_points)                   
                 feat_carrier(valid_points(p, 2), valid_points(p, 1), :) = hog_feats(p, :);
             end
