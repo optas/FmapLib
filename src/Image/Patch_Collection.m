@@ -192,6 +192,10 @@ classdef Patch_Collection < dynamicprops
             end
         end
         
+        function new_collection = keep_only(obj, keep_list)
+            new_collection = Patch_Collection();
+            new_collection.set_collection(obj.collection(keep_list), obj.image);
+        end
      
     end
     
