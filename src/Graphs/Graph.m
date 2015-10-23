@@ -1,11 +1,13 @@
 classdef Graph < dynamicprops
     % A class representing an arbitrary Graph (dyadic relation). A variety of graph related algorithms are 
     % implemented here.
-        
+    %
+    % notes: Adjacency (sparse) matrix representation of a graph. For directed ones, A(i,j) is the weight of the edge
+    %        from  i to j.
     % TODO-P: Extend to allow self-loops.
     % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
-    properties (GetAccess = public, SetAccess = protected)
+    properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Graph class has.        
         num_vertices   %   (int)                            -    Number of vertices.
         num_edges      %   (int)                            -    Number of edges.
@@ -28,7 +30,7 @@ classdef Graph < dynamicprops
                 obj.is_directed = varargin{2};
                 obj.A           = Graph.read_adjacency(edge_list_file, 'edge_list', obj.is_directed);
             else
-                % Construct a graph from explicitly given adgjacecny.
+                % Construct a graph from explicitly given adgjacecny.                
                 obj.A = varargin{1};
                 obj.is_directed = varargin{2};
             end            
@@ -88,8 +90,8 @@ classdef Graph < dynamicprops
             else
                 [node_from, node_to, weight] = find(triu(obj.A));     % Each edge is returned once since there is not direction.                  
             end
-        end
-        
+        end        
+                
         function [W] = edge_weight(obj, from, to)
             if ~ all(size(from) == size(to))
                 error('"from" and "to" must have the same size, since they define vertices connected by an edge.')
@@ -102,17 +104,55 @@ classdef Graph < dynamicprops
             end
         end
 
-        function [N] = neighbors(obj, vertices)            
-            % Finds the neighbor vertices (edge-connected) of all input vertices.
+        function [N] = out_neighbors(obj, vertices)            
+            % Finds the out-neighbor vertices (edge-connected) of all input vertices.
             %
             % Parameters
             %
             % Returns
-            %
-            N = cell(length(vertices), 1);              % TODO-P take care of directionality. 
-            for i = 1:length(vertices)
-                    N{i} = find(obj.A(i,:));                               
-            end                       
+            %                        
+            if numel(vertices) == 1
+                N  = find(obj.A(vertices,:));                                              
+            else
+                N = cell(length(vertices), 1);
+                for i = 1:length(vertices)                
+                        N{i} = find(obj.A(vertices(i),:));                               
+                end   
+            end
+        end
+                
+        function [N, W] = in_neighbors(obj, vertices)                        
+            if numel(vertices) == 1
+                N = find(obj.A(:,vertices));                                              % Is column indexing in sparse as fast as row?
+                W = full(obj.A(N, vertices));
+            else
+                N = cell(length(vertices), 1);
+                W = cell(length(vertices), 1);
+                for i = 1:length(vertices)                
+                        N{i} = find(obj.A(:,vertices(i)));                               
+                        W{i} = full(obj.A(N{i}, vertices(i)));
+                end   
+            end
+        end
+               
+        function obj = add_edge(obj, from, to, weight)
+            if weight <= 0
+                error('Edge weight must be positive.');
+            end            
+            obj.A(from, to) = weight;
+            if ~ obj.is_directed
+                obj.A(to, from) = weight;
+            end            
+        end
+        
+        function remove_edge(obj, from, to)
+            if obj.A(from, to) == 0
+                warning('Request to remove a non-existing edge.')
+            end
+            obj.A(from, to) = 0;
+            if ~ obj.is_directed
+                obj.A(to, from) = 0;
+            end
         end
         
         function [I] = incidence_matrix(obj)
@@ -126,10 +166,8 @@ classdef Graph < dynamicprops
             for i=1:obj.num_edges                       % TODO- speed up.
                 I(node_from(i), i) = 1; 
                 I(node_to(i),   i) = -1;
-            end
-            
+            end            
         end
-        
         
     end
            
@@ -278,14 +316,17 @@ classdef Graph < dynamicprops
             end
         end
         
-        function [A] = knn_to_adjacency(neighbors, weights)            
-            % Converts neighbors data into adjacency matrix of corresponding directed and weighted graph.
+        function [A] = knn_to_adjacency(neighbors, weights, direction)            
+            % Converts neighborhood data into the adjacency matrix of the underlying directed/weighted graph.
             % 
             % Input:                
             %        neighbors  - (N x K) neighbors(i,j) is j-th neighbor of the i-th node.
             %                             
-            %        weights    - (N x K) weights(i,j) is the weight of the edge between i and j.
-            %                            
+            %        weights    - (N x K) weights(i,j) is the weight of the (directed) edge between i to j.
+            %                                   
+            %        direction  - (optioal, String) 'in' or 'out'. If 'in' then weights(i,j) will be given in an edge
+            %                     that points towards i. Otherwise, towards j. Default = 'in'.
+            %
             % Output:   
             %           A       - (N x N) sparse adjacency matrix.      
             if any(any(weights < 0))
@@ -296,9 +337,13 @@ classdef Graph < dynamicprops
             i = temp(:);
             j = neighbors(:);
             v = weights(:);
-            A = sparse(i, j, v, n, n);
+            A = sparse(i, j, v, n, n)';
             assert(nnz(A) == sum(sum(weights>0)))
+            if exist('direction', 'var') && strcmp(direction, 'out')
+                A = A';                
+            end
         end
+        
         
     end
     

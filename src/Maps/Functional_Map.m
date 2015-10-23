@@ -50,7 +50,7 @@ classdef Functional_Map < dynamicprops
             end           
         end
         
-        function [F] = compute_f_map(obj, method, neigs_source, neigs_target, source_feat, target_feat, varargin)
+        function [F, residual] = compute_f_map(obj, method, neigs_source, neigs_target, source_feat, target_feat, varargin)
             ns = obj.source_basis.M.num_vertices;  % Number of vertices on source.
             nt = obj.target_basis.M.num_vertices;  % Number of vertices on target.
             if size(source_feat.F, 1) ~= ns || size(target_feat.F, 1) ~= nt
@@ -81,7 +81,7 @@ classdef Functional_Map < dynamicprops
 
             switch method                
                 case 'functions_only'                    
-                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, 0);
+                    [F, residual] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, 0);
                 case 'frobenius_square'
                     [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
                 case 'frobenius'
@@ -445,7 +445,7 @@ classdef Functional_Map < dynamicprops
             val = cvx_optval;               
         end
                         
-        function [X] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
+        function [X, residual] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
             % Computes the functional map X that minimizes the following objective: 
             %
             %       norm(X*D1-D2, 'fro')^2   +  lambda * norm(X*diag(L1) - diag(L2)*X, 'fro')^2.
@@ -467,7 +467,8 @@ classdef Functional_Map < dynamicprops
             
             if size(D1, 2) ~= size(D2, 2)
                 error ('Same number of probe functions must be used for source and target spaces.' )
-            end %TODO-P add more checks.
+            end            
+            %TODO-P add more checks.
                 
             N1 = size(D1, 1);
             N2 = size(D2, 1);
@@ -485,6 +486,10 @@ classdef Functional_Map < dynamicprops
                 end
             end
             assert(all(size(X) == [N2 N1]))
+            residual = norm((X*D1)-D2, 'fro').^2;
+            if lambda > 0
+                residual = residual + (lambda * norm((X * diag(L1)) - (diag(L2) * X), 'fro').^2);
+            end                
         end
           
         function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)            
@@ -773,15 +778,23 @@ classdef Functional_Map < dynamicprops
             end
         end
         
-        function [S, R] = stable_sub_space(in_maps, weights, latent_size)            
-            
-            W = cell2mat(in_maps)';  % Concatenate the maps in a tall matrix.            
-            
-            if exist('weights', 'var')                
-                weights = repmat(weights, size(in_maps{1}, 1), 1);                
-                W       = diag(weights(:)) * W;
+        function [S, R] = stable_sub_space(in_maps, weights, latent_size)                        
+            [r, c] = size(in_maps{1});
+            if r~=c
+                error('Square fmaps only.')
             end
+            
+            num_maps = length(in_maps);
+            W        = cell2mat(in_maps);                % Concatenate the maps in a tall matrix.            
+            assert(all(all(in_maps{1} == W(1:r, 1:c))))
+            W = W - repmat(eye(r), num_maps, 1);   % Remove identity from every map.
                         
+            if exist('weights', 'var')                
+                for m = 1:num_maps
+                    W( ((m-1)*r)+1 : m*r, :) = sqrt(weights(m)) .* W( ((m-1)*r)+1 : m*r, :);                
+                end
+            end                          
+            
             [~, R, S] = svd(W);            
             R = diag(R);
             assert(IS.non_increasing(R));                        
@@ -790,8 +803,7 @@ classdef Functional_Map < dynamicprops
             if exist('latent_size', 'var')
                 R = R(1:latent_size);
                 S = S(:, 1:latent_size);
-            end
-            
+            end            
         end
                 
     end % Static.

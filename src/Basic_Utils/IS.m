@@ -123,6 +123,9 @@ classdef IS
             B = all(diff(A) > 0);
         end
         
+        function B = is_single_number(A)            
+            B = (numel(A) == 1) && isnumeric(A);
+        end
     end
     
 end
