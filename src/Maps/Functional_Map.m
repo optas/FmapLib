@@ -754,23 +754,41 @@ classdef Functional_Map < dynamicprops
             [src, trg]         = find(weights);            
             map_size           = size(in_maps{src(1), trg(1)});
             if map_size(1) ~= map_size(2)
-                error('Not implemented yet.');
+                error('Not squate fmaps are given. This utility is not implemented yet.');
             end            
             empty_ind          = cellfun(@isempty, in_maps);
-            in_maps(empty_ind) = {sparse(map_size)};
+            in_maps(empty_ind) = {sparse([], [], [], map_size(1), map_size(2))};
             eye_map            = speye(map_size);
-            W                  = in_maps;
-            for si = 1:length(src)
-                for sj = 1:length(trg)
-                    i      = src(si);
-                    j      = trg(sj);
-                    W{i,j} = - weights(i,j) .*  (in_maps{j,i} * in_maps{i,j}');      % TODO - I think the transpose is the other way.
-                    W{i,i} = W{i,i} + ( weights(i,j) .* ((in_maps{i,j}' * in_maps{i,j}) + eye_map));
-                end
+            W                  = in_maps;           
+                        
+            for m = 1:length(src)
+                i = src(m);         % i-j are connected: i points to j.
+                j = trg(m);
+                W{i,j} = -(weights(i,j) .* in_maps{i,j}') - (weights(j,i) .* in_maps{j,i});                                
+                W{i,i} = W{i,i} + (weights(i,j) .* (in_maps{i,j}' * in_maps{i,j}));                                
+                W{j,j} = W{j,j} + (weights(j,i) .* (eye_map));
             end
-            W        = cell2mat(W);
-            [U, L]   = eigs(W, latent_size, 'sm');
-            Y        = cell(num_images, 1);
+
+%             for si = 1:length(src)
+%                 for sj = 1:length(trg)
+%                     i      = src(si);
+%                     j      = trg(sj);
+%                     W{i,j} = - weights(i,j) .*  (in_maps{j,i} * in_maps{i,j}');      % TODO - I think the transpose is the other way.
+%                     W{i,i} = W{i,i} + ( weights(i,j) .* ((in_maps{i,j}' * in_maps{i,j}) + eye_map));
+%                 end
+%             end
+            
+            W        = cell2mat(W);            
+            all_close(W, W', 0.0001, +Inf)
+            
+            W        = W + W' ./ 2;
+            
+            [U, L]   = eigs(W, latent_size, 'SM');            
+            L        = diag(L);        
+            
+%             assert(IS.non_decreasing(L));                        
+            
+            Y        = cell(num_images, 1);           
             previous = 0;
             for i = 1:num_images
                 Y{i} = U(previous+1 : previous + map_size(1), :);
@@ -778,22 +796,33 @@ classdef Functional_Map < dynamicprops
             end
         end
         
-        function [S, R] = stable_sub_space(in_maps, weights, latent_size)                        
+        function [S, R] = stable_sub_space(in_maps, out_maps, latent_size, weights)                        
             [r, c] = size(in_maps{1});
             if r~=c
                 error('Square fmaps only.')
+            end            
+            num_maps = length(in_maps);
+            if length(out_maps) ~= num_maps
+                error('In and Out maps must be of the same size.')
             end
             
-            num_maps = length(in_maps);
-            W        = cell2mat(in_maps);                % Concatenate the maps in a tall matrix.            
-            assert(all(all(in_maps{1} == W(1:r, 1:c))))
-            W = W - repmat(eye(r), num_maps, 1);   % Remove identity from every map.
-                        
-            if exist('weights', 'var')                
-                for m = 1:num_maps
-                    W( ((m-1)*r)+1 : m*r, :) = sqrt(weights(m)) .* W( ((m-1)*r)+1 : m*r, :);                
+            W  = zeros(num_maps * r, c);
+            for m = 1:num_maps                
+                W( ((m-1)*r)+1 : m*r, :) = (out_maps{m} * in_maps{m}) - eye(r);
+                if exist('weights', 'var')                                
+                    W( ((m-1)*r)+1 : m*r, :) = W( ((m-1)*r)+1 : m*r, :)  .* sqrt(weights(m));
                 end
-            end                          
+            end
+            
+%             W        = cell2mat(in_maps);                % Concatenate the maps in a tall matrix.            
+%             assert(all(all(in_maps{1} == W(1:r, 1:c))))
+%             W = W - repmat(eye(r), num_maps, 1);   % Remove identity from every map.
+%                         
+%             if exist('weights', 'var')                
+%                 for m = 1:num_maps
+%                     W( ((m-1)*r)+1 : m*r, :) = sqrt(weights(m)) .* W( ((m-1)*r)+1 : m*r, :);                
+%                 end
+%             end                          
             
             [~, R, S] = svd(W);            
             R = diag(R);

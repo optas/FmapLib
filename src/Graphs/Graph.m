@@ -7,7 +7,7 @@ classdef Graph < dynamicprops
     % TODO-P: Extend to allow self-loops.
     % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
-    properties (GetAccess = public, SetAccess = private)
+    properties (GetAccess = public, SetAccess = protected)
         % Basic properties that every instance of the Graph class has.        
         num_vertices   %   (int)                            -    Number of vertices.
         num_edges      %   (int)                            -    Number of edges.
