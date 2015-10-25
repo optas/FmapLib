@@ -238,24 +238,20 @@ classdef Graph < dynamicprops
                 directed  = false;                
                 adj = ones(n,n) - diag(ones(n,1)) ; 
                 G = Graph(adj, directed, sprintf('%d_clique', n));
+            
             elseif strcmp(graph_type, 'lattice')
-                total_edges = 2 * (((m-1) * n) + ((n-1) * m));      % Result of from graph Theory.
-                diag_vec_1  = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections.
-                diag_vec_1  = spdiags(diag_vec_1, 1, m * n, m * n);
-                diag_vec_2  = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
-                diag_vec_2  = spdiags(diag_vec_2 , n, m * n, m * n);
-                adj = diag_vec_1 + diag_vec_2;
-                adj = adj + adj.';                                  % Edges are symmetric.                        
-                assert(nnz(adj) == total_edges);                
+                adj = lattice(m, n);
                 default_name = sprintf('%d_%d_lattice', m, n);
                 directed  = false;                
                 G = Graph(adj, directed, default_name);
-            elseif strcmp(graph_type, 'checkerboard')       % TODO - generate directly sparse checkerboard.
-                adj = simple_graphs('checkerboard_dense', m, n);
+            
+            elseif strcmp(graph_type, 'checkerboard')
+                adj = checker_board(m, n);
                 adj = sparse(adj); 
                 default_name = sprintf('%d_%d_checkerboard', m, n);
                 directed  = false;                
                 G = Graph(adj, directed, default_name);        
+            
             elseif strcmp(graph_type, 'r_radius_connected')
                 radius = varargin{3};
                 rows = m ;
@@ -305,6 +301,29 @@ classdef Graph < dynamicprops
             else                               
                 error('Not valid graph type was requested.');
             end
+            
+            function adj = checker_board(r, c)               % TODO - generate directly sparse checkerboard.
+                diagVec1 = repmat([ones(c-1,1); 0],r,1);
+                diagVec1 = diagVec1(1:end-1);           
+                diagVec2 = [0; diagVec1(1:(c*(r-1)))];                                                          
+                diagVec3 = ones(c*(r-1),1);                                                                     
+                diagVec4 = diagVec2(2:end-1);                                                                   
+                adj = diag(diagVec1,1) + diag(diagVec2,c-1) + diag(diagVec3,c) + diag(diagVec4,c+1);
+                adj = adj + adj.';                            
+            end
+          
+            function adj = lattice(m, n)
+                total_edges = 2 * (((m-1) * n) + ((n-1) * m));      % Result of from graph Theory.
+                diag_vec_1  = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections.
+                diag_vec_1  = spdiags(diag_vec_1, 1, m * n, m * n);
+                diag_vec_2  = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
+                diag_vec_2  = spdiags(diag_vec_2 , n, m * n, m * n);
+                adj = diag_vec_1 + diag_vec_2;
+                adj = adj + adj.';                                  % Edges are symmetric.                        
+                assert(nnz(adj) == total_edges);                
+            end
+            
+            
         end
         
         function [A] = knn_to_adjacency(neighbors, weights, direction)            
