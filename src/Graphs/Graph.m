@@ -250,18 +250,9 @@ classdef Graph < dynamicprops
                 default_name = sprintf('%d_%d_lattice', m, n);
                 directed  = false;                
                 G = Graph(adj, directed, default_name);
-            elseif strcmp(graph_type, 'checkerboard')
-                adj = simple_graphs('checkerboard_dense', m, n);                              
-%                 diag_vec_1  = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections. 
-%                 diag_vec_1  = spdiags(diag_vec_1, 1, m * n, m * n);
-%                 diag_vec_2  = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
-%                 diag_vec_2  = spdiags(diag_vec_2 , n, m * n, m * n);
-%                 diag_vec_3  = [0; diag_vec_1(1 : (n * (m-1)))];     % Anti-diagonal connections.
-%                 diag_vec_3  = spdiags(diag_vec_3, n-1, m * n, m * n);
-%                 diag_vec_4  = diag_vec_3(2 : end-1);                % Diagonal connections.
-%                 diag_vec_4  = spdiags(diag_vec_4, n+1, m * n, m * n);                
-%                 adj = diag_vec_1 + diag_vec_2 + diag_vec_3 + diag_vec_4;
-%                 adj = adj + adj.';                        
+            elseif strcmp(graph_type, 'checkerboard')       % TODO - generate directly sparse checkerboard.
+                adj = simple_graphs('checkerboard_dense', m, n);
+                adj = sparse(adj); 
                 default_name = sprintf('%d_%d_checkerboard', m, n);
                 directed  = false;                
                 G = Graph(adj, directed, default_name);        

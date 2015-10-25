@@ -128,7 +128,14 @@ classdef Image < dynamicprops
         
         function [resized] = get_resized_image(obj)
             resized = obj.resized;
-        end             
+        end
+        
     end % End of (public) instance methods.
+    
+    methods (Static)
+        function I = blank_image(h, w)
+                I = Image(ones(h, w, 3), 'blank_image');
+        end    
+    end
     
 end
