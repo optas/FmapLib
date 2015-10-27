@@ -54,9 +54,11 @@ classdef Graph < dynamicprops
             if size(obj.A, 1) ~= size(obj.A, 2)                
                 error('The provided adjacency matrix is not a square matrix.')                
             end
+            
             if any(any(obj.A) < 0)
                 error('The provided adjacency matrix has negative entries but the edges must be non negative.')                
             end
+            
             if ~ obj.is_directed && ~issymmetric(obj.A)
                 error('The provided adjacency matrix is not symmetric but an undirected graph was expected.')
             end            
@@ -65,6 +67,18 @@ classdef Graph < dynamicprops
         
         function obj = set_name(obj, new_name)
             obj.name = new_name;
+        end
+        
+        function obj = remove_self_loops(obj)
+           N = obj.num_vertices;
+           obj.A(1: N+1 :N^2) = 0;            
+        end
+        
+        function b = has_self_loops(obj)
+            b = true;
+            if all(diag(obj.A) == 0)
+                b = false;
+            end
         end
         
         function obj = copy(this)
@@ -252,6 +266,14 @@ classdef Graph < dynamicprops
                 directed  = false;                
                 G = Graph(adj, directed, default_name);        
             
+            elseif strcmp(graph_type, 'star')
+                center       = varargin{1};
+                neighb       = varargin{2};
+                direction    = varargin{3};
+                adj          = star(center, neighb, direction);
+                default_name = sprintf('star_centered_at_%d', center);
+                G = Graph(adj, ~strcmp(direction, 'no'), default_name);                
+                
             elseif strcmp(graph_type, 'r_radius_connected')
                 radius = varargin{3};
                 rows = m ;
@@ -322,6 +344,34 @@ classdef Graph < dynamicprops
                 adj = adj + adj.';                                  % Edges are symmetric.                        
                 assert(nnz(adj) == total_edges);                
             end
+            
+            function adj = star(center, neighbors, directionality)
+                if IS.single_number(neighbors)
+                    num_nodes = neighbors+1;                    
+                    neighbors = 1:neighbors;
+                    if any(center == neighbors)
+                        neighbors = setdiff(neighbors, center);
+                        neighbors(end+1) = neighbors(end) + 1;
+                    end
+                    center = repmat(center, num_nodes-1, 1);                    
+                    if strcmp(directionality, 'out')
+                        adj = sparse(center, neighbors, ones(num_nodes-1,1), num_nodes,  num_nodes);                             
+                    elseif strcmp(directionality, 'in')
+                        adj = sparse(neighbors, center, ones(num_nodes-1,1), num_nodes,  num_nodes);                    
+                    else
+                        adj = sparse(center, neighbors, ones(num_nodes-1,1), num_nodes,  num_nodes);                             
+                        adj = adj + adj';
+                    end
+                    
+                    
+                else
+                    error('Not implemented yet');
+                end
+                
+                
+                
+            end
+                
             
             
         end

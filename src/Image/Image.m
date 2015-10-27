@@ -95,6 +95,12 @@ classdef Image < dynamicprops
             [xmin, ymin, xmax, ymax] = patch.get_corners();            
             plot([xmin xmax xmax xmin xmin],[ymin ymin ymax ymax ymin], 'Color', 'r', 'LineWidth', 2);
         end
+        
+        function [I] = patch_indicator(obj, patch)
+            I = zeros(obj.height, obj.width);
+            [xmin, ymin, xmax, ymax] = patch.get_corners();            
+            I(ymin:ymax, xmin:xmax) = 1;           
+        end
                 
         function [obj] = set_gt_segmentation(obj, segmentation)
             % Adds dynamic property 'gt_segmentation' corresponding to a groundtruth segmentation of the image.            
@@ -128,6 +134,13 @@ classdef Image < dynamicprops
         
         function [resized] = get_resized_image(obj)
             resized = obj.resized;
+        end
+        
+        function c = apply_mask(obj, mask)
+            c = obj.color();
+            c(:,:,1) = c(:,:,1) .* mask;
+            c(:,:,2) = c(:,:,2) .* mask;
+            c(:,:,3) = c(:,:,3) .* mask;
         end
         
     end % End of (public) instance methods.

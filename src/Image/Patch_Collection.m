@@ -196,6 +196,14 @@ classdef Patch_Collection < dynamicprops
             new_collection = Patch_Collection();
             new_collection.set_collection(obj.collection(keep_list), obj.image);
         end
+        
+        function [P] = patches_as_matrix(obj)
+            s =  size(obj);
+            P = zeros(s, 4);
+            for i = 1:s
+                P(i,:) = obj.collection(i).get_corners();
+            end
+        end
      
     end
     

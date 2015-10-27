@@ -123,9 +123,14 @@ classdef IS
             B = all(diff(A) > 0);
         end
         
-        function B = is_single_number(A)            
+        function B = single_number(A)            
             B = (numel(A) == 1) && isnumeric(A);
         end
+        
+        function B = vector(A)            
+            B = ismatrix(A) && min(size(A)) == 1;
+        end
+        
     end
     
 end
