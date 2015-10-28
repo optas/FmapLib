@@ -69,6 +69,22 @@ classdef Graph < dynamicprops
             obj.name = new_name;
         end
         
+        function obj = set_directed(obj, choice)
+            if choice
+                if ~ obj.is_directed
+                    assert(nnz(obj.A) == obj.num_edges * 2)
+                    obj.num_edges   = obj.num_edges * 2;
+                    obj.is_directed = true;
+                end                
+            else
+                if obj.is_directed
+                    obj.A = (obj.A + obj.A') ./ 2;
+                    obj.is_directed = false;
+                end
+                
+            end
+        end
+        
         function obj = remove_self_loops(obj)
            N = obj.num_vertices;
            obj.A(1: N+1 :N^2) = 0;            
@@ -145,7 +161,7 @@ classdef Graph < dynamicprops
                 for i = 1:length(vertices)                
                         N{i} = find(obj.A(:,vertices(i)));                               
                         W{i} = full(obj.A(N{i}, vertices(i)));
-                end   
+                end
             end
         end
                

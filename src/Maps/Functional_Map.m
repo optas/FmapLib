@@ -731,21 +731,21 @@ classdef Functional_Map < dynamicprops
         
         function [Y, L] = latent_basis_given_functional_maps(in_maps, weights, latent_size)
             % Returns a set of orthonormal vectors that correspond to latent commonalities among objects of a
-            % collection. These commonalities are found by exploiting a set of functional maps between pairs of related 
-            % objects.
+            % collection. These commonalities are found by exploiting a set of functional maps defined between pairs of 
+            % objects of the collection.
             % 
             % Input:
             %           in_maps  -  (N x N cell array) carrying the functional map from object i to object j, in its  
-            %                       (i,j) position. N is the total number of objects in the collection.
+            %                       (i,j) cell. N is the total number of objects in the collection.
             %
-            %           weights  -  (N x N matrix) weights(i,j) is a positive double reflecting how closely related object i to 
-            %                       object j.
+            %           weights  -  (N x N matrix) weights(i,j) is a positive double reflecting how closely related 
+            %                       object i is to object j.
             %
-            %           latent_size - (int) Specifies how many latent functions will be derived in each object.
+            %        latent_size - (int) Specifies how many latent functions will be derived in every object.
             %
-            %
-            % Output:   Y        - (N x1 cell array), Y(i) add_content
-            %
+            % Output:   
+            %            Y       - (N x 1 cell array). Y(i) carries 'latent_size' orthogonal column vectors,
+            %                      corresponding to the latent basis of object i.
             %
             % Reference: 'Image Co-Segmentation via Consistent Functional Maps, F. Wan et al. in _add_''
             
