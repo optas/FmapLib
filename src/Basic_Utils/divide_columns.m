@@ -12,10 +12,12 @@ function B = divide_columns(A, v)
         error('Dimension mismatch.')
     end
     
-    if (sum(v == 0) ~= 0);
+    if any(v == 0)
          error('Division with zero.')
     end
-    
+%     if (sum(v == 0) ~= 0);
+%          error('Division with zero.')
+%     end    
     if any(abs(v) < 1e-7)
         warning('Diving with elements that are smaller than 1e-7.')
     end

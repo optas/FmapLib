@@ -67,6 +67,7 @@ classdef Basis < dynamicprops
         end
 
         function [R] = synthesize_functions(obj, coeffs)
+            % Coeffs carried as column vectors.
             eigs_num = size(coeffs, 1);
             R = obj.evecs(eigs_num) * coeffs;            
         end

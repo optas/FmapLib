@@ -217,14 +217,88 @@ classdef Optimization
                 lambda = L.evals(2);
                 assert(lambda(2) >= alpha)
             end
-            
             toc
-            
+        end
+        
+        function weights = update_graph_weight(residuals, lambda)
+            [a, ~] = size(residuals);
+            n = 5;
+            cvx_begin
+                variable weights(a,a)
+                variable Z(a,a,a)                                
+                minimize( trace(weights*residuals) - lambda*sum(Z(:)) )
+                subject to
+                    trace(weights) == zeros(a,1)
+                    weights  * ones(size(weights,1), 1) == n * ones(size(weights,1), 1)
+                    weights' * ones(size(weights,1), 1) == n * ones(size(weights,1), 1)    
+                    zeros(a,a) <= sum(Z,3) <= n * weights
+                    zeros(a)   <= weights  <= ones(a)
+   
+                    for k = 1:a 
+                        w_jk = repmat(weights(:,k),[1 a]);
+                        w_ki = repmat(weights(k,:),[a 1]);
+                        Z(:,:,k) <= weights
+                        Z(:,:,k) <= w_jk
+                        Z(:,:,k) <= w_ki
+                    end
+            cvx_end
+            weights = reshape(weights, a, 1, a, 1);
         end
         
         
-        minimum_effective_resistance
+        
+        function W = big_matrix_for_latent_spaces(in_maps, weights)            
+            % TODO re-write comments/name variables.
+            % Input:
+            %           in_maps  -  (N x N cell array) carrying the functional map from object i to object j, in its  
+            %                       (i,j) cell. N is the total number of objects in the collection.
+            %
+            %           weights  -  (N x N matrix) weights(i,j) is a positive double reflecting how closely related 
+            %                       object i is to object j.
+            %
+            % Output:   
+            %            W       - (NxM x NxM matrix). M is the size of each in_map square matrix.
+            %                                  %
+            % TODO assert(diag(in_maps) = isempty())
             
+            if any(any(weights < 0))
+                error('Weights are expected to be non-negative.')                
+            end                        
+            [src, trg]         = find(weights);
+            map_size           = size(in_maps{src(1), trg(1)});
+            if map_size(1) ~= map_size(2)
+                error('Current version only works with square matrices.');
+            end            
+            empty_ind          = cellfun('isempty', in_maps);
+            in_maps(empty_ind) = {sparse([], [], [], map_size(1), map_size(2))};
+            eye_map            = speye(map_size);
+            W                  = in_maps;
+            
+            if all_close(weights, weights', 5e-10, +Inf)                % Weights are symmetric.                
+                for m = 1:length(src)                                   % Use Fan's derivation (same as paper).
+                    i = src(m);                                         % i-j are connected: i points to j.
+                    j = trg(m);
+                    W{i,j} = - weights(i,j) .* (in_maps{j,i} + in_maps{i,j}');
+                    W{i,i} = W{i,i} + (weights(i,j) .* ( eye_map + (in_maps{i,j}' * in_maps{i,j})));
+                end                
+                W = cell2mat(W);
+            else
+                for m = 1:length(src)                                   % Weights are not symmetric.
+                    i = src(m);
+                    j = trg(m);
+                    W{i,j} = -(weights(i,j) .* in_maps{i,j}') - (weights(j,i) .* in_maps{j,i});                                
+                    W{i,i} = W{i,i} + (weights(i,j) .* (in_maps{i,j}' * in_maps{i,j}));                                
+                    W{i,i} = W{i,i} + (weights(j,i) .* eye_map);
+                end
+                W = cell2mat(W);            
+                W  = (W + W') ./ 2;
+            end
+                            
+            if ~(all_close(W, W', 0.0001, +Inf))            
+                error('Produced Aggregate matrix is not symmetric. Check your input matrices.')
+            end                       
+        end
+        
 
-    end
+    end % Static    
 end

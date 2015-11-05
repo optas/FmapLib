@@ -29,6 +29,11 @@ classdef Graph < dynamicprops
                 edge_list_file  = varargin{1};                
                 obj.is_directed = varargin{2};
                 obj.A           = Graph.read_adjacency(edge_list_file, 'edge_list', obj.is_directed);
+            
+            elseif IS.single_number(varargin{1})
+                n = varargin{1};
+                obj.A           = sparse([],[],[], n, n);                
+                obj.is_directed = varargin{2};
             else
                 % Construct a graph from explicitly given adgjacecny.                
                 obj.A = varargin{1};
@@ -80,14 +85,27 @@ classdef Graph < dynamicprops
                 if obj.is_directed
                     obj.A = (obj.A + obj.A') ./ 2;
                     obj.is_directed = false;
+                    obj.num_edges   = nnz(obj.A);
+                    assert(~mod(obj.num_edges, 2));
+                    obj.num_edges  = obj.num_edges ./ 2;
                 end
                 
             end
         end
+
+        function D = in_degrees(obj)
+            D = full(sum(obj.A, 1));
+        end
+        
+        function D = out_degrees(obj)
+            D = full(sum(obj.A, 2));
+        end
         
         function obj = remove_self_loops(obj)
            N = obj.num_vertices;
-           obj.A(1: N+1 :N^2) = 0;            
+           self_loop_num = sum(diag(obj.A) ~= 0);           
+           obj.A(1: N+1 :N^2) = 0;
+           obj.num_edges = obj.num_edges - self_loop_num;           
         end
         
         function b = has_self_loops(obj)
@@ -134,7 +152,7 @@ classdef Graph < dynamicprops
             end
         end
 
-        function [N] = out_neighbors(obj, vertices)            
+        function [N, W] = out_neighbors(obj, vertices)            
             % Finds the out-neighbor vertices (edge-connected) of all input vertices.
             %
             % Parameters
@@ -142,11 +160,14 @@ classdef Graph < dynamicprops
             % Returns
             %                        
             if numel(vertices) == 1
-                N  = find(obj.A(vertices,:));                                              
+                N  = find(obj.A(vertices,:)');                                              
+                W  = full(obj.A(vertices, N)');
             else
                 N = cell(length(vertices), 1);
+                W = cell(length(vertices), 1);
                 for i = 1:length(vertices)                
-                        N{i} = find(obj.A(vertices(i),:));                               
+                        N{i} = find(obj.A(vertices(i), :))';                               
+                        W{i} = full(obj.A(vertices(i), N{i})');
                 end   
             end
         end
@@ -159,7 +180,7 @@ classdef Graph < dynamicprops
                 N = cell(length(vertices), 1);
                 W = cell(length(vertices), 1);
                 for i = 1:length(vertices)                
-                        N{i} = find(obj.A(:,vertices(i)));                               
+                        N{i} = find(obj.A(:, vertices(i)));                               
                         W{i} = full(obj.A(N{i}, vertices(i)));
                 end
             end
@@ -168,7 +189,12 @@ classdef Graph < dynamicprops
         function obj = add_edge(obj, from, to, weight)
             if weight <= 0
                 error('Edge weight must be positive.');
-            end            
+            end
+            
+            if obj.A(from, to) == 0;    %  This is a new edge.
+                obj.num_edges = obj.num_edges + 1;
+            end
+            
             obj.A(from, to) = weight;
             if ~ obj.is_directed
                 obj.A(to, from) = weight;
@@ -178,11 +204,13 @@ classdef Graph < dynamicprops
         function remove_edge(obj, from, to)
             if obj.A(from, to) == 0
                 warning('Request to remove a non-existing edge.')
+                return
             end
             obj.A(from, to) = 0;
             if ~ obj.is_directed
                 obj.A(to, from) = 0;
             end
+            obj.num_edges = obj.num_edges - 1;
         end
         
         function [I] = incidence_matrix(obj)
@@ -199,6 +227,49 @@ classdef Graph < dynamicprops
             end            
         end
         
+        function obj = flip_edges(obj)
+            obj.A = obj.A';             
+        end
+    
+        function [PR, converged, iter] = page_rank(obj, dumping, max_iter)
+            % TODO - check diagonal is zero. 
+            % Graph is connected etc.            
+            if ~exist('max_iter', 'var')
+                max_iter = 500;
+            end
+            if ~ exist('dumping', 'var')
+                dumping = 0.85;
+            end
+            
+            N  = obj.num_vertices;
+            PR = (1/N) * ones(N, 1);           
+            
+            if any(abs(sum(obj.A, 2) - 1) > 1e-6)    % The out-edges of some node do not sum to 1.
+                A  = divide_columns(obj.A' , sum(obj.A, 2));                            
+            else
+                display('Already, out-degree normalized.')
+                A = obj.A';
+            end
+            iter = 1;
+            delta_PR = true;                 
+            converged = true;
+            tele_transport = ((1-dumping) / N) .* ones(N,1);
+            % Iterate until norm of PR changes less than 1e-6                
+            while delta_PR
+                prev_PR = PR;               
+                PR       = (dumping .* A * PR) + tele_transport;
+                delta_PR = any(PR - prev_PR > 1e-6);                                                           
+                iter = iter + 1;
+                if iter > max_iter
+                    converged = false;
+                    break
+                end                    
+            end            
+            
+        end
+%        power_iter_rank = pinv((eye(length(A)) - d*A'))*(((1-d)/N)*ones(length(A),1));  % Alternative 1.
+%        if dumping == 1: [~, PR] = eigs(obj.A').
+
     end
            
     methods (Static)
@@ -378,18 +449,11 @@ classdef Graph < dynamicprops
                         adj = sparse(center, neighbors, ones(num_nodes-1,1), num_nodes,  num_nodes);                             
                         adj = adj + adj';
                     end
-                    
-                    
                 else
                     error('Not implemented yet');
                 end
-                
-                
-                
-            end
-                
-            
-            
+               
+            end    
         end
         
         function [A] = knn_to_adjacency(neighbors, weights, direction)            

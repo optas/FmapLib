@@ -749,54 +749,32 @@ classdef Functional_Map < dynamicprops
             %
             % Reference: 'Image Co-Segmentation via Consistent Functional Maps, F. Wan et al. in _add_''
             
-            % TODO assert(diag(in_maps) = isempty()) weight are positive            
-            num_images         = length(in_maps);
-            [src, trg]         = find(weights);            
-            map_size           = size(in_maps{src(1), trg(1)});
-            if map_size(1) ~= map_size(2)
-                error('Not squate fmaps are given. This utility is not implemented yet.');
-            end            
-            empty_ind          = cellfun(@isempty, in_maps);
-            in_maps(empty_ind) = {sparse([], [], [], map_size(1), map_size(2))};
-            eye_map            = speye(map_size);
-            W                  = in_maps;           
-                        
-            for m = 1:length(src)
-                i = src(m);         % i-j are connected: i points to j.
-                j = trg(m);
-                W{i,j} = -(weights(i,j) .* in_maps{i,j}') - (weights(j,i) .* in_maps{j,i});                                
-                W{i,i} = W{i,i} + (weights(i,j) .* (in_maps{i,j}' * in_maps{i,j}));                                
-                W{j,j} = W{j,j} + (weights(j,i) .* (eye_map));
-            end
-
-%             for si = 1:length(src)
-%                 for sj = 1:length(trg)
-%                     i      = src(si);
-%                     j      = trg(sj);
-%                     W{i,j} = - weights(i,j) .*  (in_maps{j,i} * in_maps{i,j}');      % TODO - I think the transpose is the other way.
-%                     W{i,i} = W{i,i} + ( weights(i,j) .* ((in_maps{i,j}' * in_maps{i,j}) + eye_map));
-%                 end
-%             end
+            % TODO assert(diag(in_maps) = isempty())
             
-            W        = cell2mat(W);            
-            all_close(W, W', 0.0001, +Inf)
-            
-            W        = W + W' ./ 2;
-            
+            W            = Optimization.big_matrix_for_latent_spaces(in_maps, weights);            
+            num_objects  = length(in_maps);                       
+            [src, trg]   = find(weights, 1);
+            map_size     = size(in_maps{src, trg});
+           
             [U, L]   = eigs(W, latent_size, 'SM');            
-            L        = diag(L);        
-            
-%             assert(IS.non_decreasing(L));                        
-            
-            Y        = cell(num_images, 1);           
-            previous = 0;
-            for i = 1:num_images
-                Y{i} = U(previous+1 : previous + map_size(1), :);
-                previous = previous + map_size(1);
+            L        = diag(L);      
+            [~, ind] = sort(abs(L));            
+            L = L(ind);
+            assert(IS.non_decreasing(abs(L)));                                    
+            U        = U(:, ind);            
+            Y        = cell(num_objects, 1);                       
+            previous  = 0;            
+            for i = 1:num_objects
+                Y{i} = U(previous + 1 : previous + map_size(1), :);                
+                previous = previous + map_size(1);                
             end
         end
         
         function [S, R] = stable_sub_space(in_maps, out_maps, latent_size, weights)                        
+            if any(cellfun('isempty',  in_maps)) || any(cellfun('isempty',  out_maps))
+                error('In/out maps must be defined.')
+            end
+            
             [r, c] = size(in_maps{1});
             if r~=c
                 error('Square fmaps only.')
@@ -808,27 +786,18 @@ classdef Functional_Map < dynamicprops
             
             W  = zeros(num_maps * r, c);
             for m = 1:num_maps                
-                W( ((m-1)*r)+1 : m*r, :) = (out_maps{m} * in_maps{m}) - eye(r);
+                W( ((m-1)*r)+1 : m*r, :) = (in_maps{m} * out_maps{m}) - eye(r);
                 if exist('weights', 'var')                                
-                    W( ((m-1)*r)+1 : m*r, :) = W( ((m-1)*r)+1 : m*r, :)  .* sqrt(weights(m));
+                    W( ((m-1)*r)+1 : m*r, :) = W( ((m-1)*r)+1 : m*r, :)  .* weights(m);
+%                     W( ((m-1)*r)+1 : m*r, :) = W( ((m-1)*r)+1 : m*r, :)  .* sqrt(weights(m));
                 end
             end
             
-%             W        = cell2mat(in_maps);                % Concatenate the maps in a tall matrix.            
-%             assert(all(all(in_maps{1} == W(1:r, 1:c))))
-%             W = W - repmat(eye(r), num_maps, 1);   % Remove identity from every map.
-%                         
-%             if exist('weights', 'var')                
-%                 for m = 1:num_maps
-%                     W( ((m-1)*r)+1 : m*r, :) = sqrt(weights(m)) .* W( ((m-1)*r)+1 : m*r, :);                
-%                 end
-%             end                          
-            
             [~, R, S] = svd(W);            
-            R = diag(R);
+            R         = diag(R);
             assert(IS.non_increasing(R));                        
-            R = flipud(R);
-            S = fliplr(S);          
+            R         = flipud(R);
+            S         = fliplr(S);          
             if exist('latent_size', 'var')
                 R = R(1:latent_size);
                 S = S(:, 1:latent_size);
