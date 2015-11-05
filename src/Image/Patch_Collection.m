@@ -15,7 +15,7 @@ classdef Patch_Collection < dynamicprops
             %           in_image - (Image) The image, over which the patches were defined.
             if nargin == 0
                 obj.collection = Patch();            
-                obj.image = Image();
+                obj.image      = Image();
             else
                 obj.image = in_image;                
                 if isa(corners, 'double')                
@@ -23,7 +23,7 @@ classdef Patch_Collection < dynamicprops
                     if m < 1 
                         error('A Patch Collection must consist of at least one Patch objects.')
                     end                
-                    obj.collection(1:m) = Patch();                                
+                    obj.collection(1:m) = Patch();
                     for i = 1:m
                         if ~ Patch.is_valid(corners(i,:), in_image)
                             error('Patch %d is cannot go with given image.\n', i);

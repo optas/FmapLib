@@ -121,7 +121,7 @@ classdef Patch < dynamicprops
     
     methods (Static, Access = public)
         function [b] = is_valid(corners, src_image)
-            % Checks if the corners obey the necessary conditions for being a patch.            
+            % Checks if the corners obey the necessary conditions for being a patch.
             if exist('src_image', 'var') % Verify it fits the image.
                 b =  corners(1) <= src_image.width  && corners(3) <= src_image.width && ...   
                      corners(2) <= src_image.height && corners(4) <= src_image.height ;
@@ -134,11 +134,10 @@ classdef Patch < dynamicprops
         
         function [P] = tightest_box_of_segment(in_mask)            
             [y, x] = find(in_mask);
-            P      =  Patch([min(x), min(y), max(x), max(y)]);            
+            P      = Patch([min(x), min(y), max(x), max(y)]);            
             
         end
                
-
         function [top_patches, top_scores] = compute_top_patches_in_images(nns, patch_feat, fmaps, top_p)
             num_images = size(patch_feat, 1);
             top_patches = zeros(num_images, top_p);
