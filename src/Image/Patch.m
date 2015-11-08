@@ -24,14 +24,18 @@ classdef Patch < dynamicprops
                 error('Wrong number of arguments.')
             end
         end
-        
-        function [xmin, ymin, xmax, ymax] = get_corners(obj)
-            % Getter of object's property 'corners' corresponding to the 4 extrema of
-            % the x-y coordinates of the patch.
-            xmin = obj.corners(1);
-            ymin = obj.corners(2);
-            xmax = obj.corners(3);
-            ymax = obj.corners(4);
+                   
+        function [varargout] = get_corners(obj)
+            % Getter of object's property 'corners'.
+            if nargout == 4
+                varargout = cell(nargout);
+                varargout{1} = obj.corners(1);
+                varargout{2} = obj.corners(2);
+                varargout{3} = obj.corners(3);
+                varargout{4} = obj.corners(4);
+            else
+                varargout{1} = obj.corners;
+            end
         end
             
         function [F] = plot(obj, varargin)

@@ -180,6 +180,13 @@ classdef Patch_Collection < dynamicprops
             end            
         end
         
+        function [inter] = intersection(obj, patch)
+            inter = zeros(size(obj), 1);             
+            for i = 1:size(obj)                
+                inter(i) = obj.collection(i).area_of_intersection(patch);
+            end            
+        end
+        
         function [H] = weight_map(obj, normalized)
             [h, w] = size(obj.image);
             H = zeros(w, h);
@@ -203,6 +210,21 @@ classdef Patch_Collection < dynamicprops
             for i = 1:s
                 P(i,:) = obj.collection(i).get_corners();
             end
+        end
+        
+        function [p] = closest_to_gt(obj, top_k)            
+            gt = obj.image.gt_segmentation;
+            p = [];
+            
+            if ~isempty(gt)                
+                best_per_gt = zeros(size(gt), top_k);
+                for g = 1:size(gt)
+                    corloc = obj.corloc(gt.get_patch(g));
+                    [~, ids] = sort(corloc, 'descend');
+                    best_per_gt(g, :) = ids(1:top_k) ;                    
+                end                
+                p = obj.keep_only(unique(best_per_gt(:)))
+            end        
         end
      
     end
