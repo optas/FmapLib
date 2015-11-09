@@ -223,7 +223,7 @@ classdef Patch_Collection < dynamicprops
                     [~, ids] = sort(corloc, 'descend');
                     best_per_gt(g, :) = ids(1:top_k) ;                    
                 end                
-                p = obj.keep_only(unique(best_per_gt(:)))
+                p = obj.keep_only(unique(best_per_gt(:)));
             end        
         end
      
