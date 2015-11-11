@@ -46,7 +46,7 @@ classdef Patch_Collection < dynamicprops
         end
 
         function F = plot_collection(obj, scores)
-            obj.image.plot()
+            obj.image.plot();
             hold on;            
             if exist('scores', 'var')                
                 colors = vals2colormap(scores);
@@ -214,9 +214,8 @@ classdef Patch_Collection < dynamicprops
         
         function [p] = closest_to_gt(obj, top_k)            
             gt = obj.image.gt_segmentation;
-            p = [];
-            
-            if ~isempty(gt)                
+            p = [];            
+            if ~ isempty(gt)                
                 best_per_gt = zeros(size(gt), top_k);
                 for g = 1:size(gt)
                     corloc = obj.corloc(gt.get_patch(g));

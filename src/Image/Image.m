@@ -58,7 +58,8 @@ classdef Image < dynamicprops
             % Plots the image and returns the graphic's handle to it.            
             h = imshow(obj.CData);
             if ~ isempty(obj.name)
-                title(['Image name = ' obj.name]);
+                title_text = strrep(obj.name, '_', '\_'); % Bypass tex interpreter.
+                title(['Image name = ' title_text]);
             end
         end
         
