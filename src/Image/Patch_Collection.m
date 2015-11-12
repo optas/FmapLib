@@ -218,7 +218,7 @@ classdef Patch_Collection < dynamicprops
             if ~ isempty(gt)                
                 best_per_gt = zeros(size(gt), top_k);
                 for g = 1:size(gt)
-                    corloc = obj.corloc(gt.get_patch(g));
+                    corloc   = obj.corloc(gt.get_patch(g));
                     [~, ids] = sort(corloc, 'descend');
                     best_per_gt(g, :) = ids(1:top_k) ;                    
                 end                
