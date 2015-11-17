@@ -6,7 +6,7 @@ classdef Mesh_IO
        
     methods (Static)
         function [vertices, faces] = read_off(filename)
-            %   Reads mesh data from a .off file.
+            %   Reads mesh data from an .off file.
             %
             %   Input:
             %           filename    -   (string) file name of the .off file.
@@ -222,9 +222,17 @@ classdef Mesh_IO
                     continue
                 end
            end                                        
-
         end
-                                
+        
+        function symmetries = read_symmetries(sym_file)            
+            fid = fopen(sym_file);
+            if (fid == -1)
+                error(['Cannot open the file: ', filename, '.'])
+            end            
+            symmetries  = textscan(fid, '%s', 'delimiter', '\n');   % Read symmetries
+            fclose(fid);
+            symmetries  = str2double(symmetries{:});    
+        end
     end
     
     

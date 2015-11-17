@@ -62,14 +62,14 @@ classdef Functional_Map < dynamicprops
 
             obj.source_features = source_feat;     % Store the raw features used.
             obj.target_features = target_feat;
-
-            source_feat = obj.source_basis.project_functions(neigs_source, source_feat.F);
-            target_feat = obj.target_basis.project_functions(neigs_target, target_feat.F);                                        
-
+            
             if options.normalize == 1 
-                source_feat = divide_columns(source_feat, sqrt(sum(source_feat.^2)));
-                target_feat = divide_columns(target_feat, sqrt(sum(target_feat.^2)));                
+                source_feat = divide_columns(source_feat.F, sqrt(sum(source_feat.F.^2)));
+                target_feat = divide_columns(target_feat.F, sqrt(sum(target_feat.F.^2)));                
             end            
+            
+            source_feat = obj.source_basis.project_functions(neigs_source, source_feat);
+            target_feat = obj.target_basis.project_functions(neigs_target, target_feat);                                        
 
             if options.lambda ~= 0
                 source_reg = obj.source_basis.evals(neigs_source);      % This includes the zeroth eigenvalue of LB.
@@ -83,13 +83,12 @@ classdef Functional_Map < dynamicprops
                 case 'functions_only'                    
                     [F, residual] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, 0);
                 case 'frobenius_square'
-                    [F] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                    [F, residual] = Functional_Map.sum_of_squared_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
                 case 'frobenius'
-                    [F] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);
-%                       [F] = Functional_Map.sum_of_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
+                    [F, residual] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);    % TODO-P add unit-test with cvx code
                 case 'l1_and_frobenius'
-                      [F] = Functional_Map.l1_and_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);
-                                
+                    [F, residual] = Functional_Map.l1_and_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);                                
+                
                 case 'frobenius_with_covariance'
                     obj.source_features.project_features(obj.source_basis, neigs_source);
                     C1 = obj.source_features.covariance_matrix();
@@ -240,16 +239,12 @@ classdef Functional_Map < dynamicprops
                 D = pinv(diag(source_evals)) * ( obj.fmap' * diag(target_evals) * obj.fmap );     
             else                                                                                      % Generic case for any basis.
                 error('Not implemented yet');                
-            end
-            
-
 %             target_evecs = obj.target_basis.evecs(obj.target_neigs);
-%             target_inner_prod = target_evecs' * laplace_beltrami.W * target_evecs;  
-%             
+%             target_inner_prod = target_evecs' * laplace_beltrami.W * target_evecs;  %             
 %             source_evecs = obj.source_basis.evecs(obj.source_neigs);            
-%             source_inner_prod = source_evecs' * laplace_beltrami.W * source_evecs;   
-%             
+%             source_inner_prod = source_evecs' * laplace_beltrami.W * source_evecs;   %             
 %             D = pinv(source_inner_prod) * ( obj.fmap' * target_inner_prod * obj.fmap ); 
+            end            
         end
         
                 
@@ -257,15 +252,15 @@ classdef Functional_Map < dynamicprops
             [dists, indices] = Functional_Map.pairwise_distortion_of_map(obj.fmap, obj.source_basis, obj.target_basis, groundtruth, varargin{:});
         end
         
-    end
+    end % End of Object's Methods.
       
     methods (Static)                        
         function [dists, indices] = pairwise_distortion_of_map(inmap, source_basis, target_basis, groundtruth, varargin)
-            %% Document.            
+            % TODO-E Document.            
             % inmap - matrix corresponding to a functional map
             % source_basis - LB basis of source
             % target_basis - LB basis of source
-            % groundtruth  -             
+            % extras: groundtruth, symmetries, options
             options = struct('fast', 1, 'nsamples', 100, 'indices', [], 'symmetries' , []);
             options = load_key_value_input_pairs(options, varargin{:});
 
@@ -276,32 +271,25 @@ classdef Functional_Map < dynamicprops
                 [deltas, indices] = Functional_Map.random_delta_functions(diag(source_basis.A), options.nsamples);                           
             end
             
-            s_neigs = size(inmap, 2);   % Number of source basis used to constuct the inmap.
+            s_neigs = size(inmap, 2);                                                % Number of source basis used to constuct the inmap.
             t_neigs = size(inmap, 1);
             
-            proj_deltas = source_basis.project_functions(s_neigs, deltas); % Project random delta function on source basis.           
-            deltas_transfered = inmap * proj_deltas;                       % Use inmap to transfer them in target_mesh.            
-            
-            target_deltas     = target_basis.evecs(t_neigs)' * sqrt(target_basis.A); % This is the set of all delta
-                                                                                     % functions defined on target
-                                                                                     % and expressed in the
-                                                                                     % target_basis.
+            proj_deltas       = source_basis.project_functions(s_neigs, deltas);     % Project random delta function on source basis.           
+            deltas_transfered = inmap * proj_deltas;                                 % Use inmap to transfer them in target_mesh.                        
+            target_deltas     = target_basis.evecs(t_neigs)' * sqrt(target_basis.A); % This is the set of all delta functions defined on target
+                                                                                     % and expressed in the target_basis.
                                                                                      
             [ids, ~]          = knnsearch(target_deltas' , deltas_transfered');      % Find closest function for its tranfered on (Euclidean dist is used).
-                                                                                                      % TODO-P,E solve 'Ties' in knn.                                              
-                                                                                                                       
-            pairs = [ids, groundtruth(indices)]';                                                           
+                                                                                     % TODO-P,E solve 'Ties' in knn.                                                                                                                                                                   
+            pairs = [ids, groundtruth(indices)]';                                    % Approximate vs. groundtruth.                       
             dists = comp_geos(pairs);
 
             if ~ isempty(options.symmetries)
-                for i=1:size(options.symmetries, 2)
-                    
-                    sym = options.symmetries(groundtruth(indices), i);
-                    
+                for i= 1:size(options.symmetries, 2)                    
+                    sym = options.symmetries(groundtruth(indices), i);                    
 %                     idx = find(sym);          TODO-E why?                    
-%                     sym(sym == 0) = idx     %TODO-P fix for nodes with not known symmetries.
+%                     sym(sym == 0) = idx      %TODO-P fix for nodes with not known symmetries.
 %                       sym(sym == 0) = ids(()
-                    
                     pairs = [ids, sym]';                                                           
                     dists = min(comp_geos(pairs), dists);
                 end                
@@ -310,13 +298,12 @@ classdef Functional_Map < dynamicprops
             function [dists] = comp_geos(pairs)
                 vertices  = target_basis.M.vertices;
                 triangles = target_basis.M.triangles;
-                if options.fast == 1                                            % Compute true geodesics or use approx. by Dijkstra.                            
+                if options.fast == 1                                                  % Compute true geodesics or use approx. by Dijkstra.                            
                     dists = comp_geodesics_pairs(vertices(:,1), vertices(:,2), vertices(:,3), triangles', pairs, 1);
                 else 
                     dists = comp_geodesics_pairs(vertices(:,1), vertices(:,2), vertices(:,3), triangles', pairs);
                 end                
-            end
-            
+            end            
         end
         
                 
@@ -427,7 +414,7 @@ classdef Functional_Map < dynamicprops
 
         end
         
-        function [X, val] = l1_and_frobenius_norms_cvx(src_functions, trg_functions, src_spectra, trg_spectra, lambda)
+        function [X, residual] = l1_and_frobenius_norms_cvx(src_functions, trg_functions, src_spectra, trg_spectra, lambda)
             % Generating a F-Map by penalizing the function correspondences with the 1-norm and the commutativity with the
             % Laplacian operator with the frobenius. I.e., 
             %      X = argmin ||X * src_functions - trg_functions||_1  +  lambda * ||X * src_spectra - trg_spectra * X||_F
@@ -442,7 +429,7 @@ classdef Functional_Map < dynamicprops
                 variables X(trg_size, src_size)
                 minimize norm(X*src_functions - trg_functions, 1) + lambda * norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro')
             cvx_end      
-            val = cvx_optval;               
+            residual = cvx_optval;               
         end
                         
         function [X, residual] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
@@ -492,7 +479,7 @@ classdef Functional_Map < dynamicprops
             end                
         end
           
-        function X = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)            
+        function [X, residual] = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)            
             % TODO-P: Add documentation.
             % This code uses Sedumi to write the objective function as a
             % Semi-definite program in the dual form. In this problem we
@@ -536,6 +523,9 @@ classdef Functional_Map < dynamicprops
             % t1,t2 to the Frobenius norms in the objective.
             [~, y, ~] = sedumi(sparse(At), sparse(b), sparse(c), K, struct('fid', 0));
             X = reshape(y(1:N1N2), N1, N2)';
+            
+            residual = norm(X*D1 - D2, 'fro') + lambda .* norm(X*diag(L1) - diag(L2)*X, 'fro');
+            
         end
 
         
@@ -741,11 +731,11 @@ classdef Functional_Map < dynamicprops
             %           weights  -  (N x N matrix) weights(i,j) is a positive double reflecting how closely related 
             %                       object i is to object j.
             %
-            %        latent_size - (int) Specifies how many latent functions will be derived in every object.
+            %        latent_size -  (int) Specifies how many latent functions will be derived in every object.
             %
             % Output:   
-            %            Y       - (N x 1 cell array). Y(i) carries 'latent_size' orthogonal column vectors,
-            %                      corresponding to the latent basis of object i.
+            %            Y       -  (N x 1 cell array). Y(i) carries 'latent_size' orthogonal column vectors,
+            %                       corresponding to the latent basis of object i.
             %
             % Reference: 'Image Co-Segmentation via Consistent Functional Maps, F. Wan et al. in _add_''
             

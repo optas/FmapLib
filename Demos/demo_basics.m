@@ -74,10 +74,7 @@ map3.set_fmap(Functional_Map.l2_regularized_map(sub_feats_1.F, sub_feats_2.F, la
 
 
 %% Further Evaluate maps with geodesic criteria.
-fid = fopen('../../data/input/tosca_symmetries/michael.sym'); % TODO-P add to IO.read_symmetries(); 
-C   = textscan(fid, '%s', 'delimiter', '\n');   % Read symmetries
-fclose(fid);
-symmetries  = str2double(C{:});    
+symmetries   = Mesh_IO.read_symmetries([dp 'input/tosca_symmetries/michael.sym']);
 groundtruth = (1:mesh1.num_vertices)';          % Groundtruth node to node correspondences.
 [dists_1, indices] = map1.pairwise_distortion(groundtruth, 'nsamples', 500, 'symmetries', symmetries);                    
 mean(dists_1)    

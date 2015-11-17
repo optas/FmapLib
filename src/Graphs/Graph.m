@@ -6,6 +6,7 @@ classdef Graph < dynamicprops
     %        from  i to j.
     % TODO-P: Extend to allow self-loops.
     % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
+    % See also: http://strategic.mit.edu/downloads.php?page=matlab_networks
     
     properties (GetAccess = public, SetAccess = protected)
         % Basic properties that every instance of the Graph class has.        
@@ -86,10 +87,10 @@ classdef Graph < dynamicprops
                     obj.A = (obj.A + obj.A') ./ 2;
                     obj.is_directed = false;
                     obj.num_edges   = nnz(obj.A);
-                    assert(~mod(obj.num_edges, 2));
+                    self_loops      = obj.self_loops();                    
+                    assert(~mod(obj.num_edges-length(self_loops), 2));
                     obj.num_edges  = obj.num_edges ./ 2;
-                end
-                
+                end                
             end
         end
 
@@ -101,11 +102,15 @@ classdef Graph < dynamicprops
             D = full(sum(obj.A, 2));
         end
         
+        function S = self_loops(obj)           
+           S = find(diag(obj.A) ~= 0);                      
+        end
+                
         function obj = remove_self_loops(obj)
            N = obj.num_vertices;
            self_loop_num = sum(diag(obj.A) ~= 0);           
            obj.A(1: N+1 :N^2) = 0;
-           obj.num_edges = obj.num_edges - self_loop_num;           
+           obj.num_edges = obj.num_edges - self_loop_num;
         end
         
         function b = has_self_loops(obj)
@@ -146,7 +151,7 @@ classdef Graph < dynamicprops
             end
             if length(from) > 1
                 ind = sub2ind(size(obj.A), from, to);
-                W   = obj.A(ind);
+                W   = full(obj.A(ind));
             else
                 W = obj.A(from, to);    
             end
@@ -230,6 +235,92 @@ classdef Graph < dynamicprops
         function obj = flip_edges(obj)
             obj.A = obj.A';             
         end
+                
+        function [T] = triangle_edges_in_ego_network(obj, ego)
+            if ~ obj.is_directed
+                T = [];
+                direct_neighb = obj.in_neighbors(ego);       % Direct neighbors.                
+                direct_neighb = setdiff(direct_neighb, ego); % Disreguard self-loops.                
+                
+                for i = 1:length(direct_neighb)                    
+                    i_neighbs = obj.in_neighbors(direct_neighb(i));
+                    i_neighbs = setdiff(i_neighbs, direct_neighb(i)); % Disreguard self-loops.
+                    common = intersect(i_neighbs, direct_neighb);
+                    t = length(common);
+                    if t ~= 0
+                        T(end+1:end+t,:) = [repmat(direct_neighb(i), t, 1) common];
+                    end
+                end
+                T = sort(T, 2);
+                T = unique(T, 'rows');
+            else
+                error('NIY.')
+            end
+        end
+        
+        function t = num_triangles(obj)            
+            Au = obj.A;
+            n  = size(Au, 1); 
+            Au(1:n+1:n*n) = 0;  % remove self-loops.
+            Au(Au ~= 0) = 1; 
+            t = trace(Au^3) / 6;            
+        end
+        
+        function [T] = triangles(obj)
+            N = obj.num_vertices;            
+            T = [];
+            for i = 1:N
+                t_in_i = obj.triangle_edges_in_ego_network(i);
+                
+                if any(t_in_i == i)
+                    display('yolo')
+                end
+                    
+                t      = size(t_in_i, 1);
+                if t > 1                    
+                    T(end+1:end+t,:) = [t_in_i repmat(i, t, 1)];
+                elseif t == 1
+                    T(end+1:end+t,:) = [t_in_i repmat(i, t, 1)'];
+                end
+            end                    
+            T = unique(sort(T, 2), 'rows');
+            assert(obj.num_triangles == size(T,1))
+        end
+       
+        function [S, C] = connected_components(obj)
+            [S, C] = graphconncomp(obj.A, 'Directed', obj.is_directed);
+        end
+        
+%         function [E] = ego_network(obj, node)
+% 
+%             if ~ obj.is_directed
+%                 [direct_neighb, weights] = obj.in_neighbors(node);   % Direct neighbors.
+%                 direct_size = length(direct_neighb);
+%                 center = repmat(node, direct_size, 1);
+%                 E = [center, direct_neighb];
+%                 
+%                 for i = 1:direct_size
+%                     n = direct_neighb(node);
+%                     other_nodes = setdiff(direct_neighb, n);
+%                     weights = obj.edges(repmat(n, length(other_nodes)), other_nodes);
+%                     to_add = find(weights);
+%                     if ~isempty(to_add)
+%                         adjacency(n, other_nodes(to_add)) = weights(to_add);
+%                     end
+%                 end
+%                 
+% 
+%             else
+%                 error('Not implemented yet.');
+%             end
+%            
+%             
+%         end
+        
+        
+%         function [T] = triangles(obj)
+%             
+%         end
     
         function [PR, converged, iter] = page_rank(obj, dumping, max_iter)
             % TODO - check diagonal is zero. 
