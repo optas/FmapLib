@@ -102,6 +102,10 @@ classdef Graph < dynamicprops
             D = full(sum(obj.A, 2));
         end
         
+        function B = is_weighted(obj)
+            B = ~IS.binary(obj.A);
+        end
+                
         function S = self_loops(obj)           
            S = find(diag(obj.A) ~= 0);                      
         end
@@ -111,6 +115,10 @@ classdef Graph < dynamicprops
            self_loop_num = sum(diag(obj.A) ~= 0);           
            obj.A(1: N+1 :N^2) = 0;
            obj.num_edges = obj.num_edges - self_loop_num;
+        end
+        
+        function obj = drop_weights(obj)
+            obj.A(obj.A > 0) = 1;
         end
         
         function b = has_self_loops(obj)
@@ -156,7 +164,7 @@ classdef Graph < dynamicprops
                 W = obj.A(from, to);    
             end
         end
-
+        
         function [N, W] = out_neighbors(obj, vertices)            
             % Finds the out-neighbor vertices (edge-connected) of all input vertices.
             %
@@ -259,23 +267,19 @@ classdef Graph < dynamicprops
         end
         
         function t = num_triangles(obj)            
+            % TODO-P does it work for undirected graphs?
             Au = obj.A;
             n  = size(Au, 1); 
-            Au(1:n+1:n*n) = 0;  % remove self-loops.
+            Au(1:n+1:n*n) = 0;  % Remove self-loops.
             Au(Au ~= 0) = 1; 
-            t = trace(Au^3) / 6;            
+            t = trace(Au^3) / 6;
         end
         
         function [T] = triangles(obj)
             N = obj.num_vertices;            
             T = [];
             for i = 1:N
-                t_in_i = obj.triangle_edges_in_ego_network(i);
-                
-                if any(t_in_i == i)
-                    display('yolo')
-                end
-                    
+                t_in_i = obj.triangle_edges_in_ego_network(i);    
                 t      = size(t_in_i, 1);
                 if t > 1                    
                     T(end+1:end+t,:) = [t_in_i repmat(i, t, 1)];
@@ -287,9 +291,56 @@ classdef Graph < dynamicprops
             assert(obj.num_triangles == size(T,1))
         end
        
-        function [S, C] = connected_components(obj)
-            [S, C] = graphconncomp(obj.A, 'Directed', obj.is_directed);
+        function [S, C] = connected_components(obj, weak)
+            % Computes connected components (cc) of the underlying graph. This is a wrapper function of the 
+            % 'graphconncomp' of the bioinformatics toolbox.
+            % 
+            %   Input:                 
+            %           weak - (logical) If true, then the directionality of the edges is being disregarded for the
+            %                  computation of the connectedness.
+            %
+            %   Output: 
+            %           S    - (int) Number of connected components.
+            %           C    - (obj.num_nodes x 1) Vector encoding the cc each node belongs to.
+            %   More info at: Bioinformatics Toolbox - 'graphconncomp'.
+            if ~ exist('weak', 'var')
+                weak = false;
+            end
+            [S, C] = graphconncomp(obj.A, 'Directed', obj.is_directed, 'WEAK', weak);
         end
+        
+        function G = giant_connected_component(obj)
+            [S, C] = connected_components(obj);
+            if S > 1
+                [num_nodes, ids] = hist(C, unique(C));
+                [num_nodes, pos] = max(num_nodes);          
+                id               = ids(pos);                % CC with maximum counter (num_nodes)
+                ids              = find(id == C);
+                G                = obj.subgraph('nodes', ids);
+                assert(G.num_vertices == num_nodes);
+            else
+               G = obj.copy;
+            end                    
+        end
+        
+        function G = subgraph(obj, type_of_list, list)
+            switch type_of_list
+                case 'nodes'
+                    if length(list) ~= length(unique(list))
+                        error('Repeated nodes were given.')
+                    end
+                    list = sort(list);
+                    new_adjacency   = obj.A(list, list);
+                    G = Graph(new_adjacency, obj.is_directed);                   % TODO- More fancy book-keeping + dyn_properties.
+                otherwise
+                    error('NIY.')
+            end
+                
+                
+                
+            
+        end
+            
         
 %         function [E] = ego_network(obj, node)
 % 

@@ -100,8 +100,7 @@ classdef Image_Graph < Graph
         end
         
         function obj = copy(this)
-            % Define what is copied when a deep copy is performed.        
-            
+            % Define what is copied when a deep copy is performed.                    
             % Instantiate new object of the same class.
             obj = feval(class(this));      
                         
@@ -114,6 +113,14 @@ classdef Image_Graph < Graph
                 obj.(p{i}) = this.(p{i});
             end           
         end
+        
+        function obj = set_new_image(obj, new_image)
+            if size(new_image) ~= size(obj.I)
+                warning('Updating the Image Graph with a new Image of different size than the original.')
+            end
+            obj.I = new_image;
+        end
+             
                
     end
     

@@ -74,5 +74,17 @@
 %     X_opt_small       = Functional_Map.groundtruth_functional_map(source_basis, target_basis, gt_map, mesh2.get_vertex_areas('barycentric'));
 %     [dists2, random_points2] = Functional_Map.pairwise_distortion_of_map(X_opt_small, mesh1, mesh2, source_basis, target_basis, gt_map, 'indices', random_points, 'fast');
 %     assert(mean(dists2) > mean(dists)) % TODO-P Change to something more reasonable.
-%     
-%     
+
+
+
+
+% Y1 = rand(64,10);
+% Y2 = rand(64,10);
+% [X, residual]   = Functional_Map.sum_of_frobenius_norms(probes{1}, probes{2}, [], [], 0);
+% residual
+% [X2, residual2] = Functional_Map.sum_of_frobenius_norms_cvx(probes{1}, probes{2}, [], [], 0);
+% residual2
+
+
+
+

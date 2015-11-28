@@ -18,8 +18,7 @@ classdef Basis < dynamicprops
         % Projects a set of input functions on the basis.
     end
     
-    
-    
+
     methods (Access = public)
         % Class Constructor.               
         function obj = Basis()     
@@ -89,6 +88,19 @@ classdef Basis < dynamicprops
             end           
         end
         
+        function obj = copy(this)
+            % Define what is copied when a deep copy is performed.                    
+            % Instantiate new object of the same class.
+            obj = feval(class(this));                              
+            % Copy all non-hidden properties (including dynamic ones)            
+            p = properties(this);         
+            for i = 1:length(p)
+                if ~isprop(obj, p{i})   % Adds all the dynamic properties.
+                    obj.addprop(p{i});
+                end                
+                obj.(p{i}) = this.(p{i});
+            end           
+        end
         
     end
 end

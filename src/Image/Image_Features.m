@@ -25,11 +25,38 @@ classdef Image_Features < dynamicprops
             end                    
         end
         
+        function [signatures] = local_binary_pattern_signatures(in_image, filter_dim)
+            if ~ exist('filter_dim', 'var')
+                filter_dim = [3, 3];
+            end
+            signatures = efficientLBP(in_image.CData, filter_dim);
+            signatures = double(signatures) / 255;        
+        end
+
         function [signatures] = sift_signature(in_image)
-            cellsize=3;
-            gridspacing=1;
+            cellsize    = 3; 
+            gridspacing = 1;
             I = im2double(in_image.CData);
             signatures = im2double(mexDenseSIFT(I, cellsize, gridspacing));
+        end
+        
+        function [signatures] = sift_signature_2(in_image)
+            SIFTparam.grid_spacing = 1;     % Distance between grid centers.
+            patch_sizes = [8, 12, 16];
+            [w, h] = size(in_image);
+            signatures = [];
+            for k = 1:length(patch_sizes)
+                SIFTparam.patch_size = patch_sizes(k); % Size of patch which is used to compute SIFT (it has to be a factor of 4).
+                pad_size = SIFTparam.patch_size/2 - 1;
+                if in_image.is_rgb
+                    gray = rgb2gray(in_image.CData); 
+                else
+                    gray = in_image.CData;
+                end
+                I1 = [zeros(pad_size, 2*pad_size + w); [zeros(h, pad_size) gray zeros(h, pad_size)]; zeros(pad_size, 2 * pad_size + w)];
+                v  = LMdenseSift(I1, '', SIFTparam);
+                signatures = cat(3, signatures, double(v));
+            end
         end
                 
         function [signatures] = color_histogram(in_image, num_bins, varargin)
@@ -78,6 +105,8 @@ classdef Image_Features < dynamicprops
                         f = Image_Features.hog_signature(in_image);                        
                     case 'color'
                         f = in_image.color();
+                    case 'lbp'
+                        f = Image_Features.local_binary_pattern_signatures(in_image);
                     otherwise
                         error('Unknown type of feature was requested.')                    
                 end                                

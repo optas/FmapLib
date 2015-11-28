@@ -107,7 +107,7 @@ classdef Laplace_Beltrami < Basis
                 error('Eigenvalues must be in range of [1, num_of_vertices-1].');
             end            
                         
-            sigma = -1e-5; % TODO-V: sigma=0 or 'SM'?
+            sigma = -1e-5; % TODO: sigma=0 or 'SM'?
             [Phi, lambda] = eigs(obj.W, obj.A, eigs_num, sigma);
             lambda        = diag(lambda);
             

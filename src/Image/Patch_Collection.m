@@ -26,7 +26,7 @@ classdef Patch_Collection < dynamicprops
                     obj.collection(1:m) = Patch();
                     for i = 1:m
                         if ~ Patch.is_valid(corners(i,:), in_image)
-                            error('Patch %d is cannot go with given image.\n', i);
+                            warning('Patch %d cannot go with given image.\n', i);
                         else
                             obj.collection(i) = Patch(corners(i, :));
                         end                    
@@ -38,7 +38,11 @@ classdef Patch_Collection < dynamicprops
         end
         
         function m = size(obj)
-            m = length(obj.collection);
+            if length(obj) > 1              % An array of Patch_Collection objects.
+                m = length(obj);                
+            else
+                m = length(obj.collection);
+            end
         end
         
         function p = get_patch(obj, p_index)
@@ -126,8 +130,7 @@ classdef Patch_Collection < dynamicprops
             new_collection = Patch_Collection();
             new_collection.set_collection(new_patches, new_image);
         end
-        
-        
+                
         function [A] = area_inside_mask(obj, bitmask)
             % Computes for every patch of the Patch_Collection, the area that resides inside the bit mask.
             %
@@ -173,10 +176,10 @@ classdef Patch_Collection < dynamicprops
             end
         end
         
-        function [corloc] = corloc(obj, patch)
-            corloc = zeros(size(obj), 1);             
+        function [C] = corloc(obj, patch)
+            C = zeros(size(obj), 1);             
             for i = 1:size(obj)                
-                corloc(i) = obj.collection(i).corloc(patch);                
+                C(i) = obj.collection(i).corloc(patch);                
             end            
         end
         
@@ -218,14 +221,56 @@ classdef Patch_Collection < dynamicprops
             if ~ isempty(gt)                
                 best_per_gt = zeros(size(gt), top_k);
                 for g = 1:size(gt)
-                    corloc   = obj.corloc(gt.get_patch(g));
-                    [~, ids] = sort(corloc, 'descend');
-                    best_per_gt(g, :) = ids(1:top_k) ;                    
+                    C   = obj.corloc(gt.get_patch(g));
+                    [~, ids] = sort(C, 'descend');
+                    best_per_gt(g, :) = ids(1:top_k);                    
                 end                
                 p = obj.keep_only(unique(best_per_gt(:)));
             end        
         end
+        
+        
+        function obj = merge_with(obj, other_collection)
+            new_patches = size(other_collection);
+            obj.collection(end+1: end+new_patches) = other_collection.collection(:);
+        end
      
+        function C = corloc_with_gt(obj)
+            C = zeros(size(obj), 1);
+            gt = obj.image.gt_segmentation;
+            
+            if size(gt) == 1                                     
+                for g = 1:size(gt)
+                    C = max(C, obj.corloc(gt.get_patch(g)));
+                end            
+            elseif size(gt) > 1            
+                
+                for p = 1:size(obj)                    % Measure how well you do only in those that you hit.
+                    p_patch        = obj.collection(p);
+                    inter_with_all = gt.intersection(p_patch);
+                    has_overlap    = find(inter_with_all);
+                    total_gt_area  = 0;
+                    for g = 1:size(has_overlap)
+                        total_gt_area = total_gt_area + gt.get_patch(has_overlap(g)).area();            
+                    end
+                    with_all_corloc   = sum(inter_with_all) ./ ((double(total_gt_area) + p_patch.area() - sum(inter_with_all)));
+                    C(p) = max(C(p), with_all_corloc);
+                end                               
+                
+                gt_all    = zeros(gt.image.height, gt.image.width);
+                ones_mask = ones(gt.image.height, gt.image.width);                
+                for j=1:size(gt)                    
+                    gt_all = gt_all  + gt.get_patch(j).extract_features(ones_mask , 'zero_pad');
+                end
+                gt_all(gt_all > 0) = 1;
+                gt = Patch.tightest_box_of_segment(gt_all);                                
+                C  = max(C, obj.corloc(gt));
+                
+                
+            end                           
+
+        end
+        
     end
     
     

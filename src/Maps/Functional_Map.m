@@ -276,9 +276,7 @@ classdef Functional_Map < dynamicprops
             
             proj_deltas       = source_basis.project_functions(s_neigs, deltas);     % Project random delta function on source basis.           
             deltas_transfered = inmap * proj_deltas;                                 % Use inmap to transfer them in target_mesh.                        
-            target_deltas     = target_basis.evecs(t_neigs)' * sqrt(target_basis.A); % This is the set of all delta functions defined on target
-                                                                                     % and expressed in the target_basis.
-                                                                                     
+            target_deltas     = target_basis.evecs(t_neigs)' * sqrt(target_basis.A); % This is the set of all delta functions defined on target, expresses in target basis.                                                                                                                                                                          
             [ids, ~]          = knnsearch(target_deltas' , deltas_transfered');      % Find closest function for its tranfered on (Euclidean dist is used).
                                                                                      % TODO-P,E solve 'Ties' in knn.                                                                                                                                                                   
             pairs = [ids, groundtruth(indices)]';                                    % Approximate vs. groundtruth.                       
@@ -306,7 +304,6 @@ classdef Functional_Map < dynamicprops
             end            
         end
         
-                
         function [centers, from_radius, to_radius] = ball_distortion_of_map(inmap, source_mesh, target_mesh, ngeoballs)
             % Computes the distortion of a geodesic ball by the given map. 
             % The centers of the balls are uniformally distributed random
@@ -454,17 +451,15 @@ classdef Functional_Map < dynamicprops
             
             if size(D1, 2) ~= size(D2, 2)
                 error ('Same number of probe functions must be used for source and target spaces.' )
-            end            
-            %TODO-P add more checks.
+            end                        
                 
             N1 = size(D1, 1);
-            N2 = size(D2, 1);
-            
+            N2 = size(D2, 1);            
             A_fixed = D1 * D1' ;
             B = D1 * D2' ;
             X = zeros(N2, N1);
             
-            if lambda == 0   %  Un-regularized                
+            if lambda == 0                          % No eigenvalue regularization.
                 X = (A_fixed\B)';
             else
                 for i = 1 : N2
@@ -621,23 +616,32 @@ classdef Functional_Map < dynamicprops
                 end
             end
         end
-        
-        function [X, val] = sum_of_frobenius_norms_cvx(src_functions, trg_functions, src_spectra, trg_spectra, lambda)
-        % Solving the fmap by minimizing the frobenius norm with cvx        
+               
+        function [X, residual] = sum_of_frobenius_norms_cvx(src_functions, trg_functions, src_spectra, trg_spectra, lambda)
+            % Solving the fmap by minimizing the frobenius norm differences via cvx.        
             [src_size, fs_n]  = size(src_functions);
             [trg_size, ft_n]  = size(trg_functions);
             if fs_n ~= ft_n
                 error('Same number of functions characterizing the two spaces must be provided.')
             end
+            if lambda < 0
+                error('Regularization parameter lambda, must be non-negative.')
+            end
             
-%             cvx_solver gurobi
+            % cvx_precision low
 
-            cvx_begin        
-                variables X(trg_size, src_size)
-                minimize norm(X*src_functions - trg_functions, 'fro') + lambda * norm(diag(trg_spectra)*X - X*diag(src_spectra), 'fro')
-            cvx_end      
-            val = cvx_optval;   
-            
+            if lambda > 0
+                cvx_begin        
+                    variables X(trg_size, src_size)
+                    minimize  norm((X*src_functions) - trg_functions, 'fro') + lambda * norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro')
+                cvx_end                      
+            else
+                cvx_begin        
+                    variables X(trg_size, src_size)                    
+                    minimize  norm((X*src_functions) - trg_functions, 'fro')
+                cvx_end                                      
+            end
+            residual = cvx_optval;               
         end
                 
         function [X, val] = frobenius_with_covariance(src_functions, trg_functions, trg_cov, src_spectra, trg_spectra, lambda)
@@ -760,6 +764,7 @@ classdef Functional_Map < dynamicprops
             end
         end
         
+
         function [S, R] = stable_sub_space(in_maps, out_maps, latent_size, weights)                        
             if any(cellfun('isempty',  in_maps)) || any(cellfun('isempty',  out_maps))
                 error('In/out maps must be defined.')

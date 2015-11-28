@@ -3,7 +3,7 @@ classdef Laplacian < Basis
     %
     % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
-    properties (SetAccess = private)       
+    properties (SetAccess = public)       % TODO turn back to private/immutable.
         L;          % (n x n)  The Laplacian matrix.
         type;       % (String) Describes the type of Laplacian (See constructor for valid values).
         G;          % (Graph)  The corresponding graph from which the Laplacian is derived.        
@@ -73,13 +73,16 @@ classdef Laplacian < Basis
             for i = 1:n_varargin
                 left  = right + 1;
                 right = right + size(varargin{i}, 2);
-                  Proj(:, left:right)  = evecs' * varargin{i};                            % Exploits orthonormality of basis.
+                  Proj(:, left:right)  = evecs' * varargin{i};  % Exploits orthonormality of basis.
             end            
         end
-
+        
     end % End of public object-tied functions.
     
+    
+    
     methods (Access = public, Hidden = true)
+
         function [Phi, lambda] = compute_spectra(obj, eigs_num)
             % Returns the smallest eigenvalues and their corresponding eigenvectors of the Laplacian matrix.
             % The user should use the inherited Basis.get_spectra() function instead since that functions wrap around

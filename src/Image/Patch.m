@@ -55,17 +55,19 @@ classdef Patch < dynamicprops
         function w = width(obj)                       
             [~, ymin, ~, ymax] = obj.get_corners();
             w = ymax - ymin + 1;
+            w = double(w);
             assert(w >= 1);
         end
         
         function h = height(obj)                       
             [xmin, ~, xmax, ~] = obj.get_corners();
             h = xmax - xmin + 1;
+            h = double(h);
             assert(h >= 1);
         end
                 
         function a = area(obj)                
-            a = obj.height() * obj.width();
+            a = obj.height() * obj.width();            
         end
         
         function a = area_of_intersection(obj, another_patch)            
@@ -76,7 +78,7 @@ classdef Patch < dynamicprops
             xmax = min(xmax1, xmax2);
             ymax = min(ymax1, ymax2);
             if ymin <= ymax && xmin <= xmax
-                a = (ymax-ymin+1) * (xmax-xmin+1);
+                a = double((ymax-ymin+1)) * double((xmax-xmin+1));
             else
                 a = 0;
             end

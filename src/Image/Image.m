@@ -45,6 +45,10 @@ classdef Image < dynamicprops
         end
         
         function [varargout] = size(obj)                        
+            if length(obj) > 1                % Array of Images.
+                varargout{1} = length(obj);               
+                return
+            end
             if nargout == 2
                 varargout = cell(nargout);
                 varargout{1} = obj.width;
