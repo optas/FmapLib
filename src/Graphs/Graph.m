@@ -94,7 +94,7 @@ classdef Graph < dynamicprops
             end
         end
 
-        function D = in_degrees(obj)
+        function D = in_degrees(obj)            
             D = full(sum(obj.A, 1));
         end
         
@@ -161,7 +161,7 @@ classdef Graph < dynamicprops
                 ind = sub2ind(size(obj.A), from, to);
                 W   = full(obj.A(ind));
             else
-                W = obj.A(from, to);    
+                W = full(obj.A(from, to));
             end
         end
         

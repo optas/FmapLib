@@ -20,13 +20,16 @@ classdef Patch_Collection < dynamicprops
                 obj.image = in_image;                
                 if isa(corners, 'double')                
                     m = size(corners, 1);    
-                    if m < 1 
-                        error('A Patch Collection must consist of at least one Patch objects.')
-                    end                
+%                     if m < 1 
+%                         error('A Patch Collection must consist of at least one Patch objects.')
+%                     end                
                     obj.collection(1:m) = Patch();
                     for i = 1:m
                         if ~ Patch.is_valid(corners(i,:), in_image)
-                            warning('Patch %d cannot go with given image.\n', i);
+                            corners(i,:)
+                            size(in_image)
+                            
+                            error('Patch %d cannot go with given image.\n', i);
                         else
                             obj.collection(i) = Patch(corners(i, :));
                         end                    
@@ -250,23 +253,26 @@ classdef Patch_Collection < dynamicprops
                     inter_with_all = gt.intersection(p_patch);
                     has_overlap    = find(inter_with_all);
                     total_gt_area  = 0;
+                    
                     for g = 1:size(has_overlap)
                         total_gt_area = total_gt_area + gt.get_patch(has_overlap(g)).area();            
                     end
+                    
                     with_all_corloc   = sum(inter_with_all) ./ ((double(total_gt_area) + p_patch.area() - sum(inter_with_all)));
+                    if with_all_corloc > 1
+                       with_all_corloc = 1;  % Can happen when two gt' overlap (i.e. their tightest_boxes)
+                    end
                     C(p) = max(C(p), with_all_corloc);
                 end                               
                 
                 gt_all    = zeros(gt.image.height, gt.image.width);
                 ones_mask = ones(gt.image.height, gt.image.width);                
                 for j=1:size(gt)                    
-                    gt_all = gt_all  + gt.get_patch(j).extract_features(ones_mask , 'zero_pad');
+                    gt_all = gt_all + gt.get_patch(j).extract_features(ones_mask , 'zero_pad');
                 end
                 gt_all(gt_all > 0) = 1;
                 gt = Patch.tightest_box_of_segment(gt_all);                                
                 C  = max(C, obj.corloc(gt));
-                
-                
             end                           
 
         end

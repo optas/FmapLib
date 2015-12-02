@@ -1,7 +1,6 @@
 classdef Image_Features < dynamicprops      
     
-    methods (Static, Access = public)
-        
+    methods (Static, Access = public)        
         function [signatures] = hog_signature(in_image)                      
             h = in_image.height;
             w = in_image.width;
@@ -25,11 +24,8 @@ classdef Image_Features < dynamicprops
             end                    
         end
         
-        function [signatures] = local_binary_pattern_signatures(in_image, filter_dim)
-            if ~ exist('filter_dim', 'var')
-                filter_dim = [3, 3];
-            end
-            signatures = efficientLBP(in_image.CData, filter_dim);
+        function [signatures] = local_binary_pattern_signatures(in_image)
+            signatures = efficientLBP(in_image.CData);
             signatures = double(signatures) / 255;        
         end
 

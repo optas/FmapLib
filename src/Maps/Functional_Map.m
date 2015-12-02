@@ -459,6 +459,10 @@ classdef Functional_Map < dynamicprops
             B = D1 * D2' ;
             X = zeros(N2, N1);
             
+            if any(any(isnan(B))) || any(any(isnan(A_fixed)))
+                error('Nan is Fmap data.')
+            end
+            
             if lambda == 0                          % No eigenvalue regularization.
                 X = (A_fixed\B)';
             else
