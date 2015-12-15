@@ -92,7 +92,7 @@ classdef Patch < dynamicprops
         end
         
         function [np] = linear_interpolation(obj, from_width, to_width, from_height, to_height)                                   
-            [xmin, ymin, xmax, ymax] = obj.get_corners();            
+            [xmin, ymin, xmax, ymax] = obj.get_corners();                        
             n_xmin = (double(xmin) * to_width)  / from_width;
             n_xmax = (double(xmax) * to_width)  / from_width;
             n_ymin = (double(ymin) * to_height) / from_height;
@@ -156,7 +156,7 @@ classdef Patch < dynamicprops
                     for j = nns(i, :)
                         mis_pi_j = +Inf;           
                         loc_j = find(~cellfun(@isempty, patch_feat(j,:)));
-                        for pj = loc_j      %Proposals for image_j                        
+                        for pj = loc_j      % Proposals for image_j                        
                             mis_pi_j = min(mis_pi_j, patch_transferability(i, j, patch_feat{i, pi}, patch_feat{j, pj}, fmaps));
                         end
 %                         mis_pi_j = mis_pi_j / length(loc_j);

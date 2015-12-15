@@ -20,16 +20,14 @@ classdef Patch_Collection < dynamicprops
                 obj.image = in_image;                
                 if isa(corners, 'double')                
                     m = size(corners, 1);    
-%                     if m < 1 
-%                         error('A Patch Collection must consist of at least one Patch objects.')
-%                     end                
+                    if m < 1 
+                        error('A Patch Collection must consist of at least one Patch objects.')
+                    end                
                     obj.collection(1:m) = Patch();
                     for i = 1:m
                         if ~ Patch.is_valid(corners(i,:), in_image)
-                            corners(i,:)
-                            size(in_image)
-                            
                             error('Patch %d cannot go with given image.\n', i);
+                            
                         else
                             obj.collection(i) = Patch(corners(i, :));
                         end                    

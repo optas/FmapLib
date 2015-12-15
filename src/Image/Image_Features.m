@@ -1,7 +1,7 @@
 classdef Image_Features < dynamicprops      
     
     methods (Static, Access = public)        
-        function [signatures] = hog_signature(in_image)                      
+        function [signatures] = hog_signature(in_image)
             h = in_image.height;
             w = in_image.width;
             pad_size  = 10;      % TODO - remove fixed size.
@@ -26,6 +26,7 @@ classdef Image_Features < dynamicprops
         
         function [signatures] = local_binary_pattern_signatures(in_image)
             signatures = efficientLBP(in_image.CData);
+%             signatures  = 1 - double(signatures) / 255;
             signatures = double(signatures) / 255;        
         end
 
