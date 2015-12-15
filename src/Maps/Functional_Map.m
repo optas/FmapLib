@@ -429,41 +429,37 @@ classdef Functional_Map < dynamicprops
             residual = cvx_optval;               
         end
                         
-        function [X, residual] = sum_of_squared_frobenius_norms(D1, D2, L1, L2, lambda)
-            % Computes the functional map X that minimizes the following objective: 
+        function [X, residual] = sum_of_squared_frobenius_norms(P1, P2, L1, L2, lambda)
+            % Computes the Functional Map (X) that minimizes the following objective: 
             %
-            %       norm(X*D1-D2, 'fro')^2   +  lambda * norm(X*diag(L1) - diag(L2)*X, 'fro')^2.
+            %       norm(X*P1-P2, 'fro')^2   +  lambda * norm(X*diag(L1) - diag(L2)*X, 'fro')^2.
             %
             % Both Frobenius norms are squared, which allows for a least-squares type of solution. (see Details)
             %
             % Input: 
-            %           D1 - (n1 x m) matrix storing source probe functions in its columns.
-            %           D2 - (n2 x m) matrix storing target probe functions in its columns.
+            %           P1 - (n1 x m) matrix storing source probe functions in its columns.
+            %           P2 - (n2 x m) matrix storing target probe functions in its columns.
             %           L1 - (n1 x 1) eigenvalues of source projection basis.
             %           L2 - (n2 x 1) eigenvalues of target projection basis.
             % Output:
             %           X  - (n2 x n1) functional map that solves objective defined above.
             % 
             % Details : 
-            % The code computes the gradient wrt. X, which is given by (X*D1-D2)*D1' for the first summand of objective
+            % The code computes the gradient wrt. X, which is given by (X*P1-P2)*P1' for the first summand of objective
             % and by (((lambda1_i-lambda2_j)^2)*X_{ij})_{ij} for the second one. The gradient is set to zero, and since            
             % this is a convex problem, the global optimum is acquired.
             
-            if size(D1, 2) ~= size(D2, 2)
+            if size(P1, 2) ~= size(P2, 2)
                 error ('Same number of probe functions must be used for source and target spaces.' )
             end                        
-                
-            N1 = size(D1, 1);
-            N2 = size(D2, 1);            
-            A_fixed = D1 * D1' ;
-            B = D1 * D2' ;
+                            
+            N1 = size(P1, 1);
+            N2 = size(P2, 1);            
+            A_fixed = P1 * P1' ;
+            B = P1 * P2' ;
             X = zeros(N2, N1);
-            
-            if any(any(isnan(B))) || any(any(isnan(A_fixed)))
-                error('Nan is Fmap data.')
-            end
-            
-            if lambda == 0                          % No eigenvalue regularization.
+
+            if lambda == 0                          % No regularization.
                 X = (A_fixed\B)';
             else
                 for i = 1 : N2
@@ -472,7 +468,7 @@ classdef Functional_Map < dynamicprops
                 end
             end
             assert(all(size(X) == [N2 N1]))
-            residual = norm((X*D1)-D2, 'fro').^2;
+            residual = norm((X*P1)-P2, 'fro').^2;
             if lambda > 0
                 residual = residual + (lambda * norm((X * diag(L1)) - (diag(L2) * X), 'fro').^2);
             end                
