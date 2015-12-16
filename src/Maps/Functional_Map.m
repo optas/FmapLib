@@ -460,7 +460,12 @@ classdef Functional_Map < dynamicprops
             X = zeros(N2, N1);
 
             if lambda == 0                          % No regularization.
-                X = (A_fixed\B)';
+                if rcond(A_fixed) < eps
+                    X = (pinv(A_fixed) * B)';
+                else                    
+                    X = (A_fixed\B)';
+                end
+                
             else
                 for i = 1 : N2
                     A = diag(lambda * (L1 - L2(i)) .^ 2) + A_fixed;
@@ -472,6 +477,7 @@ classdef Functional_Map < dynamicprops
             if lambda > 0
                 residual = residual + (lambda * norm((X * diag(L1)) - (diag(L2) * X), 'fro').^2);
             end                
+            assert(all(all(isfinite(X))));
         end
           
         function [X, residual] = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)            
