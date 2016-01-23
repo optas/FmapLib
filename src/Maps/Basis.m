@@ -5,7 +5,7 @@ classdef Basis < dynamicprops
     %
     % (c) Achlioptas, Corman, Guibas - 2015  -  http://www.fmaplib.org
     
-    properties (SetAccess = private)               
+    properties (SetAccess = public)               
         spectra;    % A struct carrying the eigenvalues and eigenvectors of the basis.
     end
         

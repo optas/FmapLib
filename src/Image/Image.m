@@ -72,7 +72,7 @@ classdef Image < dynamicprops
             if isa(obj.CData, 'uint8') || isa(obj.CData, 'uint16')
                 c = im2double(obj.CData);                  % Makes each chanel have values in [0,1].
             else 
-                obj.CData;    % TODO-P See what other data types are expected on an image.
+                c = obj.CData;    % TODO-P See what other data types are expected on an image.
             end
         end
            
@@ -105,8 +105,16 @@ classdef Image < dynamicprops
             I = zeros(obj.height, obj.width);
             [xmin, ymin, xmax, ymax] = patch.get_corners();            
             I(ymin:ymax, xmin:xmax) = 1;           
+            I = logical(I);
         end
-                
+        
+        function [I] = patch_complement_indicator(obj, patch)
+            I = ones(obj.height, obj.width);
+            [xmin, ymin, xmax, ymax] = patch.get_corners();            
+            I(ymin:ymax, xmin:xmax) = 0;           
+            I = logical(I);
+        end
+        
         function [obj] = set_gt_segmentation(obj, segmentation)
             % Adds dynamic property 'gt_segmentation' corresponding to a groundtruth segmentation of the image.            
             propname = 'gt_segmentation';
@@ -154,6 +162,18 @@ classdef Image < dynamicprops
         function I = blank_image(h, w)
                 I = Image(ones(h, w, 3), 'blank_image');
         end    
+        
+        function new_values = normalize_pixel_values(values)
+            if ndims(values) < 3   % Grayscale image or vector.                               
+                new_values = values - min(min(values));
+                new_values = new_values ./ max(max(new_values));
+            else
+                error('Not implemented yet.')
+            end
+         
+        end
+        
+        
     end
     
 end

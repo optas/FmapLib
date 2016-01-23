@@ -66,6 +66,17 @@ classdef Patch_Collection < dynamicprops
                 end                
             end
         end
+                
+        function I = masked_image(obj)
+            I = obj.image;            
+            mask = zeros(I.height, I.width);
+            for i = 1:size(obj)
+                pi = obj.get_patch(i);
+                [xmin, ymin, xmax, ymax] = pi.get_corners;
+                mask(ymin:ymax, xmin:xmax) = 1;
+            end 
+            I = I.apply_mask(mask);            
+        end
         
         function [keep] = filter_patches(obj, varargin)
             % Keep patches that are not area-wise too big or too small wrt. to the obj.image.

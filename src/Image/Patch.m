@@ -24,7 +24,21 @@ classdef Patch < dynamicprops
                 error('Wrong number of arguments.')
             end
         end
-                   
+           
+        function [varargout] = size(obj)                        
+            if length(obj) > 1                % Array of Patches.
+                varargout{1} = length(obj);               
+                return
+            end
+            if nargout == 2
+                varargout = cell(nargout);
+                varargout{1} = obj.width;
+                varargout{2} = obj.height;
+            else
+                varargout{1} = [obj.width, obj.height];
+            end
+        end
+        
         function [varargout] = get_corners(obj)
             % Getter of object's property 'corners'.
             if nargout == 4

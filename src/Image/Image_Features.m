@@ -26,18 +26,17 @@ classdef Image_Features < dynamicprops
         
         function [signatures] = local_binary_pattern_signatures(in_image)
             signatures = efficientLBP(in_image.CData);
-%             signatures  = 1 - double(signatures) / 255;
-            signatures = double(signatures) / 255;        
+            signatures  = 1 - double(signatures) / 255;                         % "1 minus signature" to put high values on white pixels (as sift).
         end
 
-        function [signatures] = sift_signature(in_image)
+        function [signatures] = sift_signature_2(in_image)
             cellsize    = 3; 
             gridspacing = 1;
             I = im2double(in_image.CData);
             signatures = im2double(mexDenseSIFT(I, cellsize, gridspacing));
         end
         
-        function [signatures] = sift_signature_2(in_image)
+        function [signatures] = sift_signature(in_image)
             SIFTparam.grid_spacing = 1;     % Distance between grid centers.
             patch_sizes = [8, 12, 16];
             [w, h] = size(in_image);

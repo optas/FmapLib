@@ -477,10 +477,10 @@ classdef Graph < dynamicprops
             end
                 
             if strcmp(graph_type, 'clique')
-                n = varargin{1};
-                directed  = false;                
-                adj = ones(n,n) - diag(ones(n,1)) ; 
-                G = Graph(adj, directed, sprintf('%d_clique', n));
+                n        = varargin{1};
+                directed = false;                
+                adj      = ones(n,n) - diag(ones(n,1)) ; 
+                G        = Graph(adj, directed, sprintf('%d_clique', n));
             
             elseif strcmp(graph_type, 'lattice')
                 adj = lattice(m, n);
@@ -499,9 +499,24 @@ classdef Graph < dynamicprops
                 center       = varargin{1};
                 neighb       = varargin{2};
                 direction    = varargin{3};
+                if ~any(strcmpi(direction, {'in', 'out', 'no'}))
+                    error('Direction input must be "in" or "out" or "no".')
+                end
                 adj          = star(center, neighb, direction);
-                default_name = sprintf('star_centered_at_%d', center);
+                default_name = sprintf('star_centered_at_%d', center);                
                 G = Graph(adj, ~strcmp(direction, 'no'), default_name);                
+            
+            elseif strcmp(graph_type, 'bipartite_fc')
+                left_nodes  = varargin{1};
+                right_nodes = varargin{2};                                  
+                num_nodes   = left_nodes  + right_nodes;                
+                i           = vec(repmat(1:left_nodes, right_nodes, 1));
+                j           = vec(repmat(left_nodes+1:left_nodes+right_nodes, right_nodes, 1)');
+                assert(length(i) == left_nodes * right_nodes );
+                adj          = sparse(i, j, ones(length(i), 1), num_nodes,  num_nodes);                    
+                default_name = sprintf('bipartite_fc_%d_%d', left_nodes, right_nodes);                
+                directed     = false;
+                G = Graph(adj+adj', directed, default_name);
                 
             elseif strcmp(graph_type, 'r_radius_connected')
                 radius = varargin{3};

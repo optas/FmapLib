@@ -79,8 +79,7 @@ classdef Laplacian < Basis
         
     end % End of public object-tied functions.
     
-    
-    
+
     methods (Access = public, Hidden = true)
 
         function [Phi, lambda] = compute_spectra(obj, eigs_num)
@@ -92,7 +91,7 @@ classdef Laplacian < Basis
                 error('Eigenvalues must be in range of [1, num_of_vertices-1].');
             end            
                         
-            sigma = -1e-5; % TODO-V: sigma=0 or 'SM'?
+            sigma = -1e-5; % TODO: sigma=0 or 'SM'?
             [Phi, lambda] = eigs(obj.L, eigs_num, sigma);
             lambda        = diag(lambda);
             
