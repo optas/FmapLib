@@ -2,9 +2,9 @@ classdef Functional_Map < dynamicprops
     % A class representing a functional map, i.e., a map between functions of two spaces.
     % The implemenation provides a variety of ways for constructing and optimizing such maps.
     %
-    % Alongside it implements a series of related utilities such as:         
+    % Alongside it implements a series of related utilities such as:
     %       Shape difference operators, 
-    %       Genearation of functional maps given point-to-point correspondences, 
+    %       Creation of functional maps given point-to-point correspondences, 
     %       Quality evaluation of maps.
     %
     % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
@@ -87,8 +87,7 @@ classdef Functional_Map < dynamicprops
                 case 'frobenius'
                     [F, residual] = Functional_Map.sum_of_frobenius_norms(source_feat, target_feat, source_reg, target_reg, options.lambda);    % TODO-P add unit-test with cvx code
                 case 'l1_and_frobenius'
-                    [F, residual] = Functional_Map.l1_and_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);                                
-                
+                    [F, residual] = Functional_Map.l1_and_frobenius_norms_cvx(source_feat, target_feat, source_reg, target_reg, options.lambda);                                                
                 case 'frobenius_with_covariance'
                     obj.source_features.project_features(obj.source_basis, neigs_source);
                     C1 = obj.source_features.covariance_matrix();
@@ -477,7 +476,7 @@ classdef Functional_Map < dynamicprops
             if lambda > 0
                 residual = residual + (lambda * norm((X * diag(L1)) - (diag(L2) * X), 'fro').^2);
             end                
-            assert(all(all(isfinite(X))));
+%             assert(all(all(isfinite(X))));
         end
           
         function [X, residual] = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)            
