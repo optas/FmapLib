@@ -71,7 +71,7 @@ classdef Basis < dynamicprops
             R = obj.evecs(eigs_num) * coeffs;            
         end
 
-        function [reconstructed] = compress_and_reconstruct(obj, in_funcs, eigs_num)
+        function [reconstructed] = compress_and_reconstruct(obj, eigs_num, in_funcs)
             % Projects the input functions onto the basis, and uses the resulting coeefficients to reconstruct
             % the original input functions. The resulting reconstructed functions are useful to discover which parts 
             % of the functions are well preserved in the basis.
