@@ -51,10 +51,10 @@ classdef Image < dynamicprops
             end
             if nargout == 2
                 varargout = cell(nargout);
-                varargout{1} = obj.width;
-                varargout{2} = obj.height;
+                varargout{1} = obj.height;
+                varargout{2} = obj.width;
             else
-                varargout{1} = [obj.width, obj.height];
+                varargout{1} = [obj.height, obj.width];
             end
         end
         
@@ -77,7 +77,7 @@ classdef Image < dynamicprops
         end
            
         function a = area(obj)                       
-            a = obj.width * obj.height;
+            a = obj.height * obj.width;
         end
         
         function [b] = is_rgb(obj)

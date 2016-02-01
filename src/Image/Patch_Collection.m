@@ -66,7 +66,15 @@ classdef Patch_Collection < dynamicprops
                 end                
             end
         end
-                
+           
+        function F = plot_patches(obj, patch_ids)
+            obj.image.plot();
+            hold on;                        
+            for i = 1:length(patch_ids)
+                F = obj.get_patch(patch_ids(i)).plot();
+            end                            
+        end
+        
         function I = masked_image(obj)
             I = obj.image;            
             mask = zeros(I.height, I.width);
@@ -93,7 +101,7 @@ classdef Patch_Collection < dynamicprops
             for i = 1:size(obj)
                 pi = obj.collection(i);
                 
-                if options.no_lines && (pi.width() == 1 || pi.height() == 1)        % Remove line - patches.
+                if options.no_lines && (pi.width() == 1 || pi.height() == 1)    % Remove line - patches.
                     keep(i) = false;
                     continue;
                 end
@@ -202,9 +210,8 @@ classdef Patch_Collection < dynamicprops
             end            
         end
         
-        function [H] = weight_map(obj, normalized)
-            [h, w] = size(obj.image);
-            H = zeros(w, h);
+        function [H] = weight_map(obj, normalized)            
+            H = zeros(size(obj.image));
             for i = 1:size(obj)                
                 [xmin, ymin, xmax, ymax] = obj.collection(i).get_corners();
                 H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + 1;               
@@ -283,8 +290,33 @@ classdef Patch_Collection < dynamicprops
                 gt = Patch.tightest_box_of_segment(gt_all);                                
                 C  = max(C, obj.corloc(gt));
             end                           
-
         end
+        
+        function C = equivalence_classes_in_area(obj, num_classes)          
+            areas = arrayfun(@(p) p.area, obj.collection);
+            C     = zeros(length(areas), 1);
+            mass_in_class = 100 / num_classes;
+            prcs = mass_in_class: mass_in_class: (100-mass_in_class);
+            prcs = prctile(areas, prcs);
+            prcs = [0, prcs];
+            class_ind = 1;
+            for i = 1:length(prcs)-1                
+                in_class = (areas >= prcs(i) & areas < prcs(i+1));
+                if sum(in_class) > 0                                    % This conditions complicated logic but is necessary for extreme cases.
+                    C = C + class_ind * in_class;
+                    class_ind  = class_ind  + 1;
+                end                    
+            end            
+            
+            i = i + 1;          % Largest/last class defined only by being bigger than last percentile.
+            C = C + class_ind * (areas >= prcs(i));
+            
+            assert(all(C>0) & all(C<=num_classes))               
+            for i = 1:class_ind-1
+                assert(max(areas(C==i)) <= min(areas(C==i+1)))                
+            end            
+        end
+        
         
     end
     

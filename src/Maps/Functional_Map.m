@@ -480,10 +480,11 @@ classdef Functional_Map < dynamicprops
         end
           
         function [X, residual] = sum_of_frobenius_norms(D1, D2, L1, L2, lambda)            
-            % TODO-P: Add documentation.
+            % Solves argmin||X*D1-D2||_Fro + lambda*||X*L1 - L2*X||_Fro. 
+            %
             % This code uses Sedumi to write the objective function as a
             % Semi-definite program in the dual form. In this problem we
-            % aim to minimize ||X*D1-D2|| + lambda*||X*L1-L2*X||. This is
+            % aim to This is
             % done by solving for min t1 + lambda*t2, s.t t1 >=
             % ||X*D1-D2||, t2 >= ||X*L1-L2*X||.
             % Written by Fan Wang, 2014.
@@ -781,7 +782,7 @@ classdef Functional_Map < dynamicprops
             end            
             num_maps = length(in_maps);
             if length(out_maps) ~= num_maps
-                error('In and Out maps must be of the same size.')
+                error('Same number of In and Out maps must be given.')
             end
             
             W  = zeros(num_maps * r, c);

@@ -69,17 +69,36 @@ classdef Laplacian < Basis
             assert(num_vertices  == obj.G.num_vertices);
             % Project feature vectors into Laplacian basis.            
             Proj = zeros(eigs_num, functions_total);            % Pre-allocate space.
-            right = 0;                                 
+            right = 0;                
+            
+            atol = 1e-03; rtol = +Inf;            
+            if ~all_close(evecs' * evecs, eye(eigs_num), atol, rtol) 
+                left  = right + 1;
+                right = right + size(varargin{i}, 2);
+                Proj(:, left:right)  = evecs \ varargin{i};
+            end
+            
+            return
+            
             for i = 1:n_varargin
                 left  = right + 1;
                 right = right + size(varargin{i}, 2);
-                  Proj(:, left:right)  = evecs' * varargin{i};  % Exploits orthonormality of basis.
+                Proj(:, left:right)  = evecs' * varargin{i};  % Exploits orthonormality of basis.
             end            
+        end
+    
+        function f = plot_basis(obj, evec_id)
+            f = figure;
+            if isa(obj.G, 'Image_Graph')
+                [h, w] = size(obj.G.I);
+                imagesc(reshape(obj.spectra.evecs(:,evec_id), h, w));
+            else
+                error('Not implemented yet');
+            end        
         end
         
     end % End of public object-tied functions.
     
-
     methods (Access = public, Hidden = true)
 
         function [Phi, lambda] = compute_spectra(obj, eigs_num)
