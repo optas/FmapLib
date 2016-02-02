@@ -75,6 +75,14 @@ classdef Patch_Collection < dynamicprops
             end                            
         end
         
+        function obj = add_patch_property(obj, prop_id, prop_content)
+            if size(prop_content, 1) ~= size(obj)
+                error('Give content for every patch (add empty if needed).')
+            end
+            obj.addprop(prop_id);
+            obj.(prop_id) = prop_content;
+        end
+        
         function I = masked_image(obj)
             I = obj.image;            
             mask = zeros(I.height, I.width);
@@ -248,6 +256,13 @@ classdef Patch_Collection < dynamicprops
             end        
         end
         
+        function A = areas(obj, patch_id)
+            if nargin == 1 % Return the areas of every patch.
+                A = arrayfun( @(p) p.area(), obj.collection);
+            else
+                A = arrayfun( @(p) p.area(), obj.collection(patch_id));                
+            end
+        end
         
         function obj = merge_with(obj, other_collection)
             new_patches = size(other_collection);
@@ -316,6 +331,29 @@ classdef Patch_Collection < dynamicprops
                 assert(max(areas(C==i)) <= min(areas(C==i+1)))                
             end            
         end
+      
+        
+        function [F] = hog_descriptors(obj, cell_size, n_orients, scaling)
+            % Fill in unset optional values.
+            if nargin == 1                
+                cell_size   = 8;
+                n_orients  = 9;
+                scaling    = 128;
+            end                              
+            hog_size = (floor(scaling / cell_size))^2 * 4 * n_orients;
+            F        = zeros(size(obj), hog_size);
+            I        = obj.image;
+            patches  = obj.collection;
+            for p = 1:size(obj)
+                content = I.content_in_patch(patches(p));
+                box     = imResample(single(content), [scaling scaling]) / 255; 
+%                 sig     = vl_hog(box, cell_size, 'numOrientations', n_orients, 'variant', 'dalaltriggs');
+%                 sig     = extractHOGFeatures(box, 'CellSize', [cell_size, cell_size], 'NumBins', n_orients);
+                sig     = hog(box, cell_size, n_orients);
+                F(p,:)  = vec(sig);
+            end
+        end
+        
         
         
     end
