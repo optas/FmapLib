@@ -7,10 +7,9 @@ classdef Image_Features < dynamicprops
             w = in_image.width;
             block_size = [1,1];
             [hog_feats] = extractHOGFeatures(in_image.CData);
-            [hogfeatures, visualization] = extractHOGFeatures(images(1).resize(100,100).CData, [10,10], 'BlockSize', block_size);
-        
+            [hogfeatures, visualization] = extractHOGFeatures(images(1).resize(100,100).CData, [10,10], 'BlockSize', block_size);        
         end
-                       
+                  
         function [signatures] = hog_signature_2(in_image)
             h = in_image.height;
             w = in_image.width;

@@ -82,7 +82,11 @@ classdef Image < dynamicprops
         
         function [b] = is_rgb(obj)
             b = ndims(obj.CData) == 3;
-        end          
+        end
+        
+        function obj = im2single(obj)
+            obj.CData = im2single(obj.CData);
+        end
                          
         function obj = set_patches(obj, patches)
             propname = 'patches';

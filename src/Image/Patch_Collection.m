@@ -127,7 +127,6 @@ classdef Patch_Collection < dynamicprops
                         continue;
                     end
                 end
-                
             end           
         end
                 
@@ -218,11 +217,15 @@ classdef Patch_Collection < dynamicprops
             end            
         end
         
-        function [H] = weight_map(obj, normalized)            
+        function [H] = weight_map(obj, masses, normalized)            
             H = zeros(size(obj.image));
             for i = 1:size(obj)                
                 [xmin, ymin, xmax, ymax] = obj.collection(i).get_corners();
-                H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + 1;               
+                if exist('masses', 'var')
+                    H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + masses(i);               
+                else
+                    H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + 1;               
+                end
             end            
             if exist('normalized', 'var') && normalized
                 H = H ./ sum(H(:)) ;
@@ -269,16 +272,23 @@ classdef Patch_Collection < dynamicprops
             obj.collection(end+1: end+new_patches) = other_collection.collection(:);
         end
      
-        function C = corloc_with_gt(obj)
-            C = zeros(size(obj), 1);
-            gt = obj.image.gt_segmentation;
+        function C = corloc_with_gt(obj, options)
+            if exist('options', 'var') && isfield(options, 'lax_corloc')
+                lax_corloc = options.lax_corloc;
+            else
+                lax_corloc = false;
+            end
             
+            C  = zeros(size(obj), 1);
+            gt = obj.image.gt_segmentation;
+
             if size(gt) == 1                                     
+                C = obj.corloc(gt.get_patch(1));                            
+            elseif size(gt) > 1 && ~lax_corloc
                 for g = 1:size(gt)
-                    C = max(C, obj.corloc(gt.get_patch(g)));
-                end            
-            elseif size(gt) > 1            
-                
+                    C = max(C, obj.corloc(gt.get_patch(g)));                            
+                end                
+            else           
                 for p = 1:size(obj)                    % Measure how well you do only in those that you hit.
                     p_patch        = obj.collection(p);
                     inter_with_all = gt.intersection(p_patch);
@@ -308,6 +318,10 @@ classdef Patch_Collection < dynamicprops
         end
         
         function C = equivalence_classes_in_area(obj, num_classes)          
+            if num_classes == 1
+                C = ones(size(obj), 1);
+                return
+            end
             areas = arrayfun(@(p) p.area, obj.collection);
             C     = zeros(length(areas), 1);
             mass_in_class = 100 / num_classes;
@@ -331,19 +345,68 @@ classdef Patch_Collection < dynamicprops
                 assert(max(areas(C==i)) <= min(areas(C==i+1)))                
             end            
         end
-      
+              
+        function I = inclusions(obj, contain, more_than)
+            I = cell(size(obj),1);
+            areas = obj.areas;
+            for p = 1:size(obj)
+                bigger_boxes = (areas > more_than .* areas(p));  
+                big_index = find(bigger_boxes);
+                patch_p   = obj.get_patch(p);
+                for b = 1:length(big_index)                         % Discard big boxes that do not contain enough of p.   
+                    big_p = big_index(b);
+                    if obj.get_patch(big_p).area_of_intersection(patch_p) < contain * areas(p)
+                        bigger_boxes(big_p) = false;
+                    end        
+                end
+                I{p} = find(bigger_boxes);
+            end                                               
+        end
         
-        function [F] = hog_descriptors(obj, cell_size, n_orients, scaling)
+        function S = most_self_similar(obj, inclusions, descriptors, topk)
+            S = zeros(size(obj), 1);
+            for p = 1:size(obj)                
+                if isempty(inclusions{p})
+                    continue;
+                end
+                [~, ids] = sort(pdist2_vec(descriptors(inclusions{p},:), descriptors(p,:)), 'Ascend');
+                S(p) = inclusions{p}(ids(1:topk));
+            end                    
+        end
+        
+        function P = inside_gt(obj, topk)
+            % topk patches that are covered the most by the gt(s) of th collection.            
+            gt = obj.image.gt_segmentation;
+            areas = obj.areas();            
+            overlaps = zeros(size(obj), 1);                        
+            for g = 1 : size(gt)
+                bitmask  = obj.image.patch_indicator(gt.get_patch(g));                
+                overlaps = max(overlaps, obj.area_inside_mask(bitmask));
+            end            
+            overlaps = overlaps ./ areas;   % Normalize to get fraction of area inside gt.                      
+            [~, top_ids] = sort(overlaps, 'Descend');
+            P = top_ids(1:topk);
+        end
+        
+        
+        
+        %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%  %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%
+        %%              Functions deriving Features on Patches.                             %%
+        %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%  %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%
+        
+        function [F] = hog_features(obj, cell_size, n_orients, scaling)
             % Fill in unset optional values.
             if nargin == 1                
-                cell_size   = 8;
+                cell_size  = 8;
                 n_orients  = 9;
                 scaling    = 128;
-            end                              
-            hog_size = (floor(scaling / cell_size))^2 * 4 * n_orients;
-            F        = zeros(size(obj), hog_size);
+            end                                          
             I        = obj.image;
             patches  = obj.collection;
+            hog_size = (floor(scaling / cell_size))^2 * 4 * n_orients;                       
+%             temp =  extractHOGFeatures(imResample(single(I.content_in_patch(patches(1))), [scaling scaling]), 'CellSize', [cell_size, cell_size], 'NumBins', n_orients);            
+%             hog_size = length(temp);
+            F        = zeros(size(obj), hog_size);               
             for p = 1:size(obj)
                 content = I.content_in_patch(patches(p));
                 box     = imResample(single(content), [scaling scaling]) / 255; 
@@ -354,8 +417,33 @@ classdef Patch_Collection < dynamicprops
             end
         end
         
+        function [F] = neural_net_features(obj, net, layer_id)
+            I          = obj.image; 
+            I          = I.im2single();
+            nn_im_size = net.meta.normalization.imageSize(1:2);
+            net.layers = net.layers(1:end-layer_id);            
+            feat_dim   = net.layers{end}.size(end);
+
+            num_patches = size(obj);
+            patches     = obj.collection;
+            im          = single(zeros(nn_im_size(1), nn_im_size(2), 3, num_patches));                        
+            av          = repmat(net.meta.normalization.averageImage, nn_im_size(1), nn_im_size(2));            
+            
+            tic
+            for i = 1:size(obj)                
+                im(:,:,:,i) = imresize(I.content_in_patch(patches(i)), nn_im_size) - av;
+            end            
+            toc            
+%             im = gpuArray(im);                                   
+            tic
+            net.info.opts.batchSize = 100;
+            F      = vl_simplenn(net, im, [], []);
+            toc
+        end
         
         
+        
+
     end
     
     

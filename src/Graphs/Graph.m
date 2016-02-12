@@ -262,33 +262,51 @@ classdef Graph < dynamicprops
                 T = sort(T, 2);
                 T = unique(T, 'rows');
             else
-                error('NIY.')
+                % out - in
+                T = [];
+                ego_in  = obj.in_neighbors(ego);
+                ego_out = obj.out_neighbors(ego);
+                for i = 1:length(ego_out)
+                    out_out = obj.out_neighbors(ego_out(i));                    
+                    common  = intersect(out_out, ego_in);
+                    t = length(common);
+                    if t ~= 0
+                        T(end+1:end+t,:) = [repmat(ego_out(i), t, 1) common];
+                    end
+                end
             end
         end
         
         function t = num_triangles(obj)            
-            % TODO-P does it work for undirected graphs?
-            Au = obj.A;
-            n  = size(Au, 1); 
-            Au(1:n+1:n*n) = 0;  % Remove self-loops.
-            Au(Au ~= 0) = 1; 
-            t = trace(Au^3) / 6;
+            if ~ obj.is_directed
+                Au = obj.A;
+                n  = size(Au, 1); 
+                Au(1:n+1:n*n) = 0;  % Remove self-loops.
+                Au(Au ~= 0) = 1; 
+                t = trace(Au^3) / 6;
+            else
+                error('NIY.')
+            end
+            
         end
         
         function [T] = triangles(obj)
+            % If obj is directed, then output is of the form: [ego - out edge - in edge].
             N = obj.num_vertices;            
             T = [];
             for i = 1:N
                 t_in_i = obj.triangle_edges_in_ego_network(i);    
                 t      = size(t_in_i, 1);
                 if t > 1                    
-                    T(end+1:end+t,:) = [t_in_i repmat(i, t, 1)];
+                    T(end+1:end+t,:) = [repmat(i, t, 1) t_in_i];
                 elseif t == 1
-                    T(end+1:end+t,:) = [t_in_i repmat(i, t, 1)'];
+                    T(end+1:end+t,:) = [repmat(i, t, 1)' t_in_i];
                 end
             end                    
-            T = unique(sort(T, 2), 'rows');
-            assert(obj.num_triangles == size(T,1))
+            if ~ obj.is_directed
+                T = unique(sort(T, 2), 'rows');
+                assert(obj.num_triangles == size(T,1));
+            end            
         end
        
         function [S, C] = connected_components(obj, weak)
