@@ -1,17 +1,16 @@
 classdef Patch_Collection < dynamicprops
-    % TODO-s aggregate: implement subref
     
     properties (GetAccess = public, SetAccess = private)
-        collection = Patch;        % (Patch Array) storing all the patches.
-        image;
+        collection = Patch;     %    (Patch Array) storing all the patches.
+        image;                  %    (Image) the image over which the patches were defined.
     end
 
     methods (Access = public)                
-        function obj = Patch_Collection(corners, in_image)            
+        function obj = Patch_Collection(corners, in_image)
             % Class Constructor.
             % Input:
             %           corners  - (N x 4) matrix carrying the (x,y) coordinates of the 2 extreme corners defining a
-            %                      rectangular patch. The expected format for each row is: [xmin, ymin, xmax, ymax].                
+            %                      rectangular patch. The expected format for each row is: [xmin, ymin, xmax, ymax].
             %           in_image - (Image) The image, over which the patches were defined.
             if nargin == 0
                 obj.collection = Patch();            
@@ -47,13 +46,14 @@ classdef Patch_Collection < dynamicprops
         end
         
         function p = get_patch(obj, p_index)
-            p = obj.collection(p_index) ;
+            % TODO: implement subref.
+            p = obj.collection(p_index);
         end
 
         function F = plot_collection(obj, scores)
             obj.image.plot();
             hold on;            
-            if exist('scores', 'var')                
+            if exist('scores', 'var')
                 colors = vals2colormap(scores);
                 for i = 1:length(scores)
                     if scores(i) ~= 0
@@ -79,19 +79,28 @@ classdef Patch_Collection < dynamicprops
             if size(prop_content, 1) ~= size(obj)
                 error('Give content for every patch (add empty if needed).')
             end
-            obj.addprop(prop_id);
+            if ~ isprop(obj, prop_id)
+                obj.addprop(prop_id);
+            end
             obj.(prop_id) = prop_content;
         end
         
-        function I = masked_image(obj)
-            I = obj.image;            
-            mask = zeros(I.height, I.width);
-            for i = 1:size(obj)
-                pi = obj.get_patch(i);
-                [xmin, ymin, xmax, ymax] = pi.get_corners;
-                mask(ymin:ymax, xmin:xmax) = 1;
-            end 
-            I = I.apply_mask(mask);            
+        function R = rects(obj)
+            if isprop(obj, 'rects_prop')
+                R = obj.rects_prop;
+            else
+                n = size(obj);
+                c = obj.collection;
+                R = zeros(n,4);
+                for i = 1:n
+                    R(i,1) = c(i).corners(1);
+                    R(i,2) = c(i).corners(2);                
+                    R(i,3) = c(i).height;
+                    R(i,4) = c(i).width;
+                end
+                obj.addprop('rects_prop');
+                obj.('rects_prop') = R;
+            end
         end
         
         function [keep] = filter_patches(obj, varargin)
@@ -129,7 +138,7 @@ classdef Patch_Collection < dynamicprops
                 end
             end           
         end
-                
+                               
         function purge_patches(obj, purgatory_list)
             obj.collection = obj.collection(purgatory_list);
         end
@@ -159,7 +168,7 @@ classdef Patch_Collection < dynamicprops
         end
                 
         function [A] = area_inside_mask(obj, bitmask)
-            % Computes for every patch of the Patch_Collection, the area that resides inside the bit mask.
+            % Computes for every patch of the Patch_Collection, the area (num pixels) that resides inside the bit mask.
             %
             % Input:    
             %
@@ -183,6 +192,17 @@ classdef Patch_Collection < dynamicprops
                 [xmin, ymin, xmax, ymax] = pi.get_corners();                
                 A(i)  = sum(sum(bitmask(ymin:ymax, xmin:xmax)));
             end
+        end
+        
+        function I = mask_image_outside_patches(obj)
+            I = obj.image;            
+            mask = zeros(I.height, I.width);
+            for i = 1:size(obj)
+                pi = obj.get_patch(i);
+                [xmin, ymin, xmax, ymax] = pi.get_corners;
+                mask(ymin:ymax, xmin:xmax) = 1;
+            end 
+            I = I.apply_mask(mask);            
         end
         
         function [overlaps] = overlap_with_patch(obj, patch)
@@ -232,6 +252,15 @@ classdef Patch_Collection < dynamicprops
             end
         end
         
+        function [H] = color_map(obj, masses)            
+            H = zeros(size(obj.image));
+            for i = 1:size(obj)                
+                [xmin, ymin, xmax, ymax] = obj.collection(i).get_corners();
+                H(ymin:ymax, xmin:xmax) = max(H(ymin:ymax, xmin:xmax),  masses(i));                              
+            end                       
+        end
+        
+        
         function new_collection = keep_only(obj, keep_list)
             new_collection = Patch_Collection();
             new_collection.set_collection(obj.collection(keep_list), obj.image);
@@ -245,7 +274,7 @@ classdef Patch_Collection < dynamicprops
             end
         end
         
-        function [p] = closest_to_gt(obj, top_k)            
+        function [varargout] = closest_to_gt(obj, top_k)            
             gt = obj.image.gt_segmentation;
             p = [];            
             if ~ isempty(gt)                
@@ -254,14 +283,23 @@ classdef Patch_Collection < dynamicprops
                     C   = obj.corloc(gt.get_patch(g));
                     [~, ids] = sort(C, 'descend');
                     best_per_gt(g, :) = ids(1:top_k);                    
-                end                
-                p = obj.keep_only(unique(best_per_gt(:)));
-            end        
+                end               
+                p = unique(best_per_gt(:), 'stable');                                
+            end
+            varargout = cell(nargout);                
+            varargout{1} = p;
+            if nargout == 2                
+                varargout{2} = obj.keep_only(p);
+            end               
         end
         
         function A = areas(obj, patch_id)
-            if nargin == 1 % Return the areas of every patch.
-                A = arrayfun( @(p) p.area(), obj.collection);
+            if nargin == 1 % Return the areas of every patch.                
+                if size(obj) == 1
+                    A = obj.collection(1).area();
+                else
+                    A = arrayfun( @(p) p.area(), obj.collection);
+                end                
             else
                 A = arrayfun( @(p) p.area(), obj.collection(patch_id));                
             end
@@ -322,7 +360,7 @@ classdef Patch_Collection < dynamicprops
                 C = ones(size(obj), 1);
                 return
             end
-            areas = arrayfun(@(p) p.area, obj.collection);
+            areas = obj.areas;
             C     = zeros(length(areas), 1);
             mass_in_class = 100 / num_classes;
             prcs = mass_in_class: mass_in_class: (100-mass_in_class);
@@ -331,7 +369,7 @@ classdef Patch_Collection < dynamicprops
             class_ind = 1;
             for i = 1:length(prcs)-1                
                 in_class = (areas >= prcs(i) & areas < prcs(i+1));
-                if sum(in_class) > 0                                    % This conditions complicated logic but is necessary for extreme cases.
+                if sum(in_class) > 0    % This conditions complicates coding logic but is necessary for extreme input cases.
                     C = C + class_ind * in_class;
                     class_ind  = class_ind  + 1;
                 end                    
@@ -346,32 +384,79 @@ classdef Patch_Collection < dynamicprops
             end            
         end
               
-        function I = inclusions(obj, contain, more_than)
-            I = cell(size(obj),1);
-            areas = obj.areas;
-            for p = 1:size(obj)
-                bigger_boxes = (areas > more_than .* areas(p));  
-                big_index = find(bigger_boxes);
-                patch_p   = obj.get_patch(p);
-                for b = 1:length(big_index)                         % Discard big boxes that do not contain enough of p.   
-                    big_p = big_index(b);
-                    if obj.get_patch(big_p).area_of_intersection(patch_p) < contain * areas(p)
-                        bigger_boxes(big_p) = false;
-                    end        
+        function I = inclusions(obj, contain, more_than, how_many)
+            n = size(obj);            
+            I = cell(n,1);
+            areas = obj.areas;                        
+            R     = obj.rects;            
+            for p = 1:n                
+                bigger_boxes = (areas > more_than .* areas(p));                  
+                inter_areas  = rectint(R(p,:), R);                
+                bigger_boxes = bigger_boxes & (inter_areas > (contain * areas(p)))';  % Discard big boxes that do not contain enough of p.                                                  
+                I{p}         = find(bigger_boxes);
+                if isempty(I{p})
+                    continue
                 end
-                I{p} = find(bigger_boxes);
+                [~, ids]     = sort(areas(I{p}), 'ascend');
+                keep         = min(how_many, length(ids)); 
+                I{p}         = I{p}(ids(1:keep));
             end                                               
         end
         
-        function S = most_self_similar(obj, inclusions, descriptors, topk)
-            S = zeros(size(obj), 1);
+        function S = symmetries(obj, descriptors, topk, intersection_thres, side_thres)
+            if ~ exist('intersection_thres', 'var')
+                intersection_thres = 0.1;
+            end
+            if ~ exist('side_thres', 'var')
+                side_thres         = 0.05; 
+            end                         
+            R = obj.rects;        
+            A = obj.areas;    
+            
+            [~, small_patch] = sort(A, 'ascend');               % TODO: parameterize on function call.
+            small_patch      = small_patch(1: ceil(0.1*size(obj))); 
+            
+            S = zeros(size(obj), topk);
+            all_pairs = pdist2_vec(descriptors, descriptors);            
+            for p = 1:size(obj)
+                if ~any(small_patch == p)
+                    continue
+                end
+                proper_inter   = (rectint(R(p,:), R) ./ A(p)) < intersection_thres;             % Intersection constraint.                 
+                proper_side    = proper_inter' & (abs(R(p,3) - R(:,3)) ./ R(p,3) < side_thres); % Area constraint.               
+                proper_side    = proper_side   & (abs(R(p,4) - R(:,4)) ./ R(p,4) < side_thres);
+                proper_side(p) = 0;                   
+                proper_side    = find(proper_side);
+              
+                if isempty(proper_side)
+                    continue;
+                end
+                
+%                 dp = obj.image.content_in_patch(p);
+%                 dists = zeros(length(proper_side),1);
+%                 for op = 1:length(proper_side)
+%                     
+%                     dists 
+%                 end
+                    
+                
+                [~, ids]     = sort(all_pairs(p, proper_side)); 
+                keep         = min(topk, length(ids));
+                S(p,1:keep)  = proper_side(ids(1:keep));
+            end                                
+            clear all_pairs;            
+        end
+        
+        function S = most_similar_inclusions(obj, descriptors, topk, inclusions)
+            S = zeros(size(obj), topk);        
             for p = 1:size(obj)                
                 if isempty(inclusions{p})
                     continue;
                 end
-                [~, ids] = sort(pdist2_vec(descriptors(inclusions{p},:), descriptors(p,:)), 'Ascend');
-                S(p) = inclusions{p}(ids(1:topk));
-            end                    
+                [~, ids]      = sort(pdist2_vec(descriptors(inclusions{p},:), descriptors(p,:)), 'ascend');
+                keep          = min(topk, length(ids));
+                S(p,1:keep)   = inclusions{p}(ids(1:keep));
+            end
         end
         
         function P = inside_gt(obj, topk)
@@ -399,14 +484,14 @@ classdef Patch_Collection < dynamicprops
             if nargin == 1                
                 cell_size  = 8;
                 n_orients  = 9;
-                scaling    = 128;
+                scaling    = 64;
             end                                          
             I        = obj.image;
             patches  = obj.collection;
             hog_size = (floor(scaling / cell_size))^2 * 4 * n_orients;                       
 %             temp =  extractHOGFeatures(imResample(single(I.content_in_patch(patches(1))), [scaling scaling]), 'CellSize', [cell_size, cell_size], 'NumBins', n_orients);            
 %             hog_size = length(temp);
-            F        = zeros(size(obj), hog_size);               
+            F        = zeros(size(obj), hog_size);
             for p = 1:size(obj)
                 content = I.content_in_patch(patches(p));
                 box     = imResample(single(content), [scaling scaling]) / 255; 
@@ -418,32 +503,23 @@ classdef Patch_Collection < dynamicprops
         end
         
         function [F] = neural_net_features(obj, net, layer_id)
-            I          = obj.image; 
-            I          = I.im2single();
-            nn_im_size = net.meta.normalization.imageSize(1:2);
-            net.layers = net.layers(1:end-layer_id);            
-            feat_dim   = net.layers{end}.size(end);
-
+            I           = obj.image; 
+            I           = I.im2single();
+            nn_im_size  = net.meta.normalization.imageSize(1:2);
+            net.layers  = net.layers(1:end-layer_id);
             num_patches = size(obj);
             patches     = obj.collection;
-            im          = single(zeros(nn_im_size(1), nn_im_size(2), 3, num_patches));                        
+            im          = single(zeros(nn_im_size(1), nn_im_size(2), 3, num_patches));
             av          = repmat(net.meta.normalization.averageImage, nn_im_size(1), nn_im_size(2));            
-            
-            tic
             for i = 1:size(obj)                
                 im(:,:,:,i) = imresize(I.content_in_patch(patches(i)), nn_im_size) - av;
-            end            
-            toc            
-%             im = gpuArray(im);                                   
-            tic
-            net.info.opts.batchSize = 100;
-            F      = vl_simplenn(net, im, [], []);
-            toc
+            end                        
+            net.info.opts.batchSize = 40;
+            temp = vl_simplenn(net, im);            
+            F = squeeze(gather(temp(end).x))';
+            clear temp;
         end
-        
-        
-        
-
+              
     end
     
     

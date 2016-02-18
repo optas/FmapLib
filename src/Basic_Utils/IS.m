@@ -128,7 +128,7 @@ classdef IS
         end
         
         function B = vector(A)            
-            B = ismatrix(A) && min(size(A)) == 1;
+            B = ismatrix(A) & min(size(A)) == 1 & ~iscell(A);
         end
         
     end

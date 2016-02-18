@@ -84,7 +84,7 @@ classdef Graph < dynamicprops
                 end                
             else
                 if obj.is_directed
-                    obj.A = (obj.A + obj.A') ./ 2;
+                    obj.A = (obj.A + obj.A');
                     obj.is_directed = false;
                     obj.num_edges   = nnz(obj.A);
                     self_loops      = obj.self_loops();                    
@@ -93,13 +93,21 @@ classdef Graph < dynamicprops
                 end                
             end
         end
-
+        
         function D = in_degrees(obj)            
             D = full(sum(obj.A, 1));
         end
         
         function D = out_degrees(obj)
-            D = full(sum(obj.A, 2));
+            D = full(sum(obj.A, 1));
+        end
+        
+        function D = num_in_neighbors(obj)
+            D = full(sum(obj.A~=0, 1) );
+        end
+        
+        function D = num_out_neighbors(obj)
+            D = full(sum(obj.A~=0, 2) )';
         end
         
         function B = is_weighted(obj)
