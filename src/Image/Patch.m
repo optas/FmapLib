@@ -54,7 +54,7 @@ classdef Patch < dynamicprops
             
         function [F] = plot(obj, varargin)
             % Plots the boundary of the patch.
-            options = struct('image', [], 'color', 'r', 'line_width', 3);
+            options = struct('image', [], 'color', 'r', 'line_width', 3, 'text', []);
             options = load_key_value_input_pairs(options, varargin{:});         
             
             [xmin, ymin, xmax, ymax] = obj.get_corners();
@@ -62,26 +62,41 @@ classdef Patch < dynamicprops
                 image.plot();            
                 hold on;
             end
-            F = plot([xmin xmax xmax xmin xmin],[ymin ymin ymax ymax ymin], 'Color', options.color, ...
-                                                                            'LineWidth', options.line_width);
+            F = plot([xmin xmax xmax xmin xmin], [ymin ymin ymax ymax ymin], ...
+                     'Color', options.color, 'LineWidth', options.line_width);
+            
+            if ~isempty(options.text)
+                text(xmin+3, ymin+10, options.text, 'FontSize', 15);                 
+            end
+                                                                            
         end
 
         function w = width(obj)                       
             [~, ymin, ~, ymax] = obj.get_corners();
             w = ymax - ymin + 1;
             w = double(w);
-            assert(w >= 1);
+%             assert(w >= 1);
         end
         
         function h = height(obj)                       
             [xmin, ~, xmax, ~] = obj.get_corners();
             h = xmax - xmin + 1;
             h = double(h);
-            assert(h >= 1);
+%             assert(h >= 1);
         end
                 
         function a = area(obj)                
             a = obj.height() * obj.width();            
+        end
+        
+        function c = center(obj)
+            [xmin, ymin, xmax, ymax] = obj.get_corners();
+            c = [single((xmax+xmin)) / 2, single((ymax+ymin)) / 2];
+        end
+        
+        function d = diagonal_length(obj)
+            [xmin, ymin, xmax, ymax] = obj.get_corners();
+            d = norm(single(xmax - xmin), single(ymax - ymin));
         end
         
         function a = area_of_intersection(obj, another_patch)            
@@ -231,20 +246,12 @@ classdef Patch < dynamicprops
         
         
         function [b] = uodl_patch_constraint(corners, src_image)                        
-            bValid1 = corners(1) > src_image.height *0.01 & corners(3) < src_image.height*0.99 ...
+            bValid1 = corners(1) > src_image.height * 0.01 & corners(3) < src_image.height*0.99 ...
                     & corners(2) > src_image.width * 0.01 & corners(4) < src_image.width*0.99;
             bValid2 = corners(1) < src_image.height*0.01 & corners(3) > src_image.height*0.99 ...
                     & corners(2) < src_image.width*0.01 & corners(4) > src_image.width*0.99;
             b = bValid1 | bValid2;                           
         end 
-
-%    function [misalignment] = patch_transferability(source_image, target_image, source_patch, target_patch, fmaps)
-%     
-%         misalignment = sum(sum(abs((fmaps{P, target_image} * source_patch) - target_patch), 1));
-%         misalignment = misalignment + sum(sum(abs((fmaps{target_image, P} * target_patch) - source_patch), 1));
-% 
-%     end     
-
 
          
     end

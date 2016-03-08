@@ -99,7 +99,7 @@ classdef Graph < dynamicprops
         end
         
         function D = out_degrees(obj)
-            D = full(sum(obj.A, 1));
+            D = full(sum(obj.A, 2));
         end
         
         function D = num_in_neighbors(obj)
