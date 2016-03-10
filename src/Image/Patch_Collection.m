@@ -461,7 +461,7 @@ classdef Patch_Collection < dynamicprops
         
         function I = pw_area_intersections(obj)
             % Computes all pairwise intersections between the patches stored in the collection.
-            I = rectint(obj.rects, obj.rects);            
+            I = single(rectint(obj.rects, obj.rects));            
         end
         
         
