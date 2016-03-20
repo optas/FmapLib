@@ -173,6 +173,21 @@ classdef Patch < dynamicprops
             P      = Patch([min(x), min(y), max(x), max(y)]);            
             
         end
+        
+%         function area_percent_covered_by_other_patches(frame_patch, other_patches, corners)
+%                 frame_corners = corners(frame_patch, :);
+%                 mask = zeros(frame_corners(4) - frame_corners(2)+1, frame_corners(3)-frame_corners(1)+1);
+%                 for p = 1:length(other_patches)
+%                     sp = other_patches(p);                
+%                     sp_corners = corners(sp,:);
+%                     xmin = sp_corners(1) - frame_corners(1) + 1;
+%                     xmax = xmin + s_corners(3) - sp_corners(1);
+%                     ymin = sp_corners(2) - frame_corners(2) + 1;
+%                     ymax = ymin + sp_corners(4) - sp_corners(2);
+%                     mask(ymin:ymax, xmin:xmax) = 1;                                               
+%                 end
+% 
+%             end
                
         function [s, qd] = angle_displacement(xc, yc, x, y)
                 % xc, yc: x,y coordinates of center (reference) patch.

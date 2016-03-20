@@ -208,7 +208,7 @@ classdef Graph < dynamicprops
         end
                
         function obj = add_edge(obj, from, to, weight)
-            if weight <= 0
+            if weight < 0
                 error('Edge weight must be positive.');
             end
             
