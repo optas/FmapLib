@@ -257,7 +257,7 @@ classdef Optimization
             %                       object i is to object j.
             %
             % Output:   
-            %            W       - (NxM x NxM matrix). M is the size of each in_map square matrix.
+            %            W       -  (NxM x NxM matrix): M is the size of each square matrix carried by in_maps.
             %                                  %
             % TODO assert(diag(in_maps) = isempty())
             
@@ -275,7 +275,7 @@ classdef Optimization
             W                  = in_maps;
             
             if all_close(weights, weights', 5e-10, +Inf)                % Weights are symmetric.                
-                for m = 1:length(src)                                   % Use Fan's derivation (same as paper).
+                for m = 1:length(src)                                   % We use Fan's derivation (same as paper).
                     i = src(m);                                         % i-j are connected: i points to j.
                     j = trg(m);
                     W{i,j} = - weights(i,j) .* (in_maps{j,i} + in_maps{i,j}');

@@ -75,14 +75,12 @@ classdef Patch < dynamicprops
             [~, ymin, ~, ymax] = obj.get_corners();
             w = ymax - ymin + 1;
             w = single(w);
-%             assert(w >= 1);
         end
         
         function h = height(obj)                       
             [xmin, ~, xmax, ~] = obj.get_corners();
             h = xmax - xmin + 1;
             h = single(h);
-%             assert(h >= 1);
         end
                 
         function a = area(obj)                
@@ -91,7 +89,7 @@ classdef Patch < dynamicprops
         
         function c = center(obj)
             [xmin, ymin, xmax, ymax] = obj.get_corners();
-            c = [single((xmax+xmin)) / 2, single((ymax+ymin)) / 2];
+            c = [single((xmax+xmin)) / 2, single((ymax+ymin)) / 2];            
         end
         
         function d = diagonal_length(obj)

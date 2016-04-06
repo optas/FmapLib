@@ -329,6 +329,7 @@ classdef Patch_Collection < dynamicprops
             else
                 C = arrayfun( @(p) p.center(), obj.collection(patch_id));                
             end
+            C = cell2mat(C);
         end
         
         function C = diagonal_lengths(obj, patch_id)

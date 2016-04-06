@@ -131,6 +131,11 @@ classdef IS
             B = ismatrix(A) & min(size(A)) == 1 & ~iscell(A);
         end
         
+        function B = contiguous(v)
+            % Checks if input vector is contains all integers in the [min(v) - max(v)] range.
+            uv = unique(v)';
+            B = all(uv == uv(1):uv(end));             
+        end
     end
     
 end

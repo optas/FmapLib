@@ -133,31 +133,31 @@ classdef Laplace_Beltrami < Basis
     methods (Static)
         
         function [W] = cotangent_laplacian(V, T, varargin)
-                % Computes the cotangent laplacian weight matrix. Also known as the stiffness matrix.
-                % Input: 
-                %                 varargin  - (optional) Angles of the mesh triangles.                
-                % Output: 
-                %                 W is symmetric. 
+            % Computes the cotangent laplacian weight matrix. Also known as the stiffness matrix.
+            % Input: 
+            %                 varargin  - (optional) Angles of the mesh triangles.                
+            % Output: 
+            %                 W is symmetric. 
                                 
-                I = [T(:,1); T(:,2); T(:,3)];
-                J = [T(:,2); T(:,3); T(:,1)];        
-                              
-                if nargin == 2
-                    angles = Mesh.angles_of_triangles(V, T);                    
-                elseif nargin == 3
-                    angles = varargin{1};
-                else
-                    error('Too many arguments were given.')
-                end
-                
-                S = 0.5 * cot([angles(:,3); angles(:,1); angles(:,2)]);
-                In = [I; J; I; J];
-                Jn = [J; I; I; J];
-                Sn = [-S; -S; S; S];
-                
-                nv = size(V, 1);
-                W  = sparse(In, Jn, Sn, nv, nv);
-                assert(isequal(W, W'))                
+            I = [T(:,1); T(:,2); T(:,3)];
+            J = [T(:,2); T(:,3); T(:,1)];        
+
+            if nargin == 2
+                angles = Mesh.angles_of_triangles(V, T);                    
+            elseif nargin == 3
+                angles = varargin{1};
+            else
+                error('Too many arguments were given.')
+            end
+
+            S = 0.5 * cot([angles(:,3); angles(:,1); angles(:,2)]);
+            In = [I; J; I; J];
+            Jn = [J; I; I; J];
+            Sn = [-S; -S; S; S];
+
+            nv = size(V, 1);
+            W  = sparse(In, Jn, Sn, nv, nv);
+            assert(isequal(W, W'))                
         end
         
     end

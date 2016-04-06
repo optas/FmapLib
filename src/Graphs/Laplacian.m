@@ -71,20 +71,20 @@ classdef Laplacian < Basis
             Proj = zeros(eigs_num, functions_total);            % Pre-allocate space.
             right = 0;                
             
-            atol = 1e-03; rtol = +Inf;            
-            if ~all_close(evecs' * evecs, eye(eigs_num), atol, rtol) 
-                left  = right + 1;
-                right = right + size(varargin{i}, 2);
-                Proj(:, left:right)  = evecs \ varargin{i};
+            atol = 1e-05; rtol = +Inf;                          % TODO: think about storing if basis is orthonormal. 
+            if ~ all_close(evecs' * evecs, eye(eigs_num), atol, rtol) 
+                for i = 1:n_varargin
+                    left  = right + 1;
+                    right = right + size(varargin{i}, 2);
+                    Proj(:, left:right)  = evecs \ varargin{i};
+                end
+            else                                               % Exploits orthonormality of basis.
+                for i = 1:n_varargin
+                    left  = right + 1;
+                    right = right + size(varargin{i}, 2);
+                    Proj(:, left:right)  = evecs' * varargin{i};  
+                end            
             end
-            
-            return
-            
-            for i = 1:n_varargin
-                left  = right + 1;
-                right = right + size(varargin{i}, 2);
-                Proj(:, left:right)  = evecs' * varargin{i};  % Exploits orthonormality of basis.
-            end            
         end
     
         function f = plot_basis(obj, evec_id)

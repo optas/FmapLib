@@ -48,7 +48,7 @@ classdef Image_Features < dynamicprops
         function [signatures] = sift_signature(in_image)
             SIFTparam.grid_spacing = 1;     % Distance between grid centers.
             patch_sizes = [8, 12, 16];
-            [w, h] = size(in_image);
+            [h, w] = size(in_image);
             signatures = [];
             for k = 1:length(patch_sizes)
                 SIFTparam.patch_size = patch_sizes(k); % Size of patch which is used to compute SIFT (it has to be a factor of 4).
@@ -94,7 +94,8 @@ classdef Image_Features < dynamicprops
             param.orientationsPerScale = [8 8 8 8];
             param.numberBlocks = 4;
             param.fc_prefilt = 4;
-            E = LMgist(in_image.CData, '', param);
+            options = param;
+            E = LMgist(in_image.CData, '', options);
         end
         
         function [features] = compute_default_features(in_image, feature_types)
