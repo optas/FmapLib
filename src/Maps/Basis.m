@@ -5,7 +5,7 @@ classdef Basis < dynamicprops
     %
     % (c) Achlioptas, Corman, Guibas - 2015  -  http://www.fmaplib.org
     
-    properties (SetAccess = private)               
+    properties (SetAccess = public)               
         spectra;    % A struct carrying the eigenvalues and eigenvectors of the basis.
     end
         
@@ -18,8 +18,7 @@ classdef Basis < dynamicprops
         % Projects a set of input functions on the basis.
     end
     
-    
-    
+
     methods (Access = public)
         % Class Constructor.               
         function obj = Basis()     
@@ -27,8 +26,8 @@ classdef Basis < dynamicprops
         end
     
         function [evals, evecs] = get_spectra(obj, eigs_num)    
-            % Computes the eigenvectors corresponding to the smallest eigenvalues of the Basis matrix. This is 
-            % It stores the in the spectra property of the object (obj.spectra). It also, 
+            % Computes the eigenvectors corresponding to the smallest eigenvalues of the Basis matrix. 
+            % It stores the results in the spectra property of the object (obj.spectra). It also, 
             % automatically reuses the previously computed ones when this is doable, instead of computing them 
             % from the scratch.
             % 
@@ -67,11 +66,12 @@ classdef Basis < dynamicprops
         end
 
         function [R] = synthesize_functions(obj, coeffs)
-            eigs_num = size(coeffs, 1);            
+            % Coeffs carried as column vectors.
+            eigs_num = size(coeffs, 1);
             R = obj.evecs(eigs_num) * coeffs;            
         end
 
-        function [reconstructed] = compress_and_reconstruct(obj, in_funcs, eigs_num)
+        function [reconstructed] = compress_and_reconstruct(obj, eigs_num, in_funcs)
             % Projects the input functions onto the basis, and uses the resulting coeefficients to reconstruct
             % the original input functions. The resulting reconstructed functions are useful to discover which parts 
             % of the functions are well preserved in the basis.
@@ -88,6 +88,19 @@ classdef Basis < dynamicprops
             end           
         end
         
+        function obj = copy(this)
+            % Define what is copied when a deep copy is performed.                    
+            % Instantiate new object of the same class.
+            obj = feval(class(this));                              
+            % Copy all non-hidden properties (including dynamic ones)            
+            p = properties(this);         
+            for i = 1:length(p)
+                if ~isprop(obj, p{i})   % Adds all the dynamic properties.
+                    obj.addprop(p{i});
+                end                
+                obj.(p{i}) = this.(p{i});
+            end           
+        end
         
     end
 end

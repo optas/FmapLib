@@ -48,51 +48,7 @@ classdef Laplace_Beltrami < Basis
                 obj.A = spdiags(vertex_areas, 0, length(vertex_areas), length(vertex_areas));                 
             end
         end
-        
-        
-%         function [evals, evecs] = get_spectra(obj, eigs_num)
-%             % Computes the eigenvectors corresponding to the smallest eigenvalues of the Laplace Beltremi operator. 
-%             % It stores the results in the spectra property of the LB object (obj.spectra). It also, automatically reuses 
-%             % the previously computed ones when this is doable, instead of computing them from the scratch.
-%             %
-%             % Input:
-%             %           eigs_num    -   (int) number of eigenvector-eigenvalue pairs to be computed. This must be
-%             %                           smaller than the number of vertices of the associated Mesh.
-%             %
-%             % Output:
-%             %           evals       -   ()
-%             %           evecs       -   ()
-%             
-%             % The requested number of eigenvalues is larger than what has been previously calculated.
-%             if length(obj.spectra.evals) < eigs_num      
-%                 [evecs, evals] = Laplace_Beltrami.compute_spectra(obj.W, obj.A, eigs_num);                
-%                 obj.spectra = struct('evals', evals, 'evecs', evecs);  % Store new spectra.
-%            
-%             else                                         % Use previously computed spectra.
-%                 evals = obj.spectra.evals;
-%                 evals = evals(1:eigs_num);                
-%                 evecs = obj.spectra.evecs;
-%                 evecs = evecs(:, 1:eigs_num);
-%             end
-%         end
-%         
-%         function [E] = evecs(obj, eigs_num)
-%             % 'Convenience function'.
-%             %  Returns only the eigenvectors of the LB. (see get_spectra()).
-%             [~, E] = obj.get_spectra(eigs_num);
-%         end
-%         
-%         function [E] = evals(obj, eigs_num)
-%             % 'Convenience function'.
-%             %  Returns only the eigenvectors of the LB. (see get_spectra()).
-%             [E, ~] = obj.get_spectra(eigs_num);
-%         end
-
-%         function [R] = synthesize_functions(obj, coeffs)
-%             eigs_num = size(coeffs, 1);            
-%             R = obj.evecs(eigs_num) * coeffs;            
-%         end
-                
+                       
         function [Proj] = project_functions(obj, eigs_num, varargin)
             %   Projects a set of given functions on the corresponding eigenfunctions of the Laplace Beltrami
             %   operator. Each LB eigenfunction has num_vertices dimensions. I.e., as many as the
@@ -151,7 +107,7 @@ classdef Laplace_Beltrami < Basis
                 error('Eigenvalues must be in range of [1, num_of_vertices-1].');
             end            
                         
-            sigma = -1e-5; % TODO-V: sigma=0 or 'SM'?
+            sigma = -1e-5; % TODO: sigma=0 or 'SM'?
             [Phi, lambda] = eigs(obj.W, obj.A, eigs_num, sigma);
             lambda        = diag(lambda);
             
@@ -177,31 +133,31 @@ classdef Laplace_Beltrami < Basis
     methods (Static)
         
         function [W] = cotangent_laplacian(V, T, varargin)
-                % Computes the cotangent laplacian weight matrix. Also known as the stiffness matrix.
-                % Input: 
-                %                 varargin  - (optional) Angles of the mesh triangles.                
-                % Output: 
-                %                 W is symmetric. 
+            % Computes the cotangent laplacian weight matrix. Also known as the stiffness matrix.
+            % Input: 
+            %                 varargin  - (optional) Angles of the mesh triangles.                
+            % Output: 
+            %                 W is symmetric. 
                                 
-                I = [T(:,1); T(:,2); T(:,3)];
-                J = [T(:,2); T(:,3); T(:,1)];        
-                              
-                if nargin == 2
-                    angles = Mesh.angles_of_triangles(V, T);                    
-                elseif nargin == 3
-                    angles = varargin{1};
-                else
-                    error('Too many arguments were given.')
-                end
-                
-                S = 0.5 * cot([angles(:,3); angles(:,1); angles(:,2)]);
-                In = [I; J; I; J];
-                Jn = [J; I; I; J];
-                Sn = [-S; -S; S; S];
-                
-                nv = size(V, 1);
-                W  = sparse(In, Jn, Sn, nv, nv);
-                assert(isequal(W, W'))                
+            I = [T(:,1); T(:,2); T(:,3)];
+            J = [T(:,2); T(:,3); T(:,1)];        
+
+            if nargin == 2
+                angles = Mesh.angles_of_triangles(V, T);                    
+            elseif nargin == 3
+                angles = varargin{1};
+            else
+                error('Too many arguments were given.')
+            end
+
+            S = 0.5 * cot([angles(:,3); angles(:,1); angles(:,2)]);
+            In = [I; J; I; J];
+            Jn = [J; I; I; J];
+            Sn = [-S; -S; S; S];
+
+            nv = size(V, 1);
+            W  = sparse(In, Jn, Sn, nv, nv);
+            assert(isequal(W, W'))                
         end
         
     end

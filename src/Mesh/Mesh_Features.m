@@ -119,6 +119,14 @@ classdef Mesh_Features < dynamicprops
             nf = size(obj.F, 2);
         end
         
+        function obj = normalize(obj, norm_type)
+            if ~exist('norm_type', 'var') || strcmp(norm_type, 'l2')
+                obj.F = divide_columns(obj.F, sqrt(sum(obj.F.^2)));
+            else
+                error('NIY');
+            end            
+        end
+        
         function [F] = project_features(obj, basis, elems, varargin)
             % Projects the features into the given basis and returns the resulting coeffients.
             % TODO-D Add info.

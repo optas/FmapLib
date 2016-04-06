@@ -1,6 +1,5 @@
 classdef Optimization
-    % Some high level routines for doing numerical optimization. Still
-    % figuring this out. TODO-V, Do your best:)
+    % Some high level routines for doing numerical optimization. Work in progress.
   
     methods (Static)
   
@@ -101,36 +100,205 @@ classdef Optimization
             end
             X = X(ids_y, ids_z);   % seems unecessary 
         end
-        
-        
-        function [Y, V] = latent_basis_given_functional_maps(in_maps, weigths, latent_size)
-            % Returns a set of orthonormal vectors that correspond to latent commonalities among objects of a
-            % collection. These commonalities are found by exploiting a set of functional maps between pairs of related 
-            % objects.
-            % 
+ 
+        function [X, opt] = least_edges_given_connectivity_first_try(init_graph, dist_matrix, alpha)
+            % Computes the adjacency matrix of a graph for which the algrebraic connectivity is larger than alpha and
+            % the sum of all its edge weigts is minimized. _add content_
+            %            
             % Input:
-            %           in_maps  -  ( N x N cell array ) carrying the functional map from object i to object j, it its  
-            %                       (i,j) position. N is the total number of objects in the collection.
+            %           init_graph   -  
+            %                       
+            %           dist_matrix  -  (N x N matrix) weights(i,j) is the weight an edge between (i and j).            
             %
-            %           weights  -  ( N x N matrix) weights(i,j) is a double reflecting how closely related object i to 
-            %                       object j.
-            %
-            %           latent_size - (int) Specifies how many latent functions will be derived in each object.
+            %           alpha        - (int) Lower bound on algebraic connectivity of derived graph.
             %
             %
             % Output: _add_
             %
             %
-            % Reference: 'Image Co-Segmentation via Consistent Functional Maps, F. Wan et al. in _add_''
+            % Reference: 'Graph Weight Design for Laplacian Eigenvalue Constraints with Multi-Agent Systems Applications.'
             
-            % _add_content
+            n = init_graph.num_vertices;
+            L = Laplacian(init_graph, 'comb');            
             
+            [~, U    ] = L.get_spectra(n-1);
+            [Ulast, ~] = eigs(L.L, 1);         % Compute the largest eigen-pair.
             
+            size(U)
+            size(Ulast)
+            U = [U(:, 2:end) Ulast];           % Remove the constant eigenvector and instert Ulast.
+            size(U)
             
-            
-            
+            alpha = alpha * eye(n);
+            cvx_begin                        
+                variable X(n, n) symmetric                
+                minimize trace(X * dist_matrix)
+                subject to
+                    U.' * ( diag(diag(X * dist_matrix)) - X - alpha) * U >= 0
+                    vec(X)  >= 0
+                    -vec(X) >= -1                
+            cvx_end      
+            opt = cvx_optval;                
         end
-            
+        
+        function [Q] = get_orthogonal_vectors(in_lap, alpha)
+                nodes = size(in_lap, 1);
+%                 A = in_lap;
+                A     = in_lap - diag(repmat(alpha, nodes, 1));                
+                [Q, ~] = eigs(A, nodes - 1);                
 
-    end
+%                 sigma = 10e-6;
+%                 [Q, ~] = eigs(A, 3, sigma);                
+% %                 Q = fliplr(Q);
+%                 Q = Q(:,1:2)
+                
+                                
+        end
+        
+        function [X, opt] = least_edges_given_connectivity(dist_matrix, alpha)
+            % Computes the adjacency matrix of a graph for which the algrebraic connectivity is larger than alpha and
+            % the sum of all its edge weigts is minimized. _add content_
+            %            
+            % Input:                       
+            %           dist_matrix  -  (N x N matrix) weights(i,j) is the weight an edge between (i and j).            
+            %
+            %           alpha        - (int) Lower bound on algebraic connectivity of derived graph.
+            %
+            %
+            % Output: _add_
+            %
+            %
+            % Reference: 'Graph Weight Design for Laplacian Eigenvalue Constraints with Multi-Agent Systems Applications.'
+            tic
+            weighted_clique  = Graph(dist_matrix, false);
+            n                = weighted_clique.num_vertices;
+            e                = weighted_clique.num_edges;
+            [node_f, node_t, weights]  = weighted_clique.all_edges();
+            W                = spdiags(weights, 0, e, e);
+                       
+            clique           = Graph.generate('clique', n, n);
+                        
+            if clique.num_edges ~= e
+                error('"dist_matrix" must containt zeros only on its diagonal.')
+            end
+            
+            I = clique.incidence_matrix();            
+            toc
+                                                
+            alpha_i = eye(n)*alpha;
+            num_iter = 2;
+            
+            D = eye(size(I, 2));
+            
+            for i =1:num_iter                
+                Q = Optimization.get_orthogonal_vectors(I*D*I', alpha);
+                K = []
+                cvx_begin sdp quiet
+                    variable K(e, e) diagonal
+                    minimize trace(K * W)                
+                    subject to
+                        Q.' * ( I * K * I' - alpha_i ) * Q == semidefinite(size(Q,2))
+                        K(:)  >= 0
+                        K(:)  <= 1                    
+                cvx_end        
+                opt = cvx_optval;                            
+%                 K
+                D = K;
+           end
+            
+            if opt == +Inf
+                warning('Program was not feasible.')
+                X = NaN;
+                return 
+            else                                                
+                X = sparse(node_f, node_t, diag(K), n, n);  % Put edges on a adjacency matrix.
+                X = X + X';              
+                L = Laplacian(Graph(X, false), 'comb');
+                lambda = L.evals(2);
+                assert(lambda(2) >= alpha)
+            end
+            toc
+        end
+        
+        function weights = update_graph_weight(residuals, lambda)
+            [a, ~] = size(residuals);
+            n = 5;
+            cvx_begin
+                variable weights(a,a)
+                variable Z(a,a,a)                                
+                minimize( trace(weights*residuals) - lambda*sum(Z(:)) )
+                subject to
+                    trace(weights) == zeros(a,1)
+                    weights  * ones(size(weights,1), 1) == n * ones(size(weights,1), 1)
+                    weights' * ones(size(weights,1), 1) == n * ones(size(weights,1), 1)    
+                    zeros(a,a) <= sum(Z,3) <= n * weights
+                    zeros(a)   <= weights  <= ones(a)
+   
+                    for k = 1:a 
+                        w_jk = repmat(weights(:,k),[1 a]);
+                        w_ki = repmat(weights(k,:),[a 1]);
+                        Z(:,:,k) <= weights
+                        Z(:,:,k) <= w_jk
+                        Z(:,:,k) <= w_ki
+                    end
+            cvx_end
+            weights = reshape(weights, a, 1, a, 1);
+        end
+        
+        
+        
+        function W = big_matrix_for_latent_spaces(in_maps, weights)            
+            % TODO re-write comments/name variables.
+            % Input:
+            %           in_maps  -  (N x N cell array) carrying the functional map from object i to object j, in its  
+            %                       (i,j) cell. N is the total number of objects in the collection.
+            %
+            %           weights  -  (N x N matrix) weights(i,j) is a positive double reflecting how closely related 
+            %                       object i is to object j.
+            %
+            % Output:   
+            %            W       -  (NxM x NxM matrix): M is the size of each square matrix carried by in_maps.
+            %                                  %
+            % TODO assert(diag(in_maps) = isempty())
+            
+            if any(any(weights < 0))
+                error('Weights are expected to be non-negative.')                
+            end                        
+            [src, trg]         = find(weights);
+            map_size           = size(in_maps{src(1), trg(1)});
+            if map_size(1) ~= map_size(2)
+                error('Current version only works with square matrices.');
+            end            
+            empty_ind          = cellfun('isempty', in_maps);
+            in_maps(empty_ind) = {sparse([], [], [], map_size(1), map_size(2))};
+            eye_map            = speye(map_size);
+            W                  = in_maps;
+            
+            if all_close(weights, weights', 5e-10, +Inf)                % Weights are symmetric.                
+                for m = 1:length(src)                                   % We use Fan's derivation (same as paper).
+                    i = src(m);                                         % i-j are connected: i points to j.
+                    j = trg(m);
+                    W{i,j} = - weights(i,j) .* (in_maps{j,i} + in_maps{i,j}');
+                    W{i,i} = W{i,i} + (weights(i,j) .* ( eye_map + (in_maps{i,j}' * in_maps{i,j})));
+                end                
+                W = cell2mat(W);
+            else
+                for m = 1:length(src)                                   % Weights are not symmetric.
+                    i = src(m);
+                    j = trg(m);
+                    W{i,j} = -(weights(i,j) .* in_maps{i,j}') - (weights(j,i) .* in_maps{j,i});                                
+                    W{i,i} = W{i,i} + (weights(i,j) .* (in_maps{i,j}' * in_maps{i,j}));                                
+                    W{i,i} = W{i,i} + (weights(j,i) .* eye_map);
+                end
+                W = cell2mat(W);            
+                W  = (W + W') ./ 2;
+            end
+                            
+            if ~(all_close(W, W', 0.0001, +Inf))            
+                error('Produced Aggregate matrix is not symmetric. Check your input matrices.')
+            end                       
+        end
+        
+
+    end % Static    
 end

@@ -1,7 +1,7 @@
 classdef Image_Graph < Graph
     % A class representing a Graph object associated with an Image object.
     %
-    % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
+    % (c) Achlioptas, Guibas  - 2015  -  http://www.fmaplib.org
     
     properties (GetAccess = public, SetAccess = private)
         I;          %  (Image) - Underlying Image object.
@@ -9,30 +9,40 @@ classdef Image_Graph < Graph
         
     methods (Access = public)
         % Class Constructor.               
-        function obj = Image_Graph(varargin)
-            % Set up super-class (Graph) arguments.
-            if nargin == 0
+        function obj = Image_Graph(in_image, varargin)
+            % in_image      - (Image) associated with the Graph.
+            % varargin{1}   - (String) describing
+            %
+                                    
+            if nargin == 0                     % Set up super-class (Graph) arguments.
                 super_args = cell(0);
             else
-                [h, w, ~] = size(varargin{1}.CData);                
-                
-                if strcmp('r_radius_connected', varargin{2})
-                    radius = varargin{3};
-                    G   = Graph.generate('r_radius_connected', h, w, radius);
-                else                    
-                    G   = Graph.generate(varargin{2}, h, w);
+                if ischar(varargin{1})
+                    [w, h] = size(in_image);                               
+                    if strcmp('r_radius_connected', varargin{1})
+                        radius = varargin{2};
+                        G = Graph.generate('r_radius_connected', h, w, radius);
+                    else                    
+                        G = Graph.generate(varargin{1}, h, w);
+                    end
+                    super_args{1} = G.A;       % Adjacency matrix.            
+                    super_args{2} = false;     % is_directed attribute.
+                    super_args{3} = G.name;    % Graph's name.
+                elseif isa(varargin{1}, 'Graph')
+                    G = varargin{1};
+                    super_args{1} = G.A;          
+                    super_args{2} = G.is_directed;
+                    super_args{3} = G.name;                        
+                else
+                    error('vargargin{1} must be either a string specifying a graph, or a Graph.');
                 end
-                
-                super_args{1} = G.A;       % Adjacency matrix.               % TODO-P Add construct from graph in Graph.
-                super_args{2} = false;     % is_directed attribute.
-                super_args{3} = G.name;    % Graph's name.
-            end            
-            obj@Graph(super_args{:})
+            end                        
+            obj@Graph(super_args{:})            % End of super-class invocation.
             
-            if nargin == 0                            % Set Image.
+            if nargin == 0                      % Set Image.
                 obj.I = Image();
             else
-                obj.I = varargin{1};             
+                obj.I = in_image;             
             end            
         end
                 
@@ -56,9 +66,8 @@ classdef Image_Graph < Graph
                 options = struct('sigma_f', 'median', 'sigma_s', 'median');
                 options = load_key_value_input_pairs(options, varargin{:});
                 
-                sigma = check_and_derive_sigma(options.sigma_s, obj.A(obj.A ~= 0));
-                                
                 [i, j, vals]   = find(obj.A);
+                sigma          = check_and_derive_sigma(options.sigma_s, vals);
                 spatial_dists  = sparse(i, j, exp(-((vals).^2) ./ sigma) );
                 
                 [node_from, node_to] = obj.all_edges();
@@ -79,12 +88,12 @@ classdef Image_Graph < Graph
                 feature_dists = sparse(node_from, node_to, feature_dists, num_nodes, num_nodes);    % Put values back in adjacecny matrix format.
                 feature_dists = feature_dists + feature_dists';
                 feature_dists = feature_dists .* spatial_dists;
-                assert(all(all(feature_dists >= 0 )));
-                                                                               
+                assert( all(nonzeros(feature_dists) > 0));
+                                               
                 obj.A         = feature_dists;
                 obj.name      = [obj.name '_feat_adjusted'];
-                issymmetric(obj.A)                
-%                 obj.add_or_reset_property('Gw', Graph(feature_dists, obj.is_directed));
+                assert(issymmetric(obj.A));                
+                assert(obj.num_edges == edges);
             else
                 error('Not implemented yet.')
             end
@@ -102,8 +111,7 @@ classdef Image_Graph < Graph
         end
         
         function obj = copy(this)
-            % Define what is copied when a deep copy is performed.        
-            
+            % Define what is copied when a deep copy is performed.                    
             % Instantiate new object of the same class.
             obj = feval(class(this));      
                         
@@ -116,6 +124,14 @@ classdef Image_Graph < Graph
                 obj.(p{i}) = this.(p{i});
             end           
         end
+        
+        function obj = set_new_image(obj, new_image)
+            if size(new_image) ~= size(obj.I)
+                warning('Updating the Image Graph with a new Image of different size than the original.')
+            end
+            obj.I = new_image;
+        end
+             
                
     end
     

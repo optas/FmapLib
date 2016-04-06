@@ -3,7 +3,7 @@ classdef Laplacian < Basis
     %
     % (c) Achlioptas, Corman, Guibas  - 2015  -  http://www.fmaplib.org
     
-    properties (SetAccess = private)       
+    properties (SetAccess = public)       % TODO turn back to private/immutable.
         L;          % (n x n)  The Laplacian matrix.
         type;       % (String) Describes the type of Laplacian (See constructor for valid values).
         G;          % (Graph)  The corresponding graph from which the Laplacian is derived.        
@@ -69,18 +69,38 @@ classdef Laplacian < Basis
             assert(num_vertices  == obj.G.num_vertices);
             % Project feature vectors into Laplacian basis.            
             Proj = zeros(eigs_num, functions_total);            % Pre-allocate space.
-            right = 0;                                 
-            for i = 1:n_varargin
-                left  = right + 1;
-                right = right + size(varargin{i}, 2);                                
-%                 Proj(:, left:right)  = evecs \ varargin{i};                
-                  Proj(:, left:right)  = evecs' * varargin{i};                            
-            end            
+            right = 0;                
+            
+            atol = 1e-05; rtol = +Inf;                          % TODO: think about storing if basis is orthonormal. 
+            if ~ all_close(evecs' * evecs, eye(eigs_num), atol, rtol) 
+                for i = 1:n_varargin
+                    left  = right + 1;
+                    right = right + size(varargin{i}, 2);
+                    Proj(:, left:right)  = evecs \ varargin{i};
+                end
+            else                                               % Exploits orthonormality of basis.
+                for i = 1:n_varargin
+                    left  = right + 1;
+                    right = right + size(varargin{i}, 2);
+                    Proj(:, left:right)  = evecs' * varargin{i};  
+                end            
+            end
         end
-
+    
+        function f = plot_basis(obj, evec_id)
+            f = figure;
+            if isa(obj.G, 'Image_Graph')
+                [h, w] = size(obj.G.I);
+                imagesc(reshape(obj.spectra.evecs(:,evec_id), h, w));
+            else
+                error('Not implemented yet');
+            end        
+        end
+        
     end % End of public object-tied functions.
     
     methods (Access = public, Hidden = true)
+
         function [Phi, lambda] = compute_spectra(obj, eigs_num)
             % Returns the smallest eigenvalues and their corresponding eigenvectors of the Laplacian matrix.
             % The user should use the inherited Basis.get_spectra() function instead since that functions wrap around
@@ -90,7 +110,7 @@ classdef Laplacian < Basis
                 error('Eigenvalues must be in range of [1, num_of_vertices-1].');
             end            
                         
-            sigma = -1e-5; % TODO-V: sigma=0 or 'SM'?
+            sigma = -1e-5; % TODO: sigma=0 or 'SM'?
             [Phi, lambda] = eigs(obj.L, eigs_num, sigma);
             lambda        = diag(lambda);
             
