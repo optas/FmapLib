@@ -47,6 +47,8 @@ function [data_path, code_path] = get_project_paths(project_name)
         code_path = '';        
     
     else
+        
+        
         error('Unknown computer.');
     end
         

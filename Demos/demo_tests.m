@@ -1,7 +1,31 @@
 %%
 %%    Script for dirty tests (to be deleted).
 %%
- 
+
+%% Cut from demo_basics
+% 2.
+% gt_map = Functional_Map.groundtruth_functional_map(LB1, LB2, (1:mesh1.num_vertices)', neigs, neigs);
+% gt_map.plot_transferred_xyz();
+% gt_map.plot_area_distortion();
+% gt_map.plot_conformal_distortion();
+
+% 3. 
+% sub_feats_1 = feats1.copy();
+sub_feats_1.F = [feats1.F Mesh_Features.extract_subleveled_feautures(feats1.F, [10,30,50,70,90])];
+% sub_feats_2 = feats2.copy();
+sub_feats_2.F = [feats2.F Mesh_Features.extract_subleveled_feautures(feats2.F, [10,30,50,70,90])];
+map2          = Functional_Map(LB1, LB2);
+map2.compute_f_map(fmap_method, neigs, neigs, sub_feats_1 , sub_feats_2, 'lambda', lambda);
+
+%% 
+map3          = Functional_Map(LB1, LB2);
+map3.set_fmap(Functional_Map.l2_regularized_map(sub_feats_1.F, sub_feats_2.F, lambda))
+
+%% End cut.
+
+
+
+
 [dp, sp] = get_project_paths('FmapLib');
 
 %  Load mesh 1.
