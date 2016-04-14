@@ -218,8 +218,8 @@ classdef Patch < dynamicprops
                     else
                         s = 0;                        
                     end
-%                     assert(s>=0 && s<=360)
-                end                    
+                end    
+%                 assert(s>=0 && s<=360)
         end
         
         function [b] = uodl_patch_constraint(corners, src_image)                        

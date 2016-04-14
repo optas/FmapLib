@@ -268,10 +268,10 @@ classdef Patch_Collection < dynamicprops
         end
         
         function [H] = color_map(obj, masses)            
-            H = zeros(size(obj.image));
+            H = zeros(size(obj.image));            
             for i = 1:size(obj)                
                 [xmin, ymin, xmax, ymax] = obj.collection(i).get_corners();
-                H(ymin:ymax, xmin:xmax) = max(H(ymin:ymax, xmin:xmax),  masses(i));                              
+                H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) +  masses(i);                              
             end                       
         end
                 
