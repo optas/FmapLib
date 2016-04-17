@@ -29,26 +29,25 @@ function [data_path, code_path] = get_project_paths(project_name)
             code_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/src/';
         end
         
-    elseif strcmp(name(1:end-1), 'orionp.stanford.edu') || strcmp(name(1:end-1), 'oriong.stanford.edu')
+    elseif strcmp(name(1:5), 'orion') && strcmp(name(end-13:end-1), '.stanford.edu')        % Orion server farm on Stanford.        
         if strcmp(project_name, 'FmapLib')
             data_path = '/orions3-zfs/projects/optas/Matlab_Projects/FmapLib/data/';
             code_path = 'orions3-zfs/projects/optas/Matlab_Projects/FmapLib/src/';
+        
         elseif strcmp(project_name, 'Joint_Image_Analysis')
             data_path = '/orions3-zfs/projects/optas/Data/Joint_Image_Analysis/';
             code_path = '/orions3-zfs/projects/optas/Matlab_Projects/External_Matlab_Code/';             
+        
         end
         
     elseif strcmp(name(1:end-1), 'Etienne-HP')                                              % Etienne's space.        
         data_path = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\data\';
         code_path = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\src\External_Code\';
-    
-    elseif strcmp(name(1:end-1), 'Vignesh_Comp_Name')                                       % Vignesh's space.
-        data_path = '';
-        code_path = '';        
-    
+        
     else
-                
+        
         error('Unknown computer.');
+        
     end
         
     if isempty(data_path)
