@@ -517,14 +517,10 @@ classdef Patch_Collection < dynamicprops
             P = top_ids(1:topk);
         end
         
-        function P = parts_of(obj, frame_ids)
-            pw_int = rectint(obj.rects, obj.rects(frame_ids));
-            areas  = obj.areas;
-            P      = cell(length(frame_ids), 1);
-            for i = 1:length(frame_ids)                
-                P{i} = setdiff(find(pw_int(:, i) ./ areas == 1), frame_ids(i));
-            end            
-            P = unique(cell2mat(P(~cellfun('isempty', P))));
+        function P = parts_of(obj, patch_id)
+            pw_int = rectint(obj.rects, obj.rects(patch_id));
+            areas  = obj.areas;            
+            P      = setdiff(find(pw_int ./ areas == 1), patch_id);            
         end
         
         

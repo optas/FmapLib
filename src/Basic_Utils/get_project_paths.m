@@ -20,8 +20,8 @@ function [data_path, code_path] = get_project_paths(project_name)
             data_path = '/Users/optas/Documents/Git_Repos/FmapLib/data/';
             code_path = '/Users/optas/Documents/Git_Repos/FmapLib/src/External_Code/';
         
-        elseif strcmp(project_name, 'ImageJointUnderstanding')
-            data_path = '/Users/optas/Dropbox/With_others/Joint_Image_Understanding/Data/';
+        elseif strcmp(project_name, 'Image_Analysis')
+            data_path = '/Users/optas/Dropbox/Matlab_projects/Image_Analysis/Data/';
             code_path = '/Users/optas/Dropbox/Matlab_projects/External_Packages/';
                 
         elseif strcmp(project_name, 'Shape_Classification')
@@ -33,8 +33,8 @@ function [data_path, code_path] = get_project_paths(project_name)
         if strcmp(project_name, 'FmapLib')
             data_path = '/orions3-zfs/projects/optas/Matlab_Projects/FmapLib/data/';
             code_path = 'orions3-zfs/projects/optas/Matlab_Projects/FmapLib/src/';
-        elseif strcmp(project_name, 'ImageJointUnderstanding')
-            data_path = '/orions3-zfs/projects/optas/Data/ImageJointUnderstanding/';
+        elseif strcmp(project_name, 'Image_Analysis')
+            data_path = '/orions3-zfs/projects/optas/Data/Image_Analysis/';
             code_path = '/orions3-zfs/projects/optas/Matlab_Projects/External_Matlab_Code/';             
         end
         
@@ -47,8 +47,7 @@ function [data_path, code_path] = get_project_paths(project_name)
         code_path = '';        
     
     else
-        
-        
+                
         error('Unknown computer.');
     end
         
