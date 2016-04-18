@@ -6,16 +6,13 @@ function [data_path, code_path] = get_project_paths(project_name)
 %           data_path    - (str) File path to project's data repository.
 %           code_path    - (str) File path to project's (external) code repository.
 
-    if ismac
-        [~, name] = system('scutil --get ComputerName');
-    else
-        [~, name] = system('hostname');
-    end
-    
+
+    name = get_computer_name();
+        
     data_path = '';
     code_path = '';
     
-    if strcmp(name(1:end-1), 'optasMacPro')                                                 % Panos's Space.
+    if strcmp(name, 'optasMacPro')                                                          % Panos's Space.
         if strcmp(project_name, 'FmapLib')
             data_path = '/Users/optas/Documents/Git_Repos/FmapLib/data/';
             code_path = '/Users/optas/Documents/Git_Repos/FmapLib/src/External_Code/';
@@ -29,7 +26,7 @@ function [data_path, code_path] = get_project_paths(project_name)
             code_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/src/';
         end
         
-    elseif strcmp(name(1:5), 'orion') && strcmp(name(end-13:end-1), '.stanford.edu')        % Orion server farm on Stanford.        
+    elseif strcmp(name(1:5), 'orion') && strcmp(name(end-13:end), '.stanford.edu')          % Orion server farm on Stanford.        
         if strcmp(project_name, 'FmapLib')
             data_path = '/orions3-zfs/projects/optas/Matlab_Projects/FmapLib/data/';
             code_path = 'orions3-zfs/projects/optas/Matlab_Projects/FmapLib/src/';
@@ -40,7 +37,7 @@ function [data_path, code_path] = get_project_paths(project_name)
         
         end
         
-    elseif strcmp(name(1:end-1), 'Etienne-HP')                                              % Etienne's space.        
+    elseif strcmp(name, 'Etienne-HP')                                                       % Etienne's space.        
         data_path = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\data\';
         code_path = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\src\External_Code\';
         
