@@ -26,7 +26,7 @@ function [data_path, code_path] = get_project_paths(project_name)
             code_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/src/';
         end
         
-    elseif strcmp(name(1:5), 'orion') && strcmp(name(end-13:end), '.stanford.edu')          % Orion server farm on Stanford.        
+    elseif strcmp(name(1:5), 'orion') && strcmp(name(end-12:end), '.stanford.edu')          % Orion server farm on Stanford.        
         if strcmp(project_name, 'FmapLib')
             data_path = '/orions3-zfs/projects/optas/Matlab_Projects/FmapLib/data/';
             code_path = 'orions3-zfs/projects/optas/Matlab_Projects/FmapLib/src/';
