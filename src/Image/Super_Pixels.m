@@ -28,6 +28,8 @@ classdef Super_Pixels
         end
         
         function [V] = super_pixels_to_pixels(obj, values)
+            % Given a real value associated with every super-pixel, computes a mask over the image,
+            % where each location/pixel is equal with the real value of the corresponding SP.
             if length(values) ~= obj.states
                 error('Input values do not match the dimensions of the super pixels.')
             end            

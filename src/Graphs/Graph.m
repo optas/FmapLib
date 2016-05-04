@@ -150,6 +150,39 @@ classdef Graph < dynamicprops
             end           
         end
         
+        function f = plot(obj)            
+            if obj.is_directed
+                L = kamada_kawai_spring_layout((obj.A + obj.A'));                
+            else
+                L = kamada_kawai_spring_layout(obj.A);
+            end
+            f = figure;            
+            [s1, s2] = obj.all_edges();               
+            
+            start_x = L(s1, 1)';
+            start_y = L(s1, 2)';
+            end_x   = L(s2, 1)';
+            end_y   = L(s2, 2)';
+                
+            colors = repmat([0.81 0.81 0.81], max(length(start_x), 1), 1);
+            set(gca,'colorOrder', colors); hold on;
+            
+            plot(L(:,1), L(:,2), 'o', 'MarkerFaceColor', 'b'); 
+            
+            if obj.is_directed                
+                quiver(start_x, start_y, end_x-start_x, end_y-start_y, 0, '-', 'LineWidth', 0.1);               
+            else
+                plot([start_x; end_x],[start_y; end_y], '.-', 'LineWidth', 0.1);
+            end
+            hold on;                 
+            for k = 1:size(L,1)
+                text(L(k,1), L(k,2), num2str(k), 'FontSize', 12);
+            end
+            
+        end
+        
+        
+        
         function [node_from, node_to, weight] = all_edges(obj)
             % Computes all the edges between every pair of nodes. If the graph is undirected it returns each edge once 
             % and the. TODO-P add documentation
@@ -534,8 +567,8 @@ classdef Graph < dynamicprops
             
             elseif strcmp(graph_type, 'bipartite_fc')
                 left_nodes  = varargin{1};
-                right_nodes = varargin{2};                                  
-                num_nodes   = left_nodes  + right_nodes;                
+                right_nodes = varargin{2} ;                                 
+                num_nodes   = left_nodes + right_nodes;                
                 i           = vec(repmat(1:left_nodes, right_nodes, 1));
                 j           = vec(repmat(left_nodes+1:left_nodes+right_nodes, right_nodes, 1)');
                 assert(length(i) == left_nodes * right_nodes );
@@ -617,19 +650,19 @@ classdef Graph < dynamicprops
             
             function adj = star(center, neighbors, directionality)
                 if IS.single_number(neighbors)
-                    num_nodes = neighbors+1;                    
+                    n_nodes   = neighbors+1;                    
                     neighbors = 1:neighbors;
                     if any(center == neighbors)
                         neighbors = setdiff(neighbors, center);
                         neighbors(end+1) = neighbors(end) + 1;
                     end
-                    center = repmat(center, num_nodes-1, 1);                    
+                    center = repmat(center, n_nodes-1, 1);                    
                     if strcmp(directionality, 'out')
-                        adj = sparse(center, neighbors, ones(num_nodes-1,1), num_nodes,  num_nodes);                             
+                        adj = sparse(center, neighbors, ones(n_nodes-1,1), n_nodes,  n_nodes);                             
                     elseif strcmp(directionality, 'in')
-                        adj = sparse(neighbors, center, ones(num_nodes-1,1), num_nodes,  num_nodes);                    
+                        adj = sparse(neighbors, center, ones(n_nodes-1,1), n_nodes,  n_nodes);                    
                     else
-                        adj = sparse(center, neighbors, ones(num_nodes-1,1), num_nodes,  num_nodes);                             
+                        adj = sparse(center, neighbors, ones(n_nodes-1,1), n_nodes,  n_nodes);                             
                         adj = adj + adj';
                     end
                 else

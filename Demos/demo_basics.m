@@ -14,7 +14,6 @@ mesh2.set_default_vertex_areas('barycentric');
 mesh1.plot();
 mesh2.plot();
 
-
 % Compute a basis for functions defined on the mesh vertices (here, Laplace Beltrami).
 LB1            = Laplace_Beltrami(mesh1);                   % Uses the cotangent scheme for the laplacian discretisation.
 LB2            = Laplace_Beltrami(mesh2);
