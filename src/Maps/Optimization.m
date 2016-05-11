@@ -247,8 +247,7 @@ classdef Optimization
         
         
         
-        function W = big_matrix_for_latent_spaces(in_maps, weights)            
-            % TODO re-write comments/name variables.
+        function W = big_matrix_for_latent_spaces(in_maps, weights)                        
             % Input:
             %           in_maps  -  (N x N cell array) carrying the functional map from object i to object j, in its  
             %                       (i,j) cell. N is the total number of objects in the collection.
@@ -274,7 +273,7 @@ classdef Optimization
             eye_map            = speye(map_size);
             W                  = in_maps;
             
-            if all_close(weights, weights', 5e-10, +Inf)                % Weights are symmetric.                
+            if all_close(weights, weights', 5e-10, +Inf)                % Weights are symmetric.
                 for m = 1:length(src)                                   % We use Fan's derivation (same as paper).
                     i = src(m);                                         % i-j are connected: i points to j.
                     j = trg(m);
@@ -297,8 +296,6 @@ classdef Optimization
             if ~(all_close(W, W', 0.0001, +Inf))            
                 error('Produced Aggregate matrix is not symmetric. Check your input matrices.')
             end                       
-        end
-        
-
+        end       
     end % Static    
 end
