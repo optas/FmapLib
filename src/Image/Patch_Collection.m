@@ -54,7 +54,8 @@ classdef Patch_Collection < dynamicprops
             obj.image.plot();
             hold on;            
             if exist('scores', 'var')
-                colors = vals2colormap(scores);
+                colors = vals2colormap(scores, 'jet');                
+%                 colors = ceil(colors .* 255);                
                 if exist('add_text', 'var') && add_text
                     for i = 1:length(scores)                    
                         F = obj.get_patch(i).plot('color', colors(i,:), 'text', sprintf('%.2f', scores(i)));                    
@@ -523,6 +524,28 @@ classdef Patch_Collection < dynamicprops
             P      = setdiff(find(pw_int ./ areas == 1), patch_id);            
         end
         
+        
+        function [top_ids, top_scores] = k_best_non_overlaping_patches(obj, scores, k, overlap_ratio)
+            if ~ exist('overlap_ratio', 'var')
+                overlap_ratio = 0.8;
+            end            
+            R = obj.rects;
+            A = obj.areas;                              
+            top_ids = []; top_scores = [];
+            [max_score, top_id] = max(scores);
+            while numel(top_ids)<k && ~(max_score==-inf)
+                top_ids        = [top_ids, top_id];
+                top_scores     = [top_scores, max_score];
+                scores(top_id) = -inf;
+                id_valid       = find(isfinite(scores));
+                area_int       = rectint(R(top_id, :), R(id_valid,:))';                
+                IOU            = area_int ./ (A(top_id) + A(id_valid) - area_int);
+                id_nm          = id_valid(find(IOU > overlap_ratio));
+                scores(id_nm)  = -inf;
+                [max_score, top_id] = max(scores);    
+            end
+        end
+
         
         
         %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%  %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%

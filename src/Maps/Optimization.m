@@ -245,7 +245,17 @@ classdef Optimization
             weights = reshape(weights, a, 1, a, 1);
         end
         
-        
+        function [sol, residual] = min_l1_solution_with_linear_const(dictionary, target_vector, lambda)
+            %
+            %
+            %                         
+            cvx_begin        
+                variables sol(size(dictionary,2) , 1) 
+                minimize norm(dictionary*sol - target_vector, 'fro') + lambda * norm(sol, 1)
+            cvx_end      
+            
+            residual = cvx_optval;               
+        end
         
         function W = big_matrix_for_latent_spaces(in_maps, weights)                        
             % Input:
