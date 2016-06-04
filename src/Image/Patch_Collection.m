@@ -232,11 +232,12 @@ classdef Patch_Collection < dynamicprops
             %           overlaps - (N x 1) vector overlaps(i) is the fraction of the area of the i-th patch (as returned 
             %                      from get_patch(i)) in the bitmask.                                                
             overlaps = zeros(size(obj), 1);
+            areas    = obj.areas;
             for i = 1:size(obj)
                 pi = obj.collection(i); 
-                overlaps(i) = pi.area_of_intersection(patch) / pi.area();
-                assert(overlaps(i) >= 0 && overlaps(i) <= 1);
+                overlaps(i) = pi.area_of_intersection(patch) / areas(i);
             end
+            assert(all(overlaps >= 0) && all(overlaps <= 1));
         end
         
         function [C] = corloc(obj, patch)
@@ -522,6 +523,9 @@ classdef Patch_Collection < dynamicprops
             pw_int = rectint(obj.rects, obj.rects(patch_id));
             areas  = obj.areas;            
             P      = setdiff(find(pw_int ./ areas == 1), patch_id);            
+            if size(P,1) ~= 1
+                P = P';
+            end
         end
         
         

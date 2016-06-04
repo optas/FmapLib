@@ -380,8 +380,7 @@ classdef Functional_Map < dynamicprops
             S       = sparse(indices, 1:nsamples, areas, num_vertices, nsamples);
         end
         
-                   
-        
+
         function [F] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, src_neigs, trg_neigs)                        
 %         function [F] = groundtruth_functional_map(basis_from, basis_to, gt_from_to, to_areas)                        
             F = Functional_Map(basis_from, basis_to);
@@ -418,11 +417,11 @@ classdef Functional_Map < dynamicprops
             [trg_size, ft_n]  = size(trg_functions);
             if fs_n ~= ft_n
                 error('Same number of functions characterizing the two spaces must be provided.')
-            end
-            
-            cvx_begin        
+            end            
+%             cvx_precision low
+            cvx_begin                        
                 variables X(trg_size, src_size)
-                minimize norm(X*src_functions - trg_functions, 1) + lambda * norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro')
+                minimize norm(X*src_functions - trg_functions, 1) + lambda * square_pos(norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro'))
             cvx_end      
             residual = cvx_optval;               
         end
@@ -495,14 +494,12 @@ classdef Functional_Map < dynamicprops
             z = sparse(N1N2, 1);
 %             cvx_setspath('sedumi'); 
             dim = numel(D2);
-            K.q = [1 + dim];
+            K.q = 1 + dim;
             b   = [z; -1];
             D2t = sparse(D2');                 %TODO-P: sparse should be making this slower here.
             c   = [0; D2t(:)];
-            At = [z' -1;
-                  kron(speye(N2), D1') sparse(dim, length(K.q))];
-
-            % L1 L2
+            At  = [z' -1;
+                  kron(speye(N2), D1') sparse(dim, length(K.q))];            
             if lambda > 0
                 dim = N1N2;
                 K.q = [K.q 1 + dim];
@@ -518,14 +515,12 @@ classdef Functional_Map < dynamicprops
             % -(y_{N1N2+1} + lambda*y_{N1N2+2}). t1 = y_{N1N2+1}, t2 =
             % y_{N1N2+2}. 
             
-            %The dual y satisfies s = c-A'*y, s \in Dual cone K'. The
+            % The dual y satisfies s = c-A'*y, s \in Dual cone K'. The
             % existence of s in the dual gives the conditions relating
             % t1,t2 to the Frobenius norms in the objective.
             [~, y, ~] = sedumi(sparse(At), sparse(b), sparse(c), K, struct('fid', 0));
-            X = reshape(y(1:N1N2), N1, N2)';
-            
-            residual = norm(X*D1 - D2, 'fro') + lambda .* norm(X*diag(L1) - diag(L2)*X, 'fro');
-            
+            X = reshape(y(1:N1N2), N1, N2)';            
+            residual = norm(X*D1 - D2, 'fro') + lambda .* norm(X*diag(L1) - diag(L2)*X, 'fro');            
         end
 
         
@@ -621,34 +616,7 @@ classdef Functional_Map < dynamicprops
                 end
             end
         end
-               
-        function [X, residual] = sum_of_frobenius_norms_cvx(src_functions, trg_functions, src_spectra, trg_spectra, lambda)
-            % Solving the fmap by minimizing the frobenius norm differences via cvx.        
-            [src_size, fs_n]  = size(src_functions);
-            [trg_size, ft_n]  = size(trg_functions);
-            if fs_n ~= ft_n
-                error('Same number of functions characterizing the two spaces must be provided.')
-            end
-            if lambda < 0
-                error('Regularization parameter lambda, must be non-negative.')
-            end
-            
-            % cvx_precision low
-
-            if lambda > 0
-                cvx_begin        
-                    variables X(trg_size, src_size)
-                    minimize  norm((X*src_functions) - trg_functions, 'fro') + lambda * norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro')
-                cvx_end                      
-            else
-                cvx_begin        
-                    variables X(trg_size, src_size)                    
-                    minimize  norm((X*src_functions) - trg_functions, 'fro')
-                cvx_end                                      
-            end
-            residual = cvx_optval;               
-        end
-                
+        
         function [X, val] = frobenius_with_covariance(src_functions, trg_functions, trg_cov, src_spectra, trg_spectra, lambda)
         % Solving the fmap by minimizing the frobenius norm with cvx        
             [src_size, fs_n]  = size(src_functions);
@@ -729,25 +697,24 @@ classdef Functional_Map < dynamicprops
         end
         
         function [Y, L] = latent_basis_given_functional_maps(in_maps, weights, latent_size)
-            % Returns a set of orthonormal vectors that correspond to latent commonalities among objects of a
-            % collection. These commonalities are found by exploiting a set of functional maps defined between pairs of 
-            % objects of the collection.
+            % Returns a set of orthonormal vectors that correspond to latent commonalities shared among objects of a
+            % collection. These commonalities are found by exploiting a set of functional maps defined between pairs 
+            % of objects of the collection.            
             % 
             % Input:
-            %           in_maps  -  (N x N cell array) carrying the functional map from object i to object j, in its  
+            %            in_maps -  (N x N cell array) carrying the functional map from object i to object j, in its  
             %                       (i,j) cell. N is the total number of objects in the collection.
             %
-            %           weights  -  (N x N matrix) weights(i,j) is a positive double reflecting how closely related 
+            %            weights -  (N x N matrix) weights(i,j) is a positive double reflecting how closely related 
             %                       object i is to object j.
             %
-            %        latent_size -  (int) Specifies how many latent functions will be derived in every object.
+            %        latent_size -  (int) Specifies how many latent vectors will be derived in every object.
             %
             % Output:   
-            %            Y       -  (N x 1 cell array). Y(i) carries 'latent_size' orthogonal column vectors,
+            %                  Y -  (N x 1 cell array). Y(i) carries 'latent_size' orthogonal column vectors,
             %                       corresponding to the latent basis of object i.
             %
-            % Reference: 'Image Co-Segmentation via Consistent Functional Maps, F. Wan et al. in _add_''
-            
+            % Reference: 'Image Co-Segmentation via Consistent Functional Maps, F. Wan et al. in ICCV 2013.''            
             % TODO assert(diag(in_maps) = isempty())
             
             W            = Optimization.big_matrix_for_latent_spaces(in_maps, weights);            
@@ -755,14 +722,14 @@ classdef Functional_Map < dynamicprops
             [src, trg]   = find(weights, 1);
             map_size     = size(in_maps{src, trg});
            
-            [U, L]   = eigs(W, latent_size, 'SM');            
-            L        = diag(L);      
+            [U, L]   = eigs(W, latent_size, 'SM');
+            L        = diag(L);
             [~, ind] = sort(abs(L));            
-            L = L(ind);
+            L        = L(ind);
             assert(IS.non_decreasing(abs(L)));                                    
             U        = U(:, ind);            
             Y        = cell(num_objects, 1);                       
-            previous  = 0;            
+            previous = 0;            
             for i = 1:num_objects
                 Y{i} = U(previous + 1 : previous + map_size(1), :);                
                 previous = previous + map_size(1);                
