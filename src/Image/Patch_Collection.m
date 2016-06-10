@@ -361,6 +361,11 @@ classdef Patch_Collection < dynamicprops
             
             C  = zeros(size(obj), 1);
             gt = obj.image.gt_segmentation;
+            
+            if isempty(gt)
+                C = [];
+                return                
+            end
 
             if size(gt) == 1                                     
                 C = obj.corloc(gt.get_patch(1));                            

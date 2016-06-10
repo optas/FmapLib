@@ -44,7 +44,7 @@ classdef Image < dynamicprops
             end                           
         end
         
-        function [varargout] = size(obj)                        
+        function [varargout] = size(obj)
             if length(obj) > 1                % Array of Images.
                 varargout{1} = length(obj);               
                 return
