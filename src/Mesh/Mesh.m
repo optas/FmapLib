@@ -213,8 +213,8 @@ classdef Mesh < dynamicprops
     methods (Static)
         
         function [N] = normals_of_vertices(V, T, weights)
-            % Computes the normalized outward normal at each vertex by adding the weighted normals of each triangle a 
-            % vertex is adjacent to. The weights that are used are the actual area of the triangle a normal comes from.
+            % Computes the normalized outward normal at each vertex by adding the normals of each triangle a 
+            % vertex is adjacent to. The weights parameter controls the weight of each triangle normal.
             %             
             % Input:
             %           V   -   (num_of_vertices x 3) 3D coordinates of
@@ -277,7 +277,7 @@ classdef Mesh < dynamicprops
             %           corresponding to the 3 vertices of the i-th
             %           triangle. The indexing is based on -V-.                
             % 
-            % Output:   A - (num_of_triangles x 1) an array containint
+            % Output:   A - (num_of_triangles x 1) an array containing
             %           the areas of all the triangles.
 
             A = Mesh.normals_of_triangles(V, T);

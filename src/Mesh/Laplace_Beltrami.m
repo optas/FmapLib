@@ -157,7 +157,7 @@ classdef Laplace_Beltrami < Basis
 
             nv = size(V, 1);
             W  = sparse(In, Jn, Sn, nv, nv);
-            assert(isequal(W, W'))                
+%             assert(isequal(W, W'))                
         end
         
     end
