@@ -1,7 +1,7 @@
 classdef Patch_Collection < dynamicprops
     
     properties (GetAccess = public, SetAccess = private)
-        collection = Patch;     %    (Patch Array) storing all the patches.
+        collection = Patch;     %    (Patch Array) 1-dimensional array storing Patch objects.
         image;                  %    (Image) the image over which the patches were defined.
     end
 
@@ -9,9 +9,9 @@ classdef Patch_Collection < dynamicprops
         function obj = Patch_Collection(corners, in_image)
             % Class Constructor.
             % Input:
-            %           corners  - (N x 4) matrix carrying the (x,y) coordinates of the 2 extreme corners defining a
-            %                      rectangular patch. The expected format for each row is: [xmin, ymin, xmax, ymax].
-            %           in_image - (Image) The image, over which the patches were defined.
+            %           corners  - (N x 4 int Matrix) carrying the (x,y) coordinates of the 2 extreme corners defining N
+            %                      rectangular patches. The expected format for each row is: [xmin, ymin, xmax, ymax].
+            %           in_image - (Image) The image over which the patches were defined.
             if nargin == 0
                 obj.collection = Patch();            
                 obj.image      = Image();
@@ -25,15 +25,14 @@ classdef Patch_Collection < dynamicprops
                     obj.collection(1:m) = Patch();
                     for i = 1:m
                         if ~ Patch.is_valid(corners(i,:), in_image)
-                            error('Patch %d cannot go with given image.\n', i);
-                            
+                            error('Patch %d cannot go with given image.\n', i);                            
                         else
                             obj.collection(i) = Patch(corners(i, :));
                         end                    
                     end
                 else
-                    error('Not correct argument.')
-                end                
+                    error('Not correct arguments.')
+                end
             end
         end
         
@@ -509,14 +508,14 @@ classdef Patch_Collection < dynamicprops
             clear all_pairs;            
         end
                        
-
+                
         function P = inside_gt(obj, topk)
-            % topk patches that are covered the most by the gt(s) of th collection.            
+            % topk patches that are covered the most by the gt(s) of the collection.            
             gt = obj.image.gt_segmentation;
             areas = obj.areas();            
             overlaps = zeros(size(obj), 1);                        
             for g = 1 : size(gt)
-                bitmask  = obj.image.patch_indicator(gt.get_patch(g));                
+                bitmask  = gt.get_patch(g).indicator_on_image(obj.image);                
                 overlaps = max(overlaps, obj.area_inside_mask(bitmask));
             end            
             overlaps = overlaps ./ areas;   % Normalize to get fraction of area inside gt.                      

@@ -15,9 +15,9 @@ function [data_path, code_path] = get_project_paths(project_name)
             data_path = '/Users/optas/Documents/Git_Repos/FmapLib/data/';
             code_path = '/Users/optas/Documents/Git_Repos/FmapLib/src/External_Code/';
         
-        elseif strcmp(project_name, 'Joint_Image_Analysis')
-            data_path = '/Users/optas/Dropbox/Matlab_projects/Joint_Image_Analysis/Data/';
-            code_path = '/Users/optas/Dropbox/Matlab_projects/External_Packages/';
+        elseif strcmp(project_name, 'Unsupervised_Image_Sensing')
+            data_path = '/Users/optas/DATA/Images/Unsupervised_Image_Sensing/';
+            code_path = '/Users/optas/Documents/Git_Repos/unsupervised_sensing/matlab_src/';
                 
         elseif strcmp(project_name, 'Shape_Classification')
             data_path = '/Users/optas/Dropbox/Matlab_Projects/Shape_Classification/Data/';
@@ -29,7 +29,7 @@ function [data_path, code_path] = get_project_paths(project_name)
             data_path = '/orions3-zfs/projects/optas/Matlab_Projects/FmapLib/data/';
             code_path = 'orions3-zfs/projects/optas/Matlab_Projects/FmapLib/src/';
         
-        elseif strcmp(project_name, 'Joint_Image_Analysis')
+        elseif strcmp(project_name, 'Unsupervised_Image_Sensing')
             data_path = '/orions3-zfs/projects/optas/Data/Joint_Image_Analysis/';
             code_path = '/orions3-zfs/projects/optas/Matlab_Projects/External_Matlab_Code/';                     
         end
@@ -39,7 +39,7 @@ function [data_path, code_path] = get_project_paths(project_name)
         code_path = 'C:\Users\Etienne\Desktop\GitHubProj\FmapLib\src\External_Code\';            
     
     else        
-        error('Unknown computer.');        
+        error('Unknown computer.');
     end
         
     if isempty(data_path)

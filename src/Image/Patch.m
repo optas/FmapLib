@@ -2,8 +2,9 @@ classdef Patch < dynamicprops
     
     properties (GetAccess = public, SetAccess = private)
         % Basic properties that every instance of the Patch class has.                
-        corners         %   (1 x 4 uint)      -    x-y coordinates wrt. source image, corresponding to the corners 
-                        %                          of the rectangular patch. They are [xmin, ymin, xmax, ymax].
+        
+        corners     % (1 x 4 positive int) x,y coordinates of two extreme corner points
+                    % defining a rectangular image patch. They are [xmin, ymin, xmax, ymax].                    
     end
        
     methods (Access = public)                
@@ -148,6 +149,15 @@ classdef Patch < dynamicprops
                     otherwise
                         error('Type not implemented.')
                 end
+        end
+        
+        function [I] = indicator_on_image(self, image)
+            % Creates a logical matrix with size equal to the dimensions of the input image, 
+            % where ones are only set in pixel locations covered by the patch.            
+            I = zeros(image.height, image.width);
+            [xmin, ymin, xmax, ymax] = self.get_corners();            
+            I(ymin:ymax, xmin:xmax) = 1;
+            I = logical(I);
         end
                        
     end
