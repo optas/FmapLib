@@ -281,6 +281,14 @@ classdef Patch_Collection < dynamicprops
             new_collection.set_collection(obj.collection(keep_list), obj.image);
         end
         
+        function new_collection = keep_top_scoring(self, scores, top_k)
+            if length(scores) ~= self.size
+                error('Provide a score for every proposal.');
+            end
+            [~, top_ids] = sort(scores, 'descend');
+            new_collection  = self.keep_only(top_ids(1:top_k));
+        end
+        
         function [P] = corners(obj)
             s =  size(obj);
             P = zeros(s, 4);

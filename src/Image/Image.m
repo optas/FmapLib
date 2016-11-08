@@ -26,7 +26,7 @@ classdef Image < dynamicprops
             %           (optional, string) describing the name of the image.
             if nargin == 0
                 obj.CData = [];
-            elseif ischar(varargin{1})                
+            elseif ischar(varargin{1})
                 obj.CData = imread(varargin{1});
             else % Directly provide the matrix with the pixel conntent.
                 if size(varargin{1}, 1) < 1 || size(varargin{1}, 2) < 1

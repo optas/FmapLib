@@ -393,44 +393,9 @@ classdef Graph < dynamicprops
                     G = Graph(new_adjacency, obj.is_directed);                   % TODO- More fancy book-keeping + dyn_properties.
                 otherwise
                     error('NIY.')
-            end
-                
-                
-                
-            
+            end            
         end
             
-        
-%         function [E] = ego_network(obj, node)
-% 
-%             if ~ obj.is_directed
-%                 [direct_neighb, weights] = obj.in_neighbors(node);   % Direct neighbors.
-%                 direct_size = length(direct_neighb);
-%                 center = repmat(node, direct_size, 1);
-%                 E = [center, direct_neighb];
-%                 
-%                 for i = 1:direct_size
-%                     n = direct_neighb(node);
-%                     other_nodes = setdiff(direct_neighb, n);
-%                     weights = obj.edges(repmat(n, length(other_nodes)), other_nodes);
-%                     to_add = find(weights);
-%                     if ~isempty(to_add)
-%                         adjacency(n, other_nodes(to_add)) = weights(to_add);
-%                     end
-%                 end
-%                 
-% 
-%             else
-%                 error('Not implemented yet.');
-%             end
-%            
-%             
-%         end
-        
-        
-%         function [T] = triangles(obj)
-%             
-%         end
     
         function [PR, converged, iter] = page_rank(obj, dumping, max_iter)
             % TODO - check diagonal is zero. 
@@ -623,7 +588,25 @@ classdef Graph < dynamicprops
                 default_name = sprintf('%d_%d_%d_radius_connected', m, n, radius);
                 directed  = false;                
                 G = Graph(adj, directed, default_name);                              
-            else                               
+            elseif strcmp(graph_type, 'random_k_out')
+                % Each of the n nodes is linked to k nodes selected at random without replacement                
+                num_nodes = varargin{1};
+                k = varargin{2};                
+                if k > num_nodes-1 
+                    error('Inapropriate parameters.')
+                end
+                default_name = sprintf('random_%d_out', num_nodes);
+                directed  = true;
+                replacement = false;
+                neighbs = zeros(num_nodes, k);
+                population  = 1:num_nodes;                            
+                for i = 1:num_nodes
+                    pop_i = setdiff(population, i); 
+                    neighbs(i,:) = randsample(pop_i, k, replacement);                     
+                end
+                adj = Graph.knn_to_adjacency(neighbs, ones(size(neighbs)), 'out');
+                G = Graph(adj, directed, default_name);
+            else
                 error('Not valid graph type was requested.');
             end
             
