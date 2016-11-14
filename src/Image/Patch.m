@@ -12,31 +12,37 @@ classdef Patch < dynamicprops
             % Class constructror:
             %   Input: 
             %             (1 x 4) vector describing the corners as: [xmin, ymin, xmax, ymax].
-            if nargin == 0                
-                obj.corners  = zeros(1,4);
+            if nargin == 0
+                obj.corners = [];
             elseif nargin == 1
                 in_corners = varargin{1};
                 if ~ Patch.is_valid(in_corners)
                     error('The corners of the Patch do not follow the xmin, ymin, xmax, ymax protocol.')
                 else                    
                     obj.corners = in_corners;
-                end            
+                end
             else
                 error('Wrong number of arguments.')
             end
         end
            
-        function [varargout] = size(obj)                        
-            if length(obj) > 1                % Array of Patches.
-                varargout{1} = length(obj);               
+        function [varargout] = size(self)                        
+            if length(self) > 1     % Array of Patches.
+                varargout{1} = length(self);               
                 return
             end
+            
+            if isempty(self.corners)    % Empty patch.
+                varargout{1} = 0;
+                return 
+            end
+            
             if nargout == 2
                 varargout = cell(nargout);
-                varargout{1} = obj.width;
-                varargout{2} = obj.height;
+                varargout{1} = self.width;
+                varargout{2} = self.height;
             else
-                varargout{1} = [obj.width, obj.height];
+                varargout{1} = [self.width, self.height];
             end
         end
         
@@ -112,11 +118,11 @@ classdef Patch < dynamicprops
             end
         end
         
-        function c = corloc(obj, another_patch)
-            intersection = obj.area_of_intersection(another_patch);
-            union        = obj.area() + another_patch.area() - intersection;
-            c            = double(intersection) / double(union);
-            assert(c >= 0 && c <= 1);
+        function s = intersection_over_union(self, another_patch)
+            intersection = self.area_of_intersection(another_patch);
+            union = self.area() + another_patch.area() - intersection;
+            s = double(intersection) / double(union);
+            assert(s >= 0 && s <= 1);
         end
         
         function [np] = linear_interpolation(obj, from_width, to_width, from_height, to_height)                                   
@@ -176,10 +182,15 @@ classdef Patch < dynamicprops
                   && length(corners) == 4 && corners(1) <= corners(3)  && corners(2) <= corners(4);                  
         end
         
-        function [P] = tightest_box_of_segment(in_mask)            
+        function [P] = tightest_surrrounding_non_zeros(in_mask)
+            % Given a two-dimensional array find the tightest box/patch that contains all its non-zero values.
+            % The edges of the tighest box include the extremal non-zero values.
             [y, x] = find(in_mask);
-            P      = Patch([min(x), min(y), max(x), max(y)]);            
-            
+            if isempty(x) || isempty(y)
+                P = Patch();
+            else                
+                P = Patch([min(x), min(y), max(x), max(y)]);
+            end
         end
         
 %         function area_percent_covered_by_other_patches(frame_patch, other_patches, corners)
@@ -232,15 +243,8 @@ classdef Patch < dynamicprops
 %                 assert(s>=0 && s<=360)
         end
         
-        function [b] = uodl_patch_constraint(corners, src_image)                        
-            bValid1 = corners(1) > src_image.height * 0.01 & corners(3) < src_image.height*0.99 ...
-                    & corners(2) > src_image.width * 0.01 & corners(4) < src_image.width*0.99;
-            bValid2 = corners(1) < src_image.height*0.01 & corners(3) > src_image.height*0.99 ...
-                    & corners(2) < src_image.width*0.01 & corners(4) > src_image.width*0.99;
-            b = bValid1 | bValid2;                           
-        end 
-
-         
+        
+                 
     end
     
 end

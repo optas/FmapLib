@@ -42,18 +42,24 @@ classdef Image < dynamicprops
             end                           
         end
         
-        function [varargout] = size(obj)
-            if length(obj) > 1 % Case: Array of Image objects.
-                varargout{1} = length(obj);               
+        function [varargout] = size(self)
+            if length(self) > 1 % Case: Array of Image objects.
+                varargout{1} = length(self);               
                 return
             end
-            % Case: Single Image: return height, width.
+            
+            if isempty(self.CData) % Empty image.
+                varargout{1}  = 0;
+                return
+            end
+            
+            % Non empty Single Image: return height, width.
             if nargout == 2    
                 varargout = cell(nargout);
-                varargout{1} = obj.height;
-                varargout{2} = obj.width;
+                varargout{1} = self.height;
+                varargout{2} = self.width;
             else
-                varargout{1} = [obj.height, obj.width];
+                varargout{1} = [self.height, self.width];
             end
         end
         
