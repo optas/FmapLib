@@ -58,7 +58,39 @@ classdef Patch < dynamicprops
                 varargout{1} = obj.corners;
             end
         end
+        
+        function w = width(self)                       
+            [xmin, ~, xmax, ~] = self.get_corners();
+            w = single(xmax - xmin + 1);            
+        end
+        
+        function h = height(obj)                       
+            [~, ymin, ~, ymax] = obj.get_corners();
+            h = single(ymax - ymin + 1);            
+        end
+        
+        function a = area(obj)
+            a = obj.height() * obj.width();            
+        end
+        
+        function R = as_rectangle(self)
+            R = single(zeros(1,4));
+            R(1) = self.corners(1);
+            R(2) = self.corners(2);
+            R(3) = self.width;
+            R(4) = self.height;
+        end
             
+        function c = center(self)
+            [xmin, ymin, xmax, ymax] = self.get_corners();
+            c = [single((xmax+xmin)/2), single((ymax+ymin)/2)];
+        end
+        
+        function d = diagonal_length(self)
+            [xmin, ymin, xmax, ymax] = self.get_corners();
+            d = norm(xmax - xmin, ymax - ymin);
+        end
+        
         function [F] = plot(obj, varargin)
             % Plots the boundary of the patch.
             options = struct('image', [], 'color', 'r', 'line_width', 3, 'text', []);
@@ -78,44 +110,20 @@ classdef Patch < dynamicprops
                                                                             
         end
 
-        function w = width(obj)                       
-            [~, ymin, ~, ymax] = obj.get_corners();
-            w = ymax - ymin + 1;
-            w = single(w);
-        end
-        
-        function h = height(obj)                       
-            [xmin, ~, xmax, ~] = obj.get_corners();
-            h = xmax - xmin + 1;
-            h = single(h);
-        end
-                
-        function a = area(obj)                
-            a = obj.height() * obj.width();            
-        end
-        
-        function c = center(obj)
-            [xmin, ymin, xmax, ymax] = obj.get_corners();
-            c = [single((xmax+xmin)) / 2, single((ymax+ymin)) / 2];            
-        end
-        
-        function d = diagonal_length(obj)
-            [xmin, ymin, xmax, ymax] = obj.get_corners();
-            d = norm(single(xmax - xmin), single(ymax - ymin));
-        end
-        
+
         function a = area_of_intersection(obj, another_patch)            
-            [xmin1, ymin1, xmax1, ymax1] = obj.get_corners();
-            [xmin2, ymin2, xmax2, ymax2] = another_patch.get_corners();            
-            xmin = max(xmin1, xmin2);
-            ymin = max(ymin1, ymin2);
-            xmax = min(xmax1, xmax2);
-            ymax = min(ymax1, ymax2);
-            if ymin <= ymax && xmin <= xmax
-                a = single((ymax-ymin+1)) * single((xmax-xmin+1));
-            else
-                a = 0;
-            end
+            a = single(rectint(obj.as_rectangle, another_patch.as_rectangle));
+%             [xmin1, ymin1, xmax1, ymax1] = obj.get_corners();
+%             [xmin2, ymin2, xmax2, ymax2] = another_patch.get_corners();            
+%             xmin = max(xmin1, xmin2);
+%             ymin = max(ymin1, ymin2);
+%             xmax = min(xmax1, xmax2);
+%             ymax = min(ymax1, ymax2);
+%             if ymin <= ymax && xmin <= xmax
+%                 a = single((ymax-ymin+1)) * single((xmax-xmin+1));
+%             else
+%                 a = 0;
+%             end
         end
         
         function s = intersection_over_union(self, another_patch)

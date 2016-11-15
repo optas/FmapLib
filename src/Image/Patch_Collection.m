@@ -51,11 +51,18 @@ classdef Patch_Collection < dynamicprops
             p = obj.collection(p_index);
         end
         
-        function [S] = intersection_over_union(self, patch)
-            S = zeros(size(self), 1);             
-            for i = 1:size(self)                
-                S(i) = self.collection(i).intersection_over_union(patch);                
-            end            
+
+        function [S] = intersection_over_union(self, patch)            
+            S = bboxOverlapRatio(self.rects, patch.as_rectangle);           
+            % If bboxOverlapRatio is not defined.
+            % r = patch.as_rectangle();
+            % pw_int = rectint(self.rects, r);
+            % S = pw_int ./ (self.areas() + patch.area() - pw_int);        
+        end
+        
+        function [inter] = intersection(self, patch)
+            r = patch.as_rectangle();
+            inter = rectint(self.rects, r);                      
         end
         
         function [overlaps] = overlap_with_patch(self, patch)
@@ -66,14 +73,8 @@ classdef Patch_Collection < dynamicprops
             %           patch    - (Patch)
             %
             % Output:                     
-            %           overlaps - (N x 1) vector overlaps(i) is the fraction of the area of the i-th patch (as returned 
-            %                      from get_patch(i)) in the bitmask.                                                
-            overlaps = zeros(size(self), 1);
-            areas = self.areas;
-            for i = 1:size(self)
-                pi = self.collection(i); 
-                overlaps(i) = pi.area_of_intersection(patch) / areas(i);
-            end
+            %           overlaps - (N x 1) vector overlaps(i) is the fraction of the area of the i-th patch in the  patch.                                                                         
+            overlaps = self.intersection(patch) ./ self.areas;           
             assert(all(overlaps >= 0) && all(overlaps <= 1));
         end
         
@@ -159,18 +160,22 @@ classdef Patch_Collection < dynamicprops
                 c = obj.collection;
                 R = zeros(n,4);
                 for i = 1:n
-                    R(i,1) = c(i).corners(1);
-                    R(i,2) = c(i).corners(2);                
-                    R(i,3) = c(i).height;
-                    R(i,4) = c(i).width;
+                    R(i,:) = c(i).as_rectangle();
                 end
                 obj.addprop('rects_prop');
                 obj.('rects_prop') = R;
             end
             if nargin == 2
                 R = R(ids,:);
-            end
-            
+            end            
+        end
+        
+        function B = boxes(self)
+            n = size(self);
+            B = zeros(n, 4);
+            for i=1:n
+                B(i,:) = self.collection(i).corners;
+            end            
         end
         
         function [keep] = filter_patches(obj, varargin)
@@ -274,14 +279,7 @@ classdef Patch_Collection < dynamicprops
             end 
             I = I.apply_mask(mask);            
         end
-        
-        function [inter] = intersection(obj, patch)
-            inter = zeros(size(obj), 1);             
-            for i = 1:size(obj)                
-                inter(i) = obj.collection(i).area_of_intersection(patch);
-            end            
-        end
-        
+                
         function [H, M] = weight_map(obj, masses)            
             H = zeros(size(obj.image));
             M = zeros(size(obj.image));
@@ -366,15 +364,14 @@ classdef Patch_Collection < dynamicprops
             obj.collection(end+1: end+new_patches) = other_collection.collection(:);
         end
      
-        
-        
-        function C = equivalence_classes_in_area(obj, num_classes)          
+                
+        function C = area_equipartition(obj, num_classes)          
             if num_classes == 1
                 C = ones(size(obj), 1);
                 return
             end
             areas = obj.areas;
-            C     = zeros(length(areas), 1);
+            C = zeros(length(areas), 1);
             mass_in_class = 100 / num_classes;
             prcs = mass_in_class: mass_in_class: (100-mass_in_class);
             prcs = prctile(areas, prcs);
@@ -386,18 +383,16 @@ classdef Patch_Collection < dynamicprops
                     C = C + class_ind * in_class;
                     class_ind  = class_ind  + 1;
                 end                    
-            end            
-            
+            end                        
             i = i + 1;          % Largest/last class defined only by being bigger than last percentile.
-            C = C + class_ind * (areas >= prcs(i));
-            
+            C = C + class_ind * (areas >= prcs(i));            
             assert(all(C>0) & all(C<=num_classes))               
             for i = 1:class_ind-1
                 assert(max(areas(C==i)) <= min(areas(C==i+1)))                
             end            
         end
         
-        function C = adaptive_equivalence_classes_in_area(self, separation)            
+        function C = area_geometric_partition(self, separation)
             [s_areas, s_ids] = sort(self.areas, 'ascend');
             membership = zeros(size(self), 1);
             membership(1) = 1;
@@ -418,9 +413,8 @@ classdef Patch_Collection < dynamicprops
                 min_of_class = last_of_class;
                 class_id = class_id + 1;                
             end
-            C = zeros(1, length(membership));
-            C(s_ids) = membership;
-            
+            C = zeros(length(membership),1);
+            C(s_ids) = membership;            
             areas = self.areas;
             for i = 1:max(C)-1
                 assert(max(areas(C==i)) <= min(areas(C==i+1)))                
@@ -463,9 +457,9 @@ classdef Patch_Collection < dynamicprops
             end
         end
         
-        function I = pw_area_intersections(obj)
+        function I = pw_area_intersections(self)
             % Computes all pairwise intersections between the patches stored in the collection.
-            I = single(rectint(obj.rects, obj.rects));            
+            I = single(rectint(self.rects, self.rects));            
         end
         
         
