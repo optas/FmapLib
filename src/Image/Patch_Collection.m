@@ -77,8 +77,7 @@ classdef Patch_Collection < dynamicprops
             overlaps = self.intersection(patch) ./ self.areas;           
             assert(all(overlaps >= 0) && all(overlaps <= 1));
         end
-        
-        
+                
         function [P] = closest_to_gt(self, top_k)
             % Returns the indices of the patches that have biggest IOU statistic
             % with any of the groundtruth bounding boxes of the image.
@@ -218,14 +217,7 @@ classdef Patch_Collection < dynamicprops
             obj.collection = obj.collection(purgatory_list);
         end
         
-        function set_collection(obj, new_patch_array, new_image)
-            if isa(new_patch_array, 'Patch') && isa(new_image, 'Image')
-                obj.collection = new_patch_array;
-                obj.image      = new_image;
-            else
-                error('Incompatible types.')
-            end            
-        end          
+        
         
         function [new_collection] = embed_in_new_image(obj, new_image)                       
             % TODO think of working with array of corners than Patches => use Patch_Collection constructor and not
@@ -300,6 +292,15 @@ classdef Patch_Collection < dynamicprops
             end                       
         end
                 
+        function set_collection(obj, new_patch_array, new_image)
+            if isa(new_patch_array, 'Patch') && isa(new_image, 'Image')
+                obj.collection = new_patch_array;
+                obj.image = new_image;
+            else
+                error('Incompatible types.')
+            end            
+        end          
+        
         function new_collection = keep_only(obj, keep_list)
             new_collection = Patch_Collection();
             new_collection.set_collection(obj.collection(keep_list), obj.image);
@@ -402,10 +403,8 @@ classdef Patch_Collection < dynamicprops
                 bound = s_areas(min_of_class) * separation;
                 last_of_class = find(s_areas > bound, 1);
                                 
-                if isempty(last_of_class)
-                    if min_of_class < size(self)                        
-                        membership(min_of_class:end) = class_id;
-                    end
+                if isempty(last_of_class)                    
+                    membership(min_of_class:end) = class_id;                    
                     break
                 end
                 
@@ -413,6 +412,7 @@ classdef Patch_Collection < dynamicprops
                 min_of_class = last_of_class;
                 class_id = class_id + 1;                
             end
+            assert(all(membership > 0))
             C = zeros(length(membership),1);
             C(s_ids) = membership;            
             areas = self.areas;
