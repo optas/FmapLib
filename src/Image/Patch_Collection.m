@@ -14,10 +14,10 @@ classdef Patch_Collection < dynamicprops
             %           in_image - (Image) The image over which the patches were defined.
             if nargin == 0
                 obj.collection = Patch();
-                obj.image      = Image();
+                obj.image = Image();
             else
                 obj.image = in_image;                
-                if isa(corners, 'double')
+                if isa(corners, 'single') || isa(corners, 'double') 
                     m = size(corners, 1);    
                     if m < 1 
                         error('A Patch Collection must consist of at least one Patch objects.')
@@ -151,32 +151,6 @@ classdef Patch_Collection < dynamicprops
             obj.(prop_id) = prop_content;
         end
         
-        function R = rects(obj, ids)
-            if isprop(obj, 'rects_prop')
-                R = obj.rects_prop;
-            else
-                n = size(obj);
-                c = obj.collection;
-                R = zeros(n,4);
-                for i = 1:n
-                    R(i,:) = c(i).as_rectangle();
-                end
-                obj.addprop('rects_prop');
-                obj.('rects_prop') = R;
-            end
-            if nargin == 2
-                R = R(ids,:);
-            end            
-        end
-        
-        function B = boxes(self)
-            n = size(self);
-            B = zeros(n, 4);
-            for i=1:n
-                B(i,:) = self.collection(i).corners;
-            end            
-        end
-        
         function [keep] = filter_patches(obj, varargin)
             % Keep patches that are not area-wise too big or too small wrt. to their image.
             % Also removes line patches.
@@ -217,8 +191,7 @@ classdef Patch_Collection < dynamicprops
             obj.collection = obj.collection(purgatory_list);
         end
         
-        
-        
+
         function [new_collection] = embed_in_new_image(obj, new_image)                       
             % TODO think of working with array of corners than Patches => use Patch_Collection constructor and not
             % set_collection.
@@ -313,53 +286,7 @@ classdef Patch_Collection < dynamicprops
             [~, top_ids] = sort(scores, 'descend');
             new_collection  = self.keep_only(top_ids(1:top_k));
         end
-        
-        function [P] = corners(obj)
-            s =  size(obj);
-            P = zeros(s, 4);
-            for i = 1:s
-                P(i,:) = obj.collection(i).get_corners();
-            end
-        end
-        
-        function A = areas(obj, patch_id)
-            if nargin == 1 % Return the areas of every patch.                
-                if size(obj) == 1
-                    A = obj.collection(1).area();
-                else
-                    A = arrayfun( @(p) p.area(), obj.collection);
-                end                
-            else
-                A = arrayfun( @(p) p.area(), obj.collection(patch_id));                
-            end
-        end
-        
-        function C = centers(obj, patch_id)
-            if nargin == 1 % Return the areas of every patch.                
-                if size(obj) == 1
-                    C = obj.collection(1).center();
-                else
-                    C = arrayfun( @(p) p.center(), obj.collection, 'UniformOutput', false);
-                end                
-            else
-                C = arrayfun( @(p) p.center(), obj.collection(patch_id));                
-            end
-            C = cell2mat(C);
-        end
-        
-        function C = diagonal_lengths(obj, patch_id)
-            if nargin == 1 % Return the areas of every patch.                
-                if size(obj) == 1
-                    C = obj.collection(1).diagonal_length();
-                else
-                    C = arrayfun( @(p) p.diagonal_length(), obj.collection);
-                end                
-            else
-                C = arrayfun( @(p) p.diagonal_length(), obj.collection(patch_id));                
-            end
-        end
-        
-        
+                        
         function obj = merge_with(obj, other_collection)
             new_patches = size(other_collection);
             obj.collection(end+1: end+new_patches) = other_collection.collection(:);
@@ -456,13 +383,7 @@ classdef Patch_Collection < dynamicprops
                 S(p,1:keep)   = inclusions{p}(ids(1:keep));
             end
         end
-        
-        function I = pw_area_intersections(self)
-            % Computes all pairwise intersections between the patches stored in the collection.
-            I = single(rectint(self.rects, self.rects));            
-        end
-        
-        
+
         function S = symmetries(obj, descriptors, topk, intersection_thres, side_thres)
             if ~ exist('intersection_thres', 'var')
                 intersection_thres = 0.1;
@@ -545,6 +466,76 @@ classdef Patch_Collection < dynamicprops
             end
         end
 
+        
+        %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%  %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%
+        %%              Functions on basic properties of the Patch collection.              %%
+        %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%  %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%        
+        
+        function [P] = corners(self)
+            n = size(self);
+            patches = self.collection;
+            P = single(zeros(n, 4));          
+            for i = 1:n
+                P(i,:) = patches(i).corners;
+            end
+        end
+        
+        function [R] = rects(self, ids)
+            if isprop(self, 'rects_prop')
+                R = self.rects_prop;
+            else
+                n = size(self);
+                c = self.collection;
+                R = single(zeros(n, 4));
+                for i = 1:n
+                    R(i,:) = c(i).as_rectangle();
+                end
+                self.addprop('rects_prop');
+                self.('rects_prop') = R;
+            end
+            if nargin == 2
+                R = R(ids,:);
+            end            
+        end
+        
+        function [I] = pw_area_intersections(self)
+            % Computes all pairwise intersections between the patches stored in the collection.
+            I = single(rectint(self.rects, self.rects));            
+        end
+        
+        function [A] = areas(self, ids)            
+            if nargin == 1 % Return the areas of every patch.                
+                R = self.rects;                
+            else
+                R = self.rects(ids);
+            end
+            A = R(:,3) .* R(:,4);           
+        end
+        
+        function [C] = centers(obj, patch_id)
+            if nargin == 1 % Return the areas of every patch.                
+                if size(obj) == 1
+                    C = obj.collection(1).center();
+                else
+                    C = arrayfun( @(p) p.center(), obj.collection, 'UniformOutput', false);
+                end                
+            else
+                C = arrayfun( @(p) p.center(), obj.collection(patch_id));                
+            end
+            C = cell2mat(C);
+        end
+        
+        function [C] = diagonal_lengths(obj, patch_id)
+            if nargin == 1
+                if size(obj) == 1
+                    C = obj.collection(1).diagonal_length();
+                else
+                    C = arrayfun( @(p) p.diagonal_length(), obj.collection);
+                end                
+            else
+                C = arrayfun( @(p) p.diagonal_length(), obj.collection(patch_id));
+            end
+        end
         
         
         %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%  %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%

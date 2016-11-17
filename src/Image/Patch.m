@@ -61,16 +61,18 @@ classdef Patch < dynamicprops
         
         function w = width(self)                       
             [xmin, ~, xmax, ~] = self.get_corners();
-            w = single(xmax - xmin + 1);            
+            w = xmax - xmin + 1;            
         end
         
-        function h = height(obj)                       
-            [~, ymin, ~, ymax] = obj.get_corners();
-            h = single(ymax - ymin + 1);            
+        function h = height(self)                       
+            [~, ymin, ~, ymax] = self.get_corners();
+            h = ymax - ymin + 1;            
         end
         
-        function a = area(obj)
-            a = obj.height() * obj.width();            
+        function a = area(self)            
+            [xmin, ymin, xmax, ymax] = self.get_corners();
+            a = (xmax-xmin+1) * (ymax-ymin+1);
+%             a = self.height() * self.width();
         end
         
         function R = as_rectangle(self)
@@ -83,7 +85,7 @@ classdef Patch < dynamicprops
             
         function c = center(self)
             [xmin, ymin, xmax, ymax] = self.get_corners();
-            c = [single((xmax+xmin)/2), single((ymax+ymin)/2)];
+            c = [(xmax+xmin)/2, (ymax+ymin)/2];
         end
         
         function d = diagonal_length(self)
@@ -109,7 +111,6 @@ classdef Patch < dynamicprops
             end
                                                                             
         end
-
 
         function a = area_of_intersection(obj, another_patch)            
             a = single(rectint(obj.as_rectangle, another_patch.as_rectangle));
