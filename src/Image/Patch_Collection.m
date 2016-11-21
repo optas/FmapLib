@@ -195,14 +195,14 @@ classdef Patch_Collection < dynamicprops
         function [new_collection] = embed_in_new_image(obj, new_image)                       
             % TODO think of working with array of corners than Patches => use Patch_Collection constructor and not
             % set_collection.
-            ow = obj.image.width;            
+            ow = obj.image.width;
             oh = obj.image.height;
             nw = new_image.width;
-            nh = new_image.height;            
+            nh = new_image.height;
             new_patches(size(obj)) = Patch();
             for i = 1:size(obj)                     
                 new_patches(i) =  obj.get_patch(i).linear_interpolation(ow, nw, oh, nh);
-            end          
+            end         
             new_collection = Patch_Collection();
             new_collection.set_collection(new_patches, new_image);
         end
@@ -253,7 +253,7 @@ classdef Patch_Collection < dynamicprops
                 if exist('masses', 'var')
                     M(ymin:ymax, xmin:xmax) = M(ymin:ymax, xmin:xmax) + masses(i);
                 end
-                H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + 1;                               
+                H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + 1;
             end            
         end
         

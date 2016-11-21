@@ -130,10 +130,43 @@ classdef Image_Graph < Graph
                 warning('Updating the Image Graph with a new Image of different size than the original.')
             end
             obj.I = new_image;
+        end                            
+    end
+    
+    methods (Static)
+        function I = graph_node_to_pixel_index_(nodes, image, major)
+            % Assumes the construction of an image-pixel based graph. It translates the node ids of such a graph
+            % into pixel (row,column) location in the image. 
+            % major: 'row' or 'column' the graph nodes took their ids by traversing the image pixels 'row' or 'column'-wise.
+            if strcmp(major, 'row')
+                w = image.width;
+                I = zeros(length(nodes), 2);            
+                I(:,1) = ceil(nodes ./ double(w));             % rows
+                I(:,2) = nodes - ((I(:,1) - 1) * w );          % columns
+            elseif strcmp(major, 'column')
+                h = image.height;            
+                I = zeros(length(nodes), 2);            
+                I(:,2) = ceil(nodes ./ double(h));             % columns
+                I(:,1) = nodes - ((I(:,2) - 1) * h );          % rows
+            end            
         end
-             
+        
+        function N = pixel_index_to_graph_node(pixels, image, major) 
+            % Pixels (Nx2), first column are the row-indices of the pixels and second their column.            
+            % Assumes the construction of an image-pixel based graph. It translates the node ids of such a graph
+            % into pixel (row,column) location in the image. 
+            % major: 'row' or 'column' the graph nodes took their ids by traversing the image pixels 'row' or 'column'-wise.
+            if strcmp(major, 'row')
+                w = image.width;                
+                N = ((pixels(:,1) - 1) .* w) + pixels(:,2);
+            elseif strcmp(major, 'column')
+                error('NIY.')
+            end                    
+        end
+        
                
     end
+    
     
     methods (Access = private)
         function [] = add_or_reset_property(obj, propname, value)

@@ -181,8 +181,6 @@ classdef Graph < dynamicprops
             
         end
         
-        
-        
         function [node_from, node_to, weight] = all_edges(obj)
             % Computes all the edges between every pair of nodes. If the graph is undirected it returns each edge once 
             % and the. TODO-P add documentation
@@ -576,13 +574,13 @@ classdef Graph < dynamicprops
                         vals(end+1:end+length(val)) = val';
                     end
                     all_starts{i1} = starts;
-                    all_ends{i1}   = ends;
-                    all_vals{i1}   = vals;
+                    all_ends{i1} = ends;
+                    all_vals{i1} = vals;
                 end
                 all_starts = cell2mat(all_starts);
-                all_ends   = cell2mat(all_ends);                
-                all_vals   = cell2mat(all_vals);
-                adj        = sparse(all_starts, all_ends, all_vals);
+                all_ends = cell2mat(all_ends);                
+                all_vals = cell2mat(all_vals);
+                adj = sparse(all_starts, all_ends, all_vals);
                 assert(all_close(adj, adj', 0.0001, +Inf));
                 assert(all(nonzeros(adj) > 0));
                 default_name = sprintf('%d_%d_%d_radius_connected', m, n, radius);
@@ -621,13 +619,13 @@ classdef Graph < dynamicprops
             end
           
             function adj = lattice(m, n)
-                total_edges = 2 * (((m-1) * n) + ((n-1) * m));      % Result of from graph Theory.
-                diag_vec_1  = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections.
-                diag_vec_1  = spdiags(diag_vec_1, 1, m * n, m * n);
-                diag_vec_2  = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
-                diag_vec_2  = spdiags(diag_vec_2 , n, m * n, m * n);
+                total_edges = 2 * (((m-1) * n) + ((n-1) * m));     % Basic result from graph theory.
+                diag_vec_1 = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections.
+                diag_vec_1 = spdiags(diag_vec_1, 1, m * n, m * n);
+                diag_vec_2 = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
+                diag_vec_2 = spdiags(diag_vec_2 , n, m * n, m * n);
                 adj = diag_vec_1 + diag_vec_2;
-                adj = adj + adj.';                                  % Edges are symmetric.                        
+                adj = adj + adj.';                                 % Edges are symmetric.                        
                 assert(nnz(adj) == total_edges);                
             end
             
