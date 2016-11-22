@@ -503,6 +503,17 @@ classdef Patch_Collection < dynamicprops
             I = single(rectint(self.rects, self.rects));            
         end
         
+        
+        function [S] = pw_iou(self)
+            % Computes all pairwise intersections between the patches stored in the collection.
+            I = self.pw_area_intersections();
+            A = self.areas;
+            U = LA.outersum(A, A);
+            U = U - I;
+            S = I ./ U;            
+        end
+        
+        
         function [A] = areas(self, ids)            
             if nargin == 1 % Return the areas of every patch.                
                 R = self.rects;                
