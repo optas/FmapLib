@@ -61,17 +61,17 @@ classdef Patch < dynamicprops
         
         function w = width(self)                       
             [xmin, ~, xmax, ~] = self.get_corners();
-            w = xmax - xmin + 1;            
+            w = xmax - xmin;            % Matlab follows this convention. It doesn't add +1 here.
         end
         
         function h = height(self)                       
             [~, ymin, ~, ymax] = self.get_corners();
-            h = ymax - ymin + 1;            
+            h = ymax - ymin;            
         end
         
         function a = area(self)            
             [xmin, ymin, xmax, ymax] = self.get_corners();
-            a = (xmax-xmin+1) * (ymax-ymin+1);
+            a = (xmax-xmin) * (ymax-ymin);
 %             a = self.height() * self.width();
         end
         
@@ -202,21 +202,7 @@ classdef Patch < dynamicprops
             end
         end
         
-%         function area_percent_covered_by_other_patches(frame_patch, other_patches, corners)
-%                 frame_corners = corners(frame_patch, :);
-%                 mask = zeros(frame_corners(4) - frame_corners(2)+1, frame_corners(3)-frame_corners(1)+1);
-%                 for p = 1:length(other_patches)
-%                     sp = other_patches(p);                
-%                     sp_corners = corners(sp,:);
-%                     xmin = sp_corners(1) - frame_corners(1) + 1;
-%                     xmax = xmin + s_corners(3) - sp_corners(1);
-%                     ymin = sp_corners(2) - frame_corners(2) + 1;
-%                     ymax = ymin + sp_corners(4) - sp_corners(2);
-%                     mask(ymin:ymax, xmin:xmax) = 1;                                               
-%                 end
-% 
-%             end
-               
+                     
         function [s, qd] = angle_displacement(xc, yc, x, y)
                 % xc, yc: x,y coordinates of center (reference) patch.
                 % x, y  : x,y coordinates of other (reference) patch.                               

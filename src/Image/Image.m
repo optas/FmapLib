@@ -163,9 +163,17 @@ classdef Image < dynamicprops
     end % End of (public) instance methods.
     
     methods (Static)
-        function I = blank_image(h, w)
-            I = Image(ones(h, w, 3), 'blank_image');
+        function I = white_image(h, w)
+            I = Image(ones(h, w, 3), 'black_image');
         end    
+        
+%         function I = tile_image(h, w)
+%             c = zeros(h, w, 3);
+%             c(w/2:
+%             
+%             I = Image(zeros(h, w, 3), 'tile_image');
+% 
+%         end    
         
         function new_values = normalize_pixel_values(values)
             if ndims(values) < 3   % Grayscale image or vector.

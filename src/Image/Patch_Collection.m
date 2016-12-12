@@ -126,17 +126,23 @@ classdef Patch_Collection < dynamicprops
             end
         end
            
-        function F = plot_patches(obj, patch_ids, scores)
+        function F = plot_patches(obj, patch_ids, visible, scores)
+            if ~ exist('visible', 'var') || visible
+%                 F = figure();                
+            else           
+                F = figure('visible', 'off');                    
+            end             
+            
             obj.image.plot();
-            hold on;                               
+            hold on;                                                                   
             if exist('scores', 'var')
                 colors = vals2colormap(scores);
                 for i = 1:length(scores)                                        
-                    F = obj.get_patch(patch_ids(i)).plot('color', colors(i,:));                    
+                    obj.get_patch(patch_ids(i)).plot('color', colors(i,:));                    
                 end
             else
                 for i = 1:length(patch_ids)                
-                    F = obj.get_patch(patch_ids(i)).plot();
+                    obj.get_patch(patch_ids(i)).plot();
                 end                            
             end
         end
@@ -153,7 +159,7 @@ classdef Patch_Collection < dynamicprops
         
         function [keep] = filter_patches(obj, varargin)
             % Keep patches that are not area-wise too big or too small wrt. to their image.
-            % Also removes line patches.
+            % Also removes line-like patches.
             
             options = struct('no_lines', 1, 'area_less', (.99)^2, 'area_more', (.01)^2);
             options = load_key_value_input_pairs(options, varargin{:});
@@ -166,7 +172,8 @@ classdef Patch_Collection < dynamicprops
             for i = 1:size(obj)
                 pi = obj.collection(i);
                 
-                if options.no_lines && (pi.width() == 1 || pi.height() == 1)    % Remove line - patches.
+%                 if options.no_lines && (pi.width() == 1 || pi.height() == 1)    % Remove line - patches.
+                if options.no_lines && (pi.width() <= 5 || pi.height() <= 5)    % Remove line - patches.
                     keep(i) = false;
                     continue;
                 end
@@ -245,13 +252,15 @@ classdef Patch_Collection < dynamicprops
             I = I.apply_mask(mask);            
         end
                 
-        function [H, M] = weight_map(obj, masses)            
+        function [H, M, MM] = weight_map(obj, masses)            
             H = zeros(size(obj.image));
             M = zeros(size(obj.image));
+            MM = zeros(size(obj.image));
             for i = 1:size(obj)
                 [xmin, ymin, xmax, ymax] = obj.collection(i).get_corners();
                 if exist('masses', 'var')
                     M(ymin:ymax, xmin:xmax) = M(ymin:ymax, xmin:xmax) + masses(i);
+                    MM(ymin:ymax, xmin:xmax) = max(MM(ymin:ymax, xmin:xmax), masses(i));
                 end
                 H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + 1;
             end            
@@ -349,11 +358,13 @@ classdef Patch_Collection < dynamicprops
         end
               
         function I = inclusions(obj, contain, more_than, how_many)
+            % Find for every patch the patches that are area wise  'more_than' its area
+            % and which contain at least 'contain' percent of its area.
             n = size(obj);            
             I = cell(n,1);
             areas = obj.areas;                        
             R     = obj.rects;
-            for p = 1:n                
+            for p = 1:n
                 bigger_boxes = (areas > more_than .* areas(p));                  
                 inter_areas  = rectint(R(p,:), R);                
                 bigger_boxes = bigger_boxes & (inter_areas > (contain * areas(p)))';  % Discard big boxes that do not contain enough of p.                                                  
@@ -368,8 +379,10 @@ classdef Patch_Collection < dynamicprops
                     keep = length(ids);                                               % Discover all inclusions.
                 end                
                 I{p}         = I{p}(ids(1:keep));
-            end                                               
+            end                                              
         end
+        
+        
         
         function S = most_similar_inclusions(obj, descriptors, topk, inclusions)
             S = zeros(size(obj), topk);                                
@@ -435,12 +448,22 @@ classdef Patch_Collection < dynamicprops
             P = top_ids(1:topk);
         end
         
-        function P = parts_of(obj, patch_id)
+        function P = sub_boxes_of(obj, patch_id)
             pw_int = rectint(obj.rects, obj.rects(patch_id));
-            areas  = obj.areas;            
-            P      = setdiff(find(pw_int ./ areas == 1), patch_id);            
+            areas = obj.areas;
+            P = setdiff(find(pw_int ./ areas == 1), patch_id);
             if size(P,1) ~= 1
                 P = P';
+            end
+        end
+        
+        function P = find_all_sub_boxes(obj)
+            % memory intensive version
+            P = cell(size(obj), 1);
+            inters = pw_area_intersections(obj); 
+            inters = bsxfun(@rdivide, inters, obj.areas');            
+            for i = 1:size(obj)
+                P{i} = setdiff(find(inters(i,:) == 1), i);
             end
         end
         
@@ -498,6 +521,24 @@ classdef Patch_Collection < dynamicprops
             end            
         end
         
+        function [A] = areas(self, ids)            
+            if nargin == 1 % Return the areas of every patch.                
+                R = self.rects;                
+            else
+                R = self.rects(ids);
+            end
+            A = R(:,3) .* R(:,4);           
+        end
+        
+        function [AR] = aspect_ratio(self, ids)            
+            if nargin == 1 
+                R = self.rects;                
+            else
+                R = self.rects(ids);
+            end
+            AR = R(:,3) ./ R(:,4);                                  
+        end
+        
         function [I] = pw_area_intersections(self)
             % Computes all pairwise intersections between the patches stored in the collection.
             I = single(rectint(self.rects, self.rects));            
@@ -514,14 +555,7 @@ classdef Patch_Collection < dynamicprops
         end
         
         
-        function [A] = areas(self, ids)            
-            if nargin == 1 % Return the areas of every patch.                
-                R = self.rects;                
-            else
-                R = self.rects(ids);
-            end
-            A = R(:,3) .* R(:,4);           
-        end
+        
         
         function [C] = centers(obj, patch_id)
             if nargin == 1 % Return the areas of every patch.                
@@ -609,6 +643,30 @@ classdef Patch_Collection < dynamicprops
             kept = proposals(valid, :);
             thrown = proposals(~valid, :);
         end
+        
+        function [mask] = extent_mask(rects, w, h)
+            mask = bbApply('toMask', rects, w, h, 1);
+            mask(mask> 0) = 1;
+        end
+        
+        function [cov] = area_coverage(rects, w, h)
+            cov = sum(sum(Patch_Collection.extent_mask(rects, w, h)));
+            cov = cov ./ (w*h);
+        end
+        
+        function [cov] = area_coverage_by_other_patches(frame_rect, other_rects, w, h)            
+            other_mask = Patch_Collection.extent_mask(other_rects, w, h);
+            corners = Patch_Collection.rects_to_corners(frame_rect);            
+            other_mask  = other_mask(corners(2):corners(4), corners(1):corners(3));
+            cov = double(sum(sum(other_mask))) ./ numel(other_mask);
+        end
+                
+        function C = rects_to_corners(rects)
+            C = rects;            
+            C(:,3) = C(:,1) + rects(:,3);
+            C(:,4) = C(:,2) + rects(:,4);
+        end
+        
     end
     
     

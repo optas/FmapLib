@@ -283,10 +283,11 @@ classdef Graph < dynamicprops
             obj.A = obj.A';             
         end
                 
-        function [T] = triangle_edges_in_ego_network(obj, ego)
+        function [T, directionality] = triangle_edges_in_ego_network(obj, ego)
+            directionality = [];
             if ~ obj.is_directed
                 T = [];
-                direct_neighb = obj.in_neighbors(ego);       % Direct neighbors.                
+                direct_neighb = obj.out_neighbors(ego);       % Direct neighbors.                
                 direct_neighb = setdiff(direct_neighb, ego); % Disreguard self-loops.                
                 
                 for i = 1:length(direct_neighb)                    
@@ -300,19 +301,39 @@ classdef Graph < dynamicprops
                 end
                 T = sort(T, 2);
                 T = unique(T, 'rows');
-            else
-                % out - in
+            else                
                 T = [];
-                ego_in  = obj.in_neighbors(ego);
+                directionality = [];
                 ego_out = obj.out_neighbors(ego);
                 for i = 1:length(ego_out)
                     out_out = obj.out_neighbors(ego_out(i));                    
-                    common  = intersect(out_out, ego_in);
+                    common = intersect(out_out, ego_out);
                     t = length(common);
                     if t ~= 0
                         T(end+1:end+t,:) = [repmat(ego_out(i), t, 1) common];
                     end
+                    directionality (end+1:end+t,:) = 0;
+                    out_in = obj.in_neighbors(ego_out(i));
+                    common = intersect(out_in, ego_out);
+                    t = length(common);
+                    if t ~= 0
+                        T(end+1:end+t,:) = [repmat(ego_out(i), t, 1) common];
+                    end                    
+                    directionality (end+1:end+t,:) = 1;
                 end
+                
+%                 % out - in
+%                 T = [];
+%                 ego_in = obj.in_neighbors(ego);
+%                 ego_out = obj.out_neighbors(ego);
+%                 for i = 1:length(ego_out)
+%                     out_out = obj.out_neighbors(ego_out(i));                    
+%                     common  = intersect(out_out, ego_in);
+%                     t = length(common);
+%                     if t ~= 0
+%                         T(end+1:end+t,:) = [repmat(ego_out(i), t, 1) common];
+%                     end
+%                 end
             end
         end
         
