@@ -245,10 +245,23 @@ classdef Optimization
             weights = reshape(weights, a, 1, a, 1);
         end
         
+        function [sol, residual] = min_l1_solution_with_linear_const(dictionary, target_vector, lambda)
+            %
+            %
+            %                         
+            cvx_begin        
+                variables sol(size(dictionary,2) , 1) 
+                minimize norm(dictionary*sol - target_vector, 'fro') + lambda * norm(sol, 1)
+            cvx_end      
+            
+            residual = cvx_optval;               
+        end
         
-        
-        function W = big_matrix_for_latent_spaces(in_maps, weights)            
-            % TODO re-write comments/name variables.
+        function W = big_matrix_for_latent_spaces(in_maps, weights)                        
+            % Constructs a big matrix that links together the pairwise functional maps of a collection. The
+            % eigenvectors of this matrix give rise to vectors Y_i, that minimize the consistency criterion:
+            %                       sum_{ij \in G} ||X_{ij} Y_i - Y_j||_{F}^2            
+            %
             % Input:
             %           in_maps  -  (N x N cell array) carrying the functional map from object i to object j, in its  
             %                       (i,j) cell. N is the total number of objects in the collection.
@@ -258,7 +271,9 @@ classdef Optimization
             %
             % Output:   
             %            W       -  (NxM x NxM matrix): M is the size of each square matrix carried by in_maps.
-            %                                  %
+            %                                 
+            % Reference: 'Image Co-Segmentation via Consistent Functional Maps, F. Wan et al. in ICCV 2013.'            
+            %
             % TODO assert(diag(in_maps) = isempty())
             
             if any(any(weights < 0))
@@ -267,22 +282,25 @@ classdef Optimization
             [src, trg]         = find(weights);
             map_size           = size(in_maps{src(1), trg(1)});
             if map_size(1) ~= map_size(2)
-                error('Current version only works with square matrices.');
+                error('Current version supports only square matrices.');
             end            
-            empty_ind          = cellfun('isempty', in_maps);
-            in_maps(empty_ind) = {sparse([], [], [], map_size(1), map_size(2))};
             eye_map            = speye(map_size);
-            W                  = in_maps;
-            
-            if all_close(weights, weights', 5e-10, +Inf)                % Weights are symmetric.                
-                for m = 1:length(src)                                   % We use Fan's derivation (same as paper).
+            W                  = cell(size(in_maps));            
+            if all_close(weights, weights', 5e-10, +Inf)                % Weights are symmetric.
+                for m = 1:length(src)                                   % We use Fan's et al. derivation.
                     i = src(m);                                         % i-j are connected: i points to j.
                     j = trg(m);
                     W{i,j} = - weights(i,j) .* (in_maps{j,i} + in_maps{i,j}');
-                    W{i,i} = W{i,i} + (weights(i,j) .* ( eye_map + (in_maps{i,j}' * in_maps{i,j})));
-                end                
+                    if isempty(W{i,i})
+                        W{i,i} = (weights(i,j) .* ( eye_map + (in_maps{i,j}' * in_maps{i,j})));
+                    else
+                        W{i,i} = W{i,i} + (weights(i,j) .* ( eye_map + (in_maps{i,j}' * in_maps{i,j})));
+                    end                                        
+                end             
+                empty_ind    = cellfun('isempty', W);
+                W(empty_ind) = {sparse([], [], [], map_size(1), map_size(2))};
                 W = cell2mat(W);
-            else
+            else                                
                 for m = 1:length(src)                                   % Weights are not symmetric.
                     i = src(m);
                     j = trg(m);
@@ -290,15 +308,16 @@ classdef Optimization
                     W{i,i} = W{i,i} + (weights(i,j) .* (in_maps{i,j}' * in_maps{i,j}));                                
                     W{i,i} = W{i,i} + (weights(j,i) .* eye_map);
                 end
-                W = cell2mat(W);            
+                W = cell2mat(W);
+                empty_ind    = cellfun('isempty', W);
+                W(empty_ind) = {sparse([], [], [], map_size(1), map_size(2))};
                 W  = (W + W') ./ 2;
             end
                             
             if ~(all_close(W, W', 0.0001, +Inf))            
                 error('Produced Aggregate matrix is not symmetric. Check your input matrices.')
             end                       
-        end
-        
+        end       
 
     end % Static    
 end

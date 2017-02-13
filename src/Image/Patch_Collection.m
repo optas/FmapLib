@@ -1,7 +1,7 @@
 classdef Patch_Collection < dynamicprops
     
     properties (GetAccess = public, SetAccess = private)
-        collection = Patch;     %    (Patch Array) storing all the patches.
+        collection = Patch;     %    (Patch Array) 1-dimensional array storing Patch objects.
         image;                  %    (Image) the image over which the patches were defined.
     end
 
@@ -9,15 +9,15 @@ classdef Patch_Collection < dynamicprops
         function obj = Patch_Collection(corners, in_image)
             % Class Constructor.
             % Input:
-            %           corners  - (N x 4) matrix carrying the (x,y) coordinates of the 2 extreme corners defining a
-            %                      rectangular patch. The expected format for each row is: [xmin, ymin, xmax, ymax].
-            %           in_image - (Image) The image, over which the patches were defined.
+            %           corners  - (N x 4 int Matrix) carrying the (x,y) coordinates of the 2 extreme corners defining N
+            %                      rectangular patches. The expected format for each row is: [xmin, ymin, xmax, ymax].
+            %           in_image - (Image) The image over which the patches were defined.
             if nargin == 0
-                obj.collection = Patch();            
-                obj.image      = Image();
+                obj.collection = Patch();
+                obj.image = Image();
             else
                 obj.image = in_image;                
-                if isa(corners, 'double')
+                if isa(corners, 'single') || isa(corners, 'double') 
                     m = size(corners, 1);    
                     if m < 1 
                         error('A Patch Collection must consist of at least one Patch objects.')
@@ -25,23 +25,24 @@ classdef Patch_Collection < dynamicprops
                     obj.collection(1:m) = Patch();
                     for i = 1:m
                         if ~ Patch.is_valid(corners(i,:), in_image)
-                            error('Patch %d cannot go with given image.\n', i);
-                            
+                            error('Patch %d cannot go with given image.\n', i);                            
                         else
                             obj.collection(i) = Patch(corners(i, :));
                         end                    
                     end
                 else
-                    error('Not correct argument.')
-                end                
+                    error('Not correct arguments.')
+                end
             end
         end
         
-        function m = size(obj)
-            if length(obj) > 1              % An array of Patch_Collection objects.
-                m = length(obj);                
+        function m = size(self)
+            if length(self) > 1 % An array of Patch_Collection objects
+                m = length(self);                
+            elseif size(self.collection) == 0 % Empty patch
+                m = 0;
             else
-                m = length(obj.collection);
+                m = length(self.collection);
             end
         end
         
@@ -49,12 +50,66 @@ classdef Patch_Collection < dynamicprops
             % TODO: implement subref.
             p = obj.collection(p_index);
         end
+        
 
+        function [S] = intersection_over_union(self, patch)            
+            S = bboxOverlapRatio(self.rects, patch.as_rectangle);           
+            % If bboxOverlapRatio is not defined.
+            % r = patch.as_rectangle();
+            % pw_int = rectint(self.rects, r);
+            % S = pw_int ./ (self.areas() + patch.area() - pw_int);        
+        end
+        
+        function [inter] = intersection(self, patch)
+            r = patch.as_rectangle();
+            inter = rectint(self.rects, r);                      
+        end
+        
+        function [overlaps] = overlap_with_patch(self, patch)
+            % Computes for every patch of the Patch_Collection, the fraction of its area that resides inside a given
+            % patch.
+            %
+            % Input:                
+            %           patch    - (Patch)
+            %
+            % Output:                     
+            %           overlaps - (N x 1) vector overlaps(i) is the fraction of the area of the i-th patch in the  patch.                                                                         
+            overlaps = self.intersection(patch) ./ self.areas;           
+            assert(all(overlaps >= 0) && all(overlaps <= 1));
+        end
+                
+        function [P] = closest_to_gt(self, top_k)
+            % Returns the indices of the patches that have biggest IOU statistic
+            % with any of the groundtruth bounding boxes of the image.
+            S = self.iou_with_gt();
+            [~, ids] = sort(S, 'descend');            
+            effective_k = min(length(ids), top_k);
+            P = ids(1:effective_k );            
+        end
+        
+        function S = iou_with_gt(self)
+            % Intersection Over Union (IOU) statistic for every patch of the collection           
+            % wrt. to the ground-truth bounding box of the underlying image. If more
+            % than one groun-truth boxes exist, it reports the maximum IOU a patch has with 
+            % any of them.
+            gt = self.image.gt_segmentation;            
+            S = [];            
+            if size(gt) == 1
+                S = self.intersection_over_union(gt.get_patch(1));
+            elseif size(gt) > 1
+                S = zeros(size(self), 1);
+                for g = 1:size(gt)
+                    S = max(S, self.intersection_over_union(gt.get_patch(g)));                            
+                end                            
+            end
+        end
+                        
         function F = plot_collection(obj, scores, add_text)
             obj.image.plot();
             hold on;            
             if exist('scores', 'var')
-                colors = vals2colormap(scores);
+                colors = vals2colormap(scores, 'jet');                
+%                 colors = ceil(colors .* 255);                
                 if exist('add_text', 'var') && add_text
                     for i = 1:length(scores)                    
                         F = obj.get_patch(i).plot('color', colors(i,:), 'text', sprintf('%.2f', scores(i)));                    
@@ -71,17 +126,23 @@ classdef Patch_Collection < dynamicprops
             end
         end
            
-        function F = plot_patches(obj, patch_ids, scores)
+        function F = plot_patches(obj, patch_ids, visible, scores)
+            if ~ exist('visible', 'var') || visible
+%                 F = figure();                
+            else           
+                F = figure('visible', 'off');                    
+            end             
+            
             obj.image.plot();
-            hold on;                               
+            hold on;                                                                   
             if exist('scores', 'var')
                 colors = vals2colormap(scores);
                 for i = 1:length(scores)                                        
-                    F = obj.get_patch(patch_ids(i)).plot('color', colors(i,:));                    
+                    obj.get_patch(patch_ids(i)).plot('color', colors(i,:));                    
                 end
             else
                 for i = 1:length(patch_ids)                
-                    F = obj.get_patch(patch_ids(i)).plot();
+                    obj.get_patch(patch_ids(i)).plot();
                 end                            
             end
         end
@@ -96,31 +157,9 @@ classdef Patch_Collection < dynamicprops
             obj.(prop_id) = prop_content;
         end
         
-        function R = rects(obj, ids)
-            if isprop(obj, 'rects_prop')
-                R = obj.rects_prop;
-            else
-                n = size(obj);
-                c = obj.collection;
-                R = zeros(n,4);
-                for i = 1:n
-                    R(i,1) = c(i).corners(1);
-                    R(i,2) = c(i).corners(2);                
-                    R(i,3) = c(i).height;
-                    R(i,4) = c(i).width;
-                end
-                obj.addprop('rects_prop');
-                obj.('rects_prop') = R;
-            end
-            if nargin == 2
-                R = R(ids,:);
-            end
-            
-        end
-        
         function [keep] = filter_patches(obj, varargin)
             % Keep patches that are not area-wise too big or too small wrt. to their image.
-            % Also removes line patches.
+            % Also removes line-like patches.
             
             options = struct('no_lines', 1, 'area_less', (.99)^2, 'area_more', (.01)^2);
             options = load_key_value_input_pairs(options, varargin{:});
@@ -133,7 +172,8 @@ classdef Patch_Collection < dynamicprops
             for i = 1:size(obj)
                 pi = obj.collection(i);
                 
-                if options.no_lines && (pi.width() == 1 || pi.height() == 1)    % Remove line - patches.
+%                 if options.no_lines && (pi.width() == 1 || pi.height() == 1)    % Remove line - patches.
+                if options.no_lines && (pi.width() <= 5 || pi.height() <= 5)    % Remove line - patches.
                     keep(i) = false;
                     continue;
                 end
@@ -158,26 +198,18 @@ classdef Patch_Collection < dynamicprops
             obj.collection = obj.collection(purgatory_list);
         end
         
-        function set_collection(obj, new_patch_array, new_image)
-            if isa(new_patch_array, 'Patch') && isa(new_image, 'Image')
-                obj.collection = new_patch_array;
-                obj.image      = new_image;
-            else
-                error('Incompatible types.')
-            end            
-        end          
-        
+
         function [new_collection] = embed_in_new_image(obj, new_image)                       
             % TODO think of working with array of corners than Patches => use Patch_Collection constructor and not
             % set_collection.
-            ow = obj.image.width;            
+            ow = obj.image.width;
             oh = obj.image.height;
             nw = new_image.width;
-            nh = new_image.height;            
+            nh = new_image.height;
             new_patches(size(obj)) = Patch();
             for i = 1:size(obj)                     
                 new_patches(i) =  obj.get_patch(i).linear_interpolation(ow, nw, oh, nh);
-            end          
+            end         
             new_collection = Patch_Collection();
             new_collection.set_collection(new_patches, new_image);
         end
@@ -219,189 +251,64 @@ classdef Patch_Collection < dynamicprops
             end 
             I = I.apply_mask(mask);            
         end
-        
-        function [overlaps] = overlap_with_patch(obj, patch)
-            % Computes for every patch of the Patch_Collection, the fraction of its area that resides inside a given
-            % patch.
-            %
-            % Input:                
-            %           patch    - (Patch)
-            %
-            % Output:                     
-            %           overlaps - (N x 1) vector overlaps(i) is the fraction of the area of the i-th patch (as returned 
-            %                      from get_patch(i)) in the bitmask.                                                
-            overlaps = zeros(size(obj), 1);
-            for i = 1:size(obj)
-                pi = obj.collection(i); 
-                overlaps(i) = pi.area_of_intersection(patch) / pi.area();
-                assert(overlaps(i) >= 0 && overlaps(i) <= 1);
-            end
-        end
-        
-        function [C] = corloc(obj, patch)
-            C = zeros(size(obj), 1);             
-            for i = 1:size(obj)                
-                C(i) = obj.collection(i).corloc(patch);                
-            end            
-        end
-        
-        function [inter] = intersection(obj, patch)
-            inter = zeros(size(obj), 1);             
-            for i = 1:size(obj)                
-                inter(i) = obj.collection(i).area_of_intersection(patch);
-            end            
-        end
-        
-        function [H] = weight_map(obj, masses, normalized)            
+                
+        function [H, M, MM] = weight_map(obj, masses)            
             H = zeros(size(obj.image));
-            for i = 1:size(obj)                
+            M = zeros(size(obj.image));
+            MM = zeros(size(obj.image));
+            for i = 1:size(obj)
                 [xmin, ymin, xmax, ymax] = obj.collection(i).get_corners();
                 if exist('masses', 'var')
-                    H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + masses(i);               
-                else
-                    H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + 1;               
+                    M(ymin:ymax, xmin:xmax) = M(ymin:ymax, xmin:xmax) + masses(i);
+                    MM(ymin:ymax, xmin:xmax) = max(MM(ymin:ymax, xmin:xmax), masses(i));
                 end
+                H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) + 1;
             end            
-            if exist('normalized', 'var') && normalized
-                H = H ./ sum(H(:)) ;
-            end
         end
         
         function [H] = color_map(obj, masses)            
-            H = zeros(size(obj.image));
+            H = zeros(size(obj.image));            
             for i = 1:size(obj)                
                 [xmin, ymin, xmax, ymax] = obj.collection(i).get_corners();
-                H(ymin:ymax, xmin:xmax) = max(H(ymin:ymax, xmin:xmax),  masses(i));                              
+                H(ymin:ymax, xmin:xmax) = H(ymin:ymax, xmin:xmax) +  masses(i);                              
             end                       
         end
                 
+        function set_collection(obj, new_patch_array, new_image)
+            if isa(new_patch_array, 'Patch') && isa(new_image, 'Image')
+                obj.collection = new_patch_array;
+                obj.image = new_image;
+            else
+                error('Incompatible types.')
+            end            
+        end          
+        
         function new_collection = keep_only(obj, keep_list)
             new_collection = Patch_Collection();
             new_collection.set_collection(obj.collection(keep_list), obj.image);
         end
         
-        function [P] = corners(obj)
-            s =  size(obj);
-            P = zeros(s, 4);
-            for i = 1:s
-                P(i,:) = obj.collection(i).get_corners();
+        function new_collection = keep_top_scoring(self, scores, top_k)
+            if length(scores) ~= self.size
+                error('Provide a score for every proposal.');
             end
+            [~, top_ids] = sort(scores, 'descend');
+            new_collection  = self.keep_only(top_ids(1:top_k));
         end
-        
-        function [varargout] = closest_to_gt(obj, top_k)            
-            gt = obj.image.gt_segmentation;
-            p = [];            
-            if ~ isempty(gt)                
-                best_per_gt = zeros(size(gt), top_k);
-                for g = 1:size(gt)
-                    C   = obj.corloc(gt.get_patch(g));
-                    [~, ids] = sort(C, 'descend');
-                    best_per_gt(g, :) = ids(1:top_k);                    
-                end               
-                p = unique(best_per_gt(:), 'stable');                                
-            end
-            varargout = cell(nargout);                
-            varargout{1} = p;
-            if nargout == 2                
-                varargout{2} = obj.keep_only(p);
-            end               
-        end
-        
-        function A = areas(obj, patch_id)
-            if nargin == 1 % Return the areas of every patch.                
-                if size(obj) == 1
-                    A = obj.collection(1).area();
-                else
-                    A = arrayfun( @(p) p.area(), obj.collection);
-                end                
-            else
-                A = arrayfun( @(p) p.area(), obj.collection(patch_id));                
-            end
-        end
-        
-        function C = centers(obj, patch_id)
-            if nargin == 1 % Return the areas of every patch.                
-                if size(obj) == 1
-                    C = obj.collection(1).center();
-                else
-                    C = arrayfun( @(p) p.center(), obj.collection, 'UniformOutput', false);
-                end                
-            else
-                C = arrayfun( @(p) p.center(), obj.collection(patch_id));                
-            end
-            C = cell2mat(C);
-        end
-        
-        function C = diagonal_lengths(obj, patch_id)
-            if nargin == 1 % Return the areas of every patch.                
-                if size(obj) == 1
-                    C = obj.collection(1).diagonal_length();
-                else
-                    C = arrayfun( @(p) p.diagonal_length(), obj.collection);
-                end                
-            else
-                C = arrayfun( @(p) p.diagonal_length(), obj.collection(patch_id));                
-            end
-        end
-        
-        
+                        
         function obj = merge_with(obj, other_collection)
             new_patches = size(other_collection);
             obj.collection(end+1: end+new_patches) = other_collection.collection(:);
         end
      
-        function C = corloc_with_gt(obj, options)
-            if exist('options', 'var') && isfield(options, 'lax_corloc')
-                lax_corloc = options.lax_corloc;
-            else
-                lax_corloc = false;
-            end
-            
-            C  = zeros(size(obj), 1);
-            gt = obj.image.gt_segmentation;
-
-            if size(gt) == 1                                     
-                C = obj.corloc(gt.get_patch(1));                            
-            elseif size(gt) > 1 && ~lax_corloc
-                for g = 1:size(gt)
-                    C = max(C, obj.corloc(gt.get_patch(g)));                            
-                end                
-            else           
-                for p = 1:size(obj)                    % Measure how well you do only in those that you hit.
-                    p_patch        = obj.collection(p);
-                    inter_with_all = gt.intersection(p_patch);
-                    has_overlap    = find(inter_with_all);
-                    total_gt_area  = 0;
-                    
-                    for g = 1:size(has_overlap)
-                        total_gt_area = total_gt_area + gt.get_patch(has_overlap(g)).area();            
-                    end
-                    
-                    with_all_corloc   = sum(inter_with_all) ./ ((double(total_gt_area) + p_patch.area() - sum(inter_with_all)));
-                    if with_all_corloc > 1
-                       with_all_corloc = 1;  % Can happen when two gt' overlap (i.e. their tightest_boxes)
-                    end
-                    C(p) = max(C(p), with_all_corloc);
-                end                               
                 
-                gt_all    = zeros(gt.image.height, gt.image.width);
-                ones_mask = ones(gt.image.height, gt.image.width);                
-                for j=1:size(gt)                    
-                    gt_all = gt_all + gt.get_patch(j).extract_features(ones_mask , 'zero_pad');
-                end
-                gt_all(gt_all > 0) = 1;
-                gt = Patch.tightest_box_of_segment(gt_all);                                
-                C  = max(C, obj.corloc(gt));
-            end                           
-        end
-        
-        function C = equivalence_classes_in_area(obj, num_classes)          
+        function C = area_equipartition(obj, num_classes)          
             if num_classes == 1
                 C = ones(size(obj), 1);
                 return
             end
             areas = obj.areas;
-            C     = zeros(length(areas), 1);
+            C = zeros(length(areas), 1);
             mass_in_class = 100 / num_classes;
             prcs = mass_in_class: mass_in_class: (100-mass_in_class);
             prcs = prctile(areas, prcs);
@@ -413,23 +320,51 @@ classdef Patch_Collection < dynamicprops
                     C = C + class_ind * in_class;
                     class_ind  = class_ind  + 1;
                 end                    
-            end            
-            
+            end                        
             i = i + 1;          % Largest/last class defined only by being bigger than last percentile.
-            C = C + class_ind * (areas >= prcs(i));
-            
+            C = C + class_ind * (areas >= prcs(i));            
             assert(all(C>0) & all(C<=num_classes))               
             for i = 1:class_ind-1
                 assert(max(areas(C==i)) <= min(areas(C==i+1)))                
             end            
         end
+        
+        function C = area_geometric_partition(self, separation)
+            [s_areas, s_ids] = sort(self.areas, 'ascend');
+            membership = zeros(size(self), 1);
+            membership(1) = 1;
+            min_of_class = 1;
+            class_id = 1;
+            while true
+                bound = s_areas(min_of_class) * separation;
+                last_of_class = find(s_areas > bound, 1);
+                                
+                if isempty(last_of_class)                    
+                    membership(min_of_class:end) = class_id;                    
+                    break
+                end
+                
+                membership(min_of_class:last_of_class-1) = class_id;
+                min_of_class = last_of_class;
+                class_id = class_id + 1;                
+            end
+            assert(all(membership > 0))
+            C = zeros(length(membership),1);
+            C(s_ids) = membership;            
+            areas = self.areas;
+            for i = 1:max(C)-1
+                assert(max(areas(C==i)) <= min(areas(C==i+1)))                
+            end                        
+        end
               
         function I = inclusions(obj, contain, more_than, how_many)
+            % Find for every patch the patches that are area wise  'more_than' its area
+            % and which contain at least 'contain' percent of its area.
             n = size(obj);            
             I = cell(n,1);
             areas = obj.areas;                        
             R     = obj.rects;
-            for p = 1:n                
+            for p = 1:n
                 bigger_boxes = (areas > more_than .* areas(p));                  
                 inter_areas  = rectint(R(p,:), R);                
                 bigger_boxes = bigger_boxes & (inter_areas > (contain * areas(p)))';  % Discard big boxes that do not contain enough of p.                                                  
@@ -444,8 +379,10 @@ classdef Patch_Collection < dynamicprops
                     keep = length(ids);                                               % Discover all inclusions.
                 end                
                 I{p}         = I{p}(ids(1:keep));
-            end                                               
+            end                                              
         end
+        
+        
         
         function S = most_similar_inclusions(obj, descriptors, topk, inclusions)
             S = zeros(size(obj), topk);                                
@@ -459,13 +396,7 @@ classdef Patch_Collection < dynamicprops
                 S(p,1:keep)   = inclusions{p}(ids(1:keep));
             end
         end
-        
-        function I = pw_area_intersections(obj)
-            % Computes all pairwise intersections between the patches stored in the collection.
-            I = single(rectint(obj.rects, obj.rects));            
-        end
-        
-        
+
         function S = symmetries(obj, descriptors, topk, intersection_thres, side_thres)
             if ~ exist('intersection_thres', 'var')
                 intersection_thres = 0.1;
@@ -502,14 +433,14 @@ classdef Patch_Collection < dynamicprops
             clear all_pairs;            
         end
                        
-
+                
         function P = inside_gt(obj, topk)
-            % topk patches that are covered the most by the gt(s) of th collection.            
+            % topk patches that are covered the most by the gt(s) of the collection.
             gt = obj.image.gt_segmentation;
-            areas = obj.areas();            
-            overlaps = zeros(size(obj), 1);                        
+            areas = obj.areas();
+            overlaps = zeros(size(obj), 1);
             for g = 1 : size(gt)
-                bitmask  = obj.image.patch_indicator(gt.get_patch(g));                
+                bitmask  = gt.get_patch(g).indicator_on_image(obj.image);                
                 overlaps = max(overlaps, obj.area_inside_mask(bitmask));
             end            
             overlaps = overlaps ./ areas;   % Normalize to get fraction of area inside gt.                      
@@ -517,16 +448,139 @@ classdef Patch_Collection < dynamicprops
             P = top_ids(1:topk);
         end
         
-        function P = parts_of(obj, frame_ids)
-            pw_int = rectint(obj.rects, obj.rects(frame_ids));
-            areas  = obj.areas;
-            P      = cell(length(frame_ids), 1);
-            for i = 1:length(frame_ids)                
-                P{i} = setdiff(find(pw_int(:, i) ./ areas == 1), frame_ids(i));
-            end            
-            P = unique(cell2mat(P(~cellfun('isempty', P))));
+        function P = sub_boxes_of(obj, patch_id)
+            pw_int = rectint(obj.rects, obj.rects(patch_id));
+            areas = obj.areas;
+            P = setdiff(find(pw_int ./ areas == 1), patch_id);
+            if size(P,1) ~= 1
+                P = P';
+            end
         end
         
+        function P = find_all_sub_boxes(obj)
+            % memory intensive version
+            P = cell(size(obj), 1);
+            inters = pw_area_intersections(obj); 
+            inters = bsxfun(@rdivide, inters, obj.areas');            
+            for i = 1:size(obj)
+                P{i} = setdiff(find(inters(i,:) == 1), i);
+            end
+        end
+        
+        
+        function [top_ids, top_scores] = k_best_non_overlaping_patches(obj, scores, k, overlap_ratio)
+            if ~ exist('overlap_ratio', 'var')
+                overlap_ratio = 0.8;
+            end            
+            R = obj.rects;
+            A = obj.areas;                              
+            top_ids = []; top_scores = [];
+            [max_score, top_id] = max(scores);
+            while numel(top_ids)<k && ~(max_score==-inf)
+                top_ids        = [top_ids, top_id];
+                top_scores     = [top_scores, max_score];
+                scores(top_id) = -inf;
+                id_valid       = find(isfinite(scores));
+                area_int       = rectint(R(top_id, :), R(id_valid,:))';                
+                IOU            = area_int ./ (A(top_id) + A(id_valid) - area_int);
+                id_nm          = id_valid(find(IOU > overlap_ratio));
+                scores(id_nm)  = -inf;
+                [max_score, top_id] = max(scores);    
+            end
+        end
+
+        
+        %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%  %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%
+        %%              Functions on basic properties of the Patch collection.              %%
+        %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%  %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%        
+        
+        function [P] = corners(self)
+            n = size(self);
+            patches = self.collection;
+            P = single(zeros(n, 4));          
+            for i = 1:n
+                P(i,:) = patches(i).corners;
+            end
+        end
+        
+        function [R] = rects(self, ids)
+            if isprop(self, 'rects_prop')
+                R = self.rects_prop;
+            else
+                n = size(self);
+                c = self.collection;
+                R = single(zeros(n, 4));
+                for i = 1:n
+                    R(i,:) = c(i).as_rectangle();
+                end
+                self.addprop('rects_prop');
+                self.('rects_prop') = R;
+            end
+            if nargin == 2
+                R = R(ids,:);
+            end            
+        end
+        
+        function [A] = areas(self, ids)            
+            if nargin == 1 % Return the areas of every patch.                
+                R = self.rects;                
+            else
+                R = self.rects(ids);
+            end
+            A = R(:,3) .* R(:,4);           
+        end
+        
+        function [AR] = aspect_ratio(self, ids)            
+            if nargin == 1 
+                R = self.rects;                
+            else
+                R = self.rects(ids);
+            end
+            AR = R(:,3) ./ R(:,4);                                  
+        end
+        
+        function [I] = pw_area_intersections(self)
+            % Computes all pairwise intersections between the patches stored in the collection.
+            I = single(rectint(self.rects, self.rects));            
+        end
+        
+        
+        function [S] = pw_iou(self)
+            % Computes all pairwise intersections between the patches stored in the collection.
+            I = self.pw_area_intersections();
+            A = self.areas;
+            U = LA.outersum(A, A);
+            U = U - I;
+            S = I ./ U;            
+        end
+        
+        
+        
+        
+        function [C] = centers(obj, patch_id)
+            if nargin == 1 % Return the areas of every patch.                
+                if size(obj) == 1
+                    C = obj.collection(1).center();
+                else
+                    C = arrayfun( @(p) p.center(), obj.collection, 'UniformOutput', false);
+                end                
+            else
+                C = arrayfun( @(p) p.center(), obj.collection(patch_id));                
+            end
+            C = cell2mat(C);
+        end
+        
+        function [C] = diagonal_lengths(obj, patch_id)
+            if nargin == 1
+                if size(obj) == 1
+                    C = obj.collection(1).diagonal_length();
+                else
+                    C = arrayfun( @(p) p.diagonal_length(), obj.collection);
+                end                
+            else
+                C = arrayfun( @(p) p.diagonal_length(), obj.collection(patch_id));
+            end
+        end
         
         
         %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%  %%  %% %%  %% %%  %% %%  %%  %%  %% %%  %%
@@ -574,9 +628,46 @@ classdef Patch_Collection < dynamicprops
             clear temp;
         end
               
+    end % End of public methods.
+    
+    methods (Static, Access = public)
+        function [kept, thrown] = cho_proposal_filter(proposals, image)
+            % Cho et al. CVPR 2015 apply this filtering to the proposals generated via the RP method on the dataset of VOC_2007x2.            
+            width = image.width;
+            height = image.height;
+            c1 = proposals(:,1) > width  * 0.01 & proposals(:,3) < width  * 0.99 ...    % Proposal has to be relatively centered.
+               & proposals(:,2) > height * 0.01 & proposals(:,4) < height * 0.99;
+            c2 = proposals(:,1) < width  * 0.01 & proposals(:,3) > width  * 0.99 ...    % Or it has to be very big.
+               & proposals(:,2) < height * 0.01 & proposals(:,4) > height * 0.99;           
+            valid = c1 | c2;
+            kept = proposals(valid, :);
+            thrown = proposals(~valid, :);
+        end
+        
+        function [mask] = extent_mask(rects, w, h)
+            mask = bbApply('toMask', rects, w, h, 1);
+            mask(mask> 0) = 1;
+        end
+        
+        function [cov] = area_coverage(rects, w, h)
+            cov = sum(sum(Patch_Collection.extent_mask(rects, w, h)));
+            cov = cov ./ (w*h);
+        end
+        
+        function [cov] = area_coverage_by_other_patches(frame_rect, other_rects, w, h)            
+            other_mask = Patch_Collection.extent_mask(other_rects, w, h);
+            corners = Patch_Collection.rects_to_corners(frame_rect);            
+            other_mask  = other_mask(corners(2):corners(4), corners(1):corners(3));
+            cov = double(sum(sum(other_mask))) ./ numel(other_mask);
+        end
+                
+        function C = rects_to_corners(rects)
+            C = rects;            
+            C(:,3) = C(:,1) + rects(:,3);
+            C(:,4) = C(:,2) + rects(:,4);
+        end
+        
     end
     
     
-    
-
-end
+end % End of class.

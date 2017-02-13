@@ -150,6 +150,37 @@ classdef Graph < dynamicprops
             end           
         end
         
+        function f = plot(obj)            
+            if obj.is_directed
+                L = kamada_kawai_spring_layout((obj.A + obj.A'));                
+            else
+                L = kamada_kawai_spring_layout(obj.A);
+            end
+            f = figure;            
+            [s1, s2] = obj.all_edges();               
+            
+            start_x = L(s1, 1)';
+            start_y = L(s1, 2)';
+            end_x   = L(s2, 1)';
+            end_y   = L(s2, 2)';
+                
+            colors = repmat([0.81 0.81 0.81], max(length(start_x), 1), 1);
+            set(gca,'colorOrder', colors); hold on;
+            
+            plot(L(:,1), L(:,2), 'o', 'MarkerFaceColor', 'b'); 
+            
+            if obj.is_directed                
+                quiver(start_x, start_y, end_x-start_x, end_y-start_y, 0, '-', 'LineWidth', 0.1);               
+            else
+                plot([start_x; end_x],[start_y; end_y], '.-', 'LineWidth', 0.1);
+            end
+            hold on;                 
+            for k = 1:size(L,1)
+                text(L(k,1), L(k,2), num2str(k), 'FontSize', 12);
+            end
+            
+        end
+        
         function [node_from, node_to, weight] = all_edges(obj)
             % Computes all the edges between every pair of nodes. If the graph is undirected it returns each edge once 
             % and the. TODO-P add documentation
@@ -252,10 +283,11 @@ classdef Graph < dynamicprops
             obj.A = obj.A';             
         end
                 
-        function [T] = triangle_edges_in_ego_network(obj, ego)
+        function [T, directionality] = triangle_edges_in_ego_network(obj, ego)
+            directionality = [];
             if ~ obj.is_directed
                 T = [];
-                direct_neighb = obj.in_neighbors(ego);       % Direct neighbors.                
+                direct_neighb = obj.out_neighbors(ego);       % Direct neighbors.                
                 direct_neighb = setdiff(direct_neighb, ego); % Disreguard self-loops.                
                 
                 for i = 1:length(direct_neighb)                    
@@ -269,19 +301,39 @@ classdef Graph < dynamicprops
                 end
                 T = sort(T, 2);
                 T = unique(T, 'rows');
-            else
-                % out - in
+            else                
                 T = [];
-                ego_in  = obj.in_neighbors(ego);
+                directionality = [];
                 ego_out = obj.out_neighbors(ego);
                 for i = 1:length(ego_out)
                     out_out = obj.out_neighbors(ego_out(i));                    
-                    common  = intersect(out_out, ego_in);
+                    common = intersect(out_out, ego_out);
                     t = length(common);
                     if t ~= 0
                         T(end+1:end+t,:) = [repmat(ego_out(i), t, 1) common];
                     end
+                    directionality (end+1:end+t,:) = 0;
+                    out_in = obj.in_neighbors(ego_out(i));
+                    common = intersect(out_in, ego_out);
+                    t = length(common);
+                    if t ~= 0
+                        T(end+1:end+t,:) = [repmat(ego_out(i), t, 1) common];
+                    end                    
+                    directionality (end+1:end+t,:) = 1;
                 end
+                
+%                 % out - in
+%                 T = [];
+%                 ego_in = obj.in_neighbors(ego);
+%                 ego_out = obj.out_neighbors(ego);
+%                 for i = 1:length(ego_out)
+%                     out_out = obj.out_neighbors(ego_out(i));                    
+%                     common  = intersect(out_out, ego_in);
+%                     t = length(common);
+%                     if t ~= 0
+%                         T(end+1:end+t,:) = [repmat(ego_out(i), t, 1) common];
+%                     end
+%                 end
             end
         end
         
@@ -360,44 +412,9 @@ classdef Graph < dynamicprops
                     G = Graph(new_adjacency, obj.is_directed);                   % TODO- More fancy book-keeping + dyn_properties.
                 otherwise
                     error('NIY.')
-            end
-                
-                
-                
-            
+            end            
         end
             
-        
-%         function [E] = ego_network(obj, node)
-% 
-%             if ~ obj.is_directed
-%                 [direct_neighb, weights] = obj.in_neighbors(node);   % Direct neighbors.
-%                 direct_size = length(direct_neighb);
-%                 center = repmat(node, direct_size, 1);
-%                 E = [center, direct_neighb];
-%                 
-%                 for i = 1:direct_size
-%                     n = direct_neighb(node);
-%                     other_nodes = setdiff(direct_neighb, n);
-%                     weights = obj.edges(repmat(n, length(other_nodes)), other_nodes);
-%                     to_add = find(weights);
-%                     if ~isempty(to_add)
-%                         adjacency(n, other_nodes(to_add)) = weights(to_add);
-%                     end
-%                 end
-%                 
-% 
-%             else
-%                 error('Not implemented yet.');
-%             end
-%            
-%             
-%         end
-        
-        
-%         function [T] = triangles(obj)
-%             
-%         end
     
         function [PR, converged, iter] = page_rank(obj, dumping, max_iter)
             % TODO - check diagonal is zero. 
@@ -534,8 +551,8 @@ classdef Graph < dynamicprops
             
             elseif strcmp(graph_type, 'bipartite_fc')
                 left_nodes  = varargin{1};
-                right_nodes = varargin{2};                                  
-                num_nodes   = left_nodes  + right_nodes;                
+                right_nodes = varargin{2} ;                                 
+                num_nodes   = left_nodes + right_nodes;                
                 i           = vec(repmat(1:left_nodes, right_nodes, 1));
                 j           = vec(repmat(left_nodes+1:left_nodes+right_nodes, right_nodes, 1)');
                 assert(length(i) == left_nodes * right_nodes );
@@ -578,19 +595,37 @@ classdef Graph < dynamicprops
                         vals(end+1:end+length(val)) = val';
                     end
                     all_starts{i1} = starts;
-                    all_ends{i1}   = ends;
-                    all_vals{i1}   = vals;
+                    all_ends{i1} = ends;
+                    all_vals{i1} = vals;
                 end
                 all_starts = cell2mat(all_starts);
-                all_ends   = cell2mat(all_ends);                
-                all_vals   = cell2mat(all_vals);
-                adj        = sparse(all_starts, all_ends, all_vals);
+                all_ends = cell2mat(all_ends);                
+                all_vals = cell2mat(all_vals);
+                adj = sparse(all_starts, all_ends, all_vals);
                 assert(all_close(adj, adj', 0.0001, +Inf));
                 assert(all(nonzeros(adj) > 0));
                 default_name = sprintf('%d_%d_%d_radius_connected', m, n, radius);
                 directed  = false;                
                 G = Graph(adj, directed, default_name);                              
-            else                               
+            elseif strcmp(graph_type, 'random_k_out')
+                % Each of the n nodes is linked to k nodes selected at random without replacement                
+                num_nodes = varargin{1};
+                k = varargin{2};                
+                if k > num_nodes-1 
+                    error('Inapropriate parameters.')
+                end
+                default_name = sprintf('random_%d_out', num_nodes);
+                directed  = true;
+                replacement = false;
+                neighbs = zeros(num_nodes, k);
+                population  = 1:num_nodes;                            
+                for i = 1:num_nodes
+                    pop_i = setdiff(population, i); 
+                    neighbs(i,:) = randsample(pop_i, k, replacement);                     
+                end
+                adj = Graph.knn_to_adjacency(neighbs, ones(size(neighbs)), 'out');
+                G = Graph(adj, directed, default_name);
+            else
                 error('Not valid graph type was requested.');
             end
             
@@ -605,31 +640,31 @@ classdef Graph < dynamicprops
             end
           
             function adj = lattice(m, n)
-                total_edges = 2 * (((m-1) * n) + ((n-1) * m));      % Result of from graph Theory.
-                diag_vec_1  = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections.
-                diag_vec_1  = spdiags(diag_vec_1, 1, m * n, m * n);
-                diag_vec_2  = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
-                diag_vec_2  = spdiags(diag_vec_2 , n, m * n, m * n);
+                total_edges = 2 * (((m-1) * n) + ((n-1) * m));     % Basic result from graph theory.
+                diag_vec_1 = repmat([0; ones(n-1, 1)], m, 1);      % Horizontal connections.
+                diag_vec_1 = spdiags(diag_vec_1, 1, m * n, m * n);
+                diag_vec_2 = repmat([1; ones(n-1, 1)], m, 1);      % Vertical connections.
+                diag_vec_2 = spdiags(diag_vec_2 , n, m * n, m * n);
                 adj = diag_vec_1 + diag_vec_2;
-                adj = adj + adj.';                                  % Edges are symmetric.                        
+                adj = adj + adj.';                                 % Edges are symmetric.                        
                 assert(nnz(adj) == total_edges);                
             end
             
             function adj = star(center, neighbors, directionality)
                 if IS.single_number(neighbors)
-                    num_nodes = neighbors+1;                    
+                    n_nodes   = neighbors+1;                    
                     neighbors = 1:neighbors;
                     if any(center == neighbors)
                         neighbors = setdiff(neighbors, center);
                         neighbors(end+1) = neighbors(end) + 1;
                     end
-                    center = repmat(center, num_nodes-1, 1);                    
+                    center = repmat(center, n_nodes-1, 1);                    
                     if strcmp(directionality, 'out')
-                        adj = sparse(center, neighbors, ones(num_nodes-1,1), num_nodes,  num_nodes);                             
+                        adj = sparse(center, neighbors, ones(n_nodes-1,1), n_nodes,  n_nodes);                             
                     elseif strcmp(directionality, 'in')
-                        adj = sparse(neighbors, center, ones(num_nodes-1,1), num_nodes,  num_nodes);                    
+                        adj = sparse(neighbors, center, ones(n_nodes-1,1), n_nodes,  n_nodes);                    
                     else
-                        adj = sparse(center, neighbors, ones(num_nodes-1,1), num_nodes,  num_nodes);                             
+                        adj = sparse(center, neighbors, ones(n_nodes-1,1), n_nodes,  n_nodes);                             
                         adj = adj + adj';
                     end
                 else

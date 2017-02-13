@@ -28,6 +28,8 @@ classdef Super_Pixels
         end
         
         function [V] = super_pixels_to_pixels(obj, values)
+            % Given a real value associated with every super-pixel, computes a mask over the image,
+            % where each location/pixel is equal with the real value of the corresponding SP.
             if length(values) ~= obj.states
                 error('Input values do not match the dimensions of the super pixels.')
             end            
@@ -43,10 +45,10 @@ classdef Super_Pixels
             p = Patch.tightest_box_of_segment(sp_mask);
             C = p.extract_features(C, 'mask');                        
         end
-        
+                
         function [F] = mean_features_on_super_pixels(obj, pixel_features)
             % Given feature vectors defined on the pixels of an image, define a feature vector for each super-pixel
-            % by considering the mean of the features defined on the pixels that constitute itself.                
+            % by considering the mean of the features defined on the pixels that constitute itself.
             [h, w, fdim]  = size(pixel_features);
             if w ~= obj.I.width || h ~= obj.I.height
                 error('Pixel Features are not defined on an image of the same size.');
@@ -62,14 +64,22 @@ classdef Super_Pixels
             end                
         end
                 
-        function H = color_histograms(obj, num_bins)                                       
-               bounds = 1: (256/num_bins) : 256;   % TODO. formalize.
-               bounds(end+1) = 256;               
-               H = zeros(obj.states, num_bins);
-               for s = 1:obj.states
-                   all_vals = obj.I.CData(obj.mask == s);                         
-                   H(s,:) = histcounts(all_vals, bounds, 'Normalization', 'probability');               
-               end
+        function H = color_histograms(obj, num_bins, normalized)
+            if isa(obj.I.CData, 'uint8') || isa(obj.I.CData, 'uint16')
+                max_val = intmax(class(obj.I.CData));
+            else
+                assert('NIY.')
+            end                            
+            bins = linspace(0, double(max_val), num_bins+1);            
+            H = zeros(obj.states, num_bins);            
+            for s = 1:obj.states
+                all_vals = obj.I.CData(obj.mask == s);                         
+                if normalized
+                    H(s,:) = histcounts(all_vals, bins, 'Normalization', 'probability');               
+                else
+                    H(s,:) = histcounts(all_vals, bins);
+                end
+            end
         end
         
         

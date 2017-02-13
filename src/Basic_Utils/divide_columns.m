@@ -15,16 +15,14 @@ function B = divide_columns(A, v)
     if any(v == 0)
          error('Division with zero.')
     end
-%     if (sum(v == 0) ~= 0);
-%          error('Division with zero.')
-%     end    
+
     if any(abs(v) < 1e-7)
         warning('Diving with elements that are smaller than 1e-7.')
     end
         
     N = size(A, 2);        
     B = zeros(size(A));
-    for i=1:N               % TODO - parfor?
+    for i=1:N
         B(:,i) = A(:,i) / v(i);
     end  
 end

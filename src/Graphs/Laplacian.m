@@ -54,6 +54,9 @@ classdef Laplacian < Basis
             if n_varargin < 1
                 error ('Please provide some functions to be projected on the Laplacian basis.');
             end
+            if eigs_num < 1
+                error('The number of eigenvectors must be a positive integer.')
+            end
             
             num_vertices = size(obj.L, 1);            
             functions_total = 0;

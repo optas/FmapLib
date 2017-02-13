@@ -1,12 +1,12 @@
-% classdef Test_Functional_Map < matlab.unittest.TestCase
-%     % Unit test verifying the expected behavior and functionality of the
-%     % class 'Laplace_Beltrami'.
-%     %
-%     % Usage Example:
-%     %                test1 = Test_Laplace_Beltrami(); run(test1);
-%     %
-%     % Note: As of 26/05, checks the storing-returning of previously
-%     % computed spectra for only a small set of eigenvalue-values.
+classdef Test_Functional_Map < matlab.unittest.TestCase
+    % Unit test verifying the expected behavior and functionality of the
+    % class 'Laplace_Beltrami'.
+    %
+    % Usage Example:
+    %                test1 = Test_Laplace_Beltrami(); run(test1);
+    %
+    % Note: As of 26/05, checks the storing-returning of previously
+    % computed spectra for only a small set of eigenvalue-values.
 % 
 %     properties
 %         shape_file  = '../../Data/kid_rodola/0001.isometry.1.off';
@@ -84,7 +84,60 @@
 % residual
 % [X2, residual2] = Functional_Map.sum_of_frobenius_norms_cvx(probes{1}, probes{2}, [], [], 0);
 % residual2
+    
+    methods(Static)
+            function [X, residual] = sum_of_frobenius_norms_cvx(src_functions, trg_functions, src_spectra, trg_spectra, lambda)
+                % Solving the fmap by minimizing the frobenius norm differences via cvx.        
+                [src_size, fs_n]  = size(src_functions);
+                [trg_size, ft_n]  = size(trg_functions);
+                if fs_n ~= ft_n
+                    error('Same number of functions characterizing the two spaces must be provided.')
+                end
+                if lambda < 0
+                    error('Regularization parameter lambda, must be non-negative.')
+                end                            
+                if lambda > 0
+                    cvx_begin        
+                        variables X(trg_size, src_size)
+                        minimize  norm((X*src_functions) - trg_functions, 'fro') + lambda * square_pos(norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro'))
+                    cvx_end                      
+                else
+                    cvx_begin        
+                        variables X(trg_size, src_size)                    
+                        minimize  norm((X*src_functions) - trg_functions, 'fro')
+                    cvx_end                                      
+                end
+                residual = cvx_optval;               
+            end
+            
+            function [X, residual] = sum_of_square_frobenius_norms_cvx(src_functions, trg_functions, src_spectra, trg_spectra, lambda)
+                % Solving the fmap by minimizing the squared-frobenius norm differences via cvx.        
+                [src_size, fs_n]  = size(src_functions);
+                [trg_size, ft_n]  = size(trg_functions);
+                if fs_n ~= ft_n
+                    error('Same number of functions characterizing the two spaces must be provided.')
+                end
+                if lambda < 0
+                    error('Regularization parameter lambda, must be non-negative.')
+                end                            
+                if lambda > 0
+                    cvx_begin        
+                        variables X(trg_size, src_size)
+                        minimize  square_pos(norm((X*src_functions) - trg_functions, 'fro')) + lambda * square_pos(norm(X*diag(src_spectra) - diag(trg_spectra)*X, 'fro'))
+                    cvx_end                      
+                else
+                    cvx_begin        
+                        variables X(trg_size, src_size)                    
+                        minimize  square_pos(norm((X*src_functions) - trg_functions, 'fro'))
+                    cvx_end                                      
+                end
+                residual = cvx_optval;               
+            end
+            
+            
+    end
 
 
 
 
+end
