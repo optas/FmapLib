@@ -1,31 +1,25 @@
 FmapLib -- An efficient implementation of the Functional Map Framework
 ======================================================================
 
-FmapLib is an efficient Matlab implementation of the Functional Map Framework, which 
-was introduced in the seminal paper "Functional Maps: a flexible representation
-of maps between shapes" by M. Ovsjanikov, et al. in SIGGRAPH 2012.
+FmapLib is an efficient Matlab implementation of the Functional Map Framework, which was introduced in the seminal paper "Functional Maps: a flexible representation of maps between shapes" by M. Ovsjanikov, et al. in SIGGRAPH 2012.
 
-Our implementation follows the Object Oriented Programming and provides classes to abstract modalities such as: Images, 3D Meshes and Graphs. 
-
-This way, one can infer and manipulate Functional Maps, among all the modalities that have currently been explored in the literature in a straightforward way.
-
-For more information and documentation, please take a look at the website 
-                        www.fmaplib.org
-
+This implementation is Object Oriented and provides classes to abstract modalities such as: Images, 3D Meshes and Graphs.  This way, one can infer and manipulate Functional Maps, among all the modalities that have currently been explored in the literature in a straightforward way.
 
 FmapLib is free software, you can redistribute it and/or modify it under the terms of
 the GNU General Public License, version 3 or above. See LICENSE for details.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-Availability
-============
-The current stable version of FmapLib is always available at the project's website: http://www.fmaplib.org
+Citation
+==============
+If you use any part of this code, please cite:
+Achlioptas P., Corman E. and Guibas L. (2016) FmapLib (Version 1.0) [Source Code]. http://github.com/optas/FmapLib
+
 
 Reporting Bugs
 ==============
 Please contact optas@stanford.edu for any bugs or unexpected behavior you may experience. 
 
 ------------------------------------------------
-(c) 2015 Achlioptas P., Corman E. and Guibas L.
+(c) 2016 Achlioptas P., Corman E. and Guibas L.
 
